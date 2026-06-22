@@ -1,0 +1,322 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ──────────────────────────────────────────────
+
+enum Role {
+  USER
+  STAFF
+  AUDITOR
+  ADMIN
+}
+
+enum RecordStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+}
+
+enum LeadStatus {
+  NEW
+  ASSIGNED
+  FOLLOWING
+  CONVERTED
+  ABANDONED
+}
+
+enum KnowledgeStatus {
+  UPLOADED
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum IndexJobStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+}
+
+enum ChatMessageStatus {
+  STREAMING
+  COMPLETED
+  INTERRUPTED
+  FAILED
+}
+
+// ── Models ──────────────────────────────────────────────
+
+model User {
+  id                String       @id @default(cuid())
+  email             String       @unique
+  passwordHash      String
+  role              Role         @default(USER)
+  status            RecordStatus @default(ACTIVE)
+  privacyVersion    String
+  privacyAcceptedAt DateTime
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+  leads               Lead[]
+  chatSessions        ChatSession[]
+  assignedLeads       Lead[]               @relation("AssignedLeads")
+  auditLogs           AuditLog[]           @relation("AuditLogActor")
+  searchTraces        SearchTrace[]
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  familyId  String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
+}
+
+model Product {
+  id                  String       @id @default(cuid())
+  model               String       @unique
+  series              String
+  status              RecordStatus @default(DRAFT)
+  params              Json
+  advantages          String[]
+  datasheetMaterialId String?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  productSolutions ProductSolution[]
+  materials        Material[]
+
+  @@index([model])
+}
+
+model Solution {
+  id          String       @id @default(cuid())
+  name        String
+  description String
+  status      RecordStatus @default(DRAFT)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  productSolutions ProductSolution[]
+  materials        Material[]
+}
+
+model ProductSolution {
+  id         String   @id @default(cuid())
+  productId  String
+  solutionId String
+  createdAt  DateTime @default(now())
+
+  product  Product  @relation(fields: [productId], references: [id])
+  solution Solution @relation(fields: [solutionId], references: [id])
+
+  @@unique([productId, solutionId])
+}
+
+model Material {
+  id                 String       @id @default(cuid())
+  solutionId         String?
+  productId          String?
+  type               String
+  title              String
+  originalStorageKey String
+  previewStorageKey  String?
+  mimeType           String
+  pageCount          Int?
+  previewPages       Int          @default(3)
+  status             RecordStatus @default(DRAFT)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  solution     Solution?     @relation(fields: [solutionId], references: [id], onDelete: SetNull)
+  product      Product?      @relation(fields: [productId], references: [id], onDelete: SetNull)
+  knowledgeDoc KnowledgeDoc?
+
+  @@index([solutionId])
+  @@index([productId])
+}
+
+model KnowledgeDoc {
+  id           String          @id @default(cuid())
+  materialId   String          @unique
+  title        String
+  sourceType   String
+  status       KnowledgeStatus @default(UPLOADED)
+  indexVersion String?
+  indexedAt    DateTime?
+  errorMessage String?
+
+  material  Material?           @relation(fields: [materialId], references: [id])
+  indexJobs KnowledgeIndexJob[]
+  chunks    KnowledgeChunk[]
+}
+
+model KnowledgeIndexJob {
+  id           String         @id @default(cuid())
+  docId        String
+  indexVersion String
+  status       IndexJobStatus @default(PENDING)
+  attempts     Int            @default(0)
+  errorMessage String?
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  createdAt    DateTime       @default(now())
+
+  doc KnowledgeDoc @relation(fields: [docId], references: [id], onDelete: Cascade)
+
+  @@unique([docId, indexVersion])
+}
+
+model KnowledgeChunk {
+  id           String                       @id @default(cuid())
+  docId        String
+  indexVersion String
+  content      String
+  page         Int?
+  contentHash  String
+  embedding    Unsupported("vector(1536)")?
+
+  doc   KnowledgeDoc    @relation(fields: [docId], references: [id], onDelete: Cascade)
+  event KnowledgeEvent?
+
+  @@unique([docId, indexVersion, contentHash])
+}
+
+model KnowledgeEvent {
+  id        String                       @id @default(cuid())
+  chunkId   String                       @unique
+  summary   String
+  eventType String
+  embedding Unsupported("vector(1536)")?
+  createdAt DateTime                     @default(now())
+
+  chunk    KnowledgeChunk         @relation(fields: [chunkId], references: [id], onDelete: Cascade)
+  entities KnowledgeEventEntity[]
+}
+
+model KnowledgeEntity {
+  id             String                       @id @default(cuid())
+  name           String
+  normalizedName String                       @unique
+  entityType     String
+  embedding      Unsupported("vector(1536)")?
+  createdAt      DateTime                     @default(now())
+
+  eventEntities KnowledgeEventEntity[]
+
+  @@index([normalizedName])
+}
+
+model KnowledgeEventEntity {
+  id       String @id @default(cuid())
+  eventId  String
+  entityId String
+  role     String
+
+  event  KnowledgeEvent  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  entity KnowledgeEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, entityId, role])
+}
+
+model SearchTrace {
+  id        String   @id @default(cuid())
+  userId    String?
+  query     String
+  mode      String
+  latencyMs Int
+  steps     Json?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Lead {
+  id           String     @id @default(cuid())
+  userId       String?
+  anonymousId  String?
+  score        Float      @default(0)
+  status       LeadStatus @default(NEW)
+  assignedTo   String?
+  lastActiveAt DateTime   @default(now())
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  user          User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignedStaff User?       @relation("AssignedLeads", fields: [assignedTo], references: [id])
+  events        LeadEvent[]
+}
+
+model LeadEvent {
+  id        String   @id @default(cuid())
+  leadId    String
+  eventType String
+  payload   Json?
+  createdAt DateTime @default(now())
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+}
+
+model ChatSession {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+}
+
+model ChatMessage {
+  id        String            @id @default(cuid())
+  sessionId String
+  role      String
+  status    ChatMessageStatus
+  content   String
+  sources   Json?
+  feedback  Json?
+  createdAt DateTime          @default(now())
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  targetType String
+  targetId   String?
+  payload    Json?
+  createdAt  DateTime @default(now())
+
+  actor User? @relation("AuditLogActor", fields: [actorId], references: [id], onDelete: SetNull)
+}
