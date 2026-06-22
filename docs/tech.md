@@ -13,15 +13,14 @@
 | UI | Ant Design 5 + Tailwind CSS | 后台提效，前台保留高级定制空间 |
 | 后端 | Node.js 20 + TypeScript + Express | 简洁、生态成熟、便于 AI 持续维护 |
 | ORM | Prisma | 类型安全迁移和查询 |
-| 主库 | PostgreSQL 16 | JSONB 与复杂查询能力适合产品参数 |
+| 主库 | PostgreSQL 16 + pgvector | JSONB、全文检索、向量检索和 SQL 多跳检索都在主库完成 |
 | 缓存 | Redis 7 | 限流、热点查询、短期会话 |
-| 向量库 | Qdrant | RAG 检索轻量可靠 |
 | 文件存储 | MinIO，开发可用本地存储 | S3 兼容，便于迁移到 OSS |
 | 日志 | Pino | JSON 日志，方便采集 |
 | 校验 | Zod | 前后端共享校验思想 |
 | 测试 | Vitest + React Testing Library + Supertest | 覆盖核心逻辑和接口 |
 
-不在第一版使用微服务。选型、资料、AI 和线索先放在同一后端应用内，通过模块边界隔离，后续按压力点拆分。
+不在第一版使用微服务。选型、资料、AI 和线索先放在同一后端应用内，通过模块边界隔离，后续按压力点拆分。AI 知识库吸收 `Zleap-AI/SAG` 的事件/实体索引和 SQL 多跳检索思路，但不直接嵌入 SAG 原工作台，避免引入 Fastify、npm 项目结构和 React 19 依赖冲突。
 
 ## 2. 项目结构
 
@@ -108,7 +107,7 @@ Route
   -> Zod Schema Validation
   -> Service
   -> Repository / External Adapter
-  -> Database / Redis / Qdrant / Storage / LLM
+  -> Database / Redis / Storage / LLM
 ```
 
 职责边界：
@@ -119,7 +118,7 @@ Route
 | Controller | 读取请求、调用校验、返回响应 |
 | Service | 业务规则、事务、权限语义 |
 | Repository | Prisma 查询，不写业务判断 |
-| Adapter | 封装 MinIO、Qdrant、LLM、邮件等外部系统 |
+| Adapter | 封装 MinIO、LLM、Embedding、Rerank、邮件等外部系统 |
 
 ### 3.2 统一响应
 
@@ -184,6 +183,10 @@ enum LeadStatus { NEW ASSIGNED FOLLOWING CONVERTED ABANDONED }
 | `Material` | `id`, `solutionId`, `type`, `title`, `storageKey`, `mimeType`, `pageCount`, `previewPages`, `status` |
 | `KnowledgeDoc` | `id`, `materialId`, `title`, `sourceType`, `status`, `indexedAt` |
 | `KnowledgeChunk` | `id`, `docId`, `content`, `page`, `vectorId` |
+| `KnowledgeEvent` | `id`, `chunkId`, `summary`, `eventType`, `vectorId`, `createdAt` |
+| `KnowledgeEntity` | `id`, `name`, `normalizedName`, `entityType`, `vectorId`, `createdAt` |
+| `KnowledgeEventEntity` | `id`, `eventId`, `entityId`, `role` |
+| `SearchTrace` | `id`, `userId`, `query`, `mode`, `latencyMs`, `steps`, `createdAt` |
 | `Lead` | `id`, `userId`, `anonymousId`, `score`, `status`, `assignedTo`, `lastActiveAt` |
 | `LeadEvent` | `id`, `leadId`, `eventType`, `payload`, `createdAt` |
 | `ChatSession` | `id`, `userId`, `title`, `createdAt`, `updatedAt` |
@@ -196,8 +199,10 @@ enum LeadStatus { NEW ASSIGNED FOLLOWING CONVERTED ABANDONED }
 2. `Solution 1 -> N Material`。
 3. `Material 0/1 -> 1 KnowledgeDoc`。
 4. `KnowledgeDoc 1 -> N KnowledgeChunk`。
-5. `Lead 1 -> N LeadEvent`。
-6. `ChatSession 1 -> N ChatMessage`。
+5. `KnowledgeChunk 1 -> 1 KnowledgeEvent`。
+6. `KnowledgeEvent N -> N KnowledgeEntity`，通过 `KnowledgeEventEntity` 关联。
+7. `Lead 1 -> N LeadEvent`。
+8. `ChatSession 1 -> N ChatMessage`。
 
 ### 4.2 索引要求
 
@@ -206,6 +211,9 @@ enum LeadStatus { NEW ASSIGNED FOLLOWING CONVERTED ABANDONED }
 3. `Lead.userId + status + lastActiveAt` 复合索引。
 4. `LeadEvent.leadId + createdAt` 复合索引。
 5. `AuditLog.actorId + createdAt`、`AuditLog.targetType + targetId` 索引。
+6. `KnowledgeChunk.content`、`KnowledgeEntity.normalizedName` 建 PostgreSQL 全文检索索引。
+7. `KnowledgeChunk.vectorId`、`KnowledgeEvent.vectorId`、`KnowledgeEntity.vectorId` 对应 pgvector 向量列。
+8. `KnowledgeEventEntity.eventId + entityId` 建唯一索引，支持 SQL 多跳扩展。
 
 ## 5. 选型引擎
 
@@ -284,7 +292,7 @@ export interface StorageAdapter {
 3. PDF 水印在下载前生成临时文件或走流式处理。
 4. 每次下载写入 `LeadEvent` 和 `AuditLog`。
 
-## 7. RAG 与 AI 问答
+## 7. SAG 知识库与 AI 问答
 
 ### 7.1 索引流程
 
@@ -293,9 +301,12 @@ export interface StorageAdapter {
   -> 文本提取
   -> 清洗
   -> 分块
-  -> 向量化
-  -> 写入 Qdrant
-  -> 写入 KnowledgeDoc / KnowledgeChunk
+  -> 每个 chunk 提取 1 个完整 event
+  -> 每个 chunk 提取多个 entities
+  -> chunk / event / entity 向量化
+  -> 写入 PostgreSQL + pgvector
+  -> 建立 event <-> entity 关联
+  -> 写入 KnowledgeDoc / KnowledgeChunk / KnowledgeEvent / KnowledgeEntity
 ```
 
 分块默认值：
@@ -307,14 +318,46 @@ export interface StorageAdapter {
 | topK | 5 |
 | score threshold | 0.72 |
 
-### 7.2 LLM Adapter
+### 7.2 检索模式
+
+默认使用 SAG 极速模式：
+
+```text
+用户问题
+  -> entity 全文/BM25 检索
+  -> chunk/event 向量召回
+  -> SQL join 扩展共享 entity 的 event
+  -> rerank 选择 topK 证据
+  -> 生成带来源回答
+```
+
+标准模式作为配置项：
+
+```text
+用户问题
+  -> LLM 抽取 query entities
+  -> entity / event / chunk 多路召回
+  -> SQL 多跳扩展
+  -> LLM 或 rerank 模型精排
+  -> 生成带来源回答
+```
+
+降级策略：
+
+1. pgvector 或 rerank 不可用时，允许用全文检索 + SQL 多跳扩展返回候选。
+2. event/entity 抽取失败时，该文档片段不得进入高置信回答，只能作为低置信候选。
+3. 普通向量 TopK 仅作为兜底，不作为默认路径。
+
+### 7.3 Adapter 接口
 
 ```ts
 export type ChatSource = {
   docId: string;
+  eventId?: string;
   title: string;
   page?: number;
   snippet: string;
+  entities: string[];
 };
 
 export type GenerateAnswerInput = {
@@ -325,6 +368,19 @@ export type GenerateAnswerInput = {
 export interface LlmAdapter {
   generateAnswer(input: GenerateAnswerInput): AsyncIterable<string>;
 }
+
+export interface KnowledgeSearchAdapter {
+  search(input: {
+    query: string;
+    mode: "fast" | "standard";
+    topK: number;
+    returnTrace: boolean;
+  }): Promise<{
+    sources: ChatSource[];
+    trace: unknown[];
+    latencyMs: number;
+  }>;
+}
 ```
 
 回答约束：
@@ -332,6 +388,7 @@ export interface LlmAdapter {
 1. 没有超过阈值的来源时直接拒答。
 2. Prompt 必须要求只基于来源回答。
 3. 输出完成后保存完整内容和来源。
+4. 保存 SearchTrace，后台可查看命中 event、entity、召回步骤和耗时。
 
 ## 8. 前端架构
 
@@ -409,8 +466,10 @@ WEB_ORIGIN=http://localhost:5173
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/xinmaowei
 REDIS_URL=redis://localhost:6379
 
-QDRANT_URL=http://localhost:6333
-QDRANT_API_KEY=
+PGVECTOR_ENABLED=true
+KNOWLEDGE_SEARCH_MODE=fast
+RERANK_PROVIDER=openai-compatible
+RERANK_MODEL=qwen3-rerank
 
 STORAGE_DRIVER=local
 STORAGE_LOCAL_DIR=./uploads
@@ -426,6 +485,7 @@ LLM_PROVIDER=openai
 LLM_API_KEY=
 LLM_MODEL=gpt-4.1-mini
 EMBEDDING_MODEL=text-embedding-3-small
+EMBEDDING_DIMENSIONS=1536
 
 SMTP_HOST=
 SMTP_PORT=587
@@ -440,7 +500,8 @@ VITE_API_BASE_URL=/api/v1
 
 ```bash
 pnpm install
-docker compose up -d postgres redis qdrant minio
+docker compose up -d postgres redis minio
+pnpm --filter server prisma:vector
 pnpm --filter server prisma:migrate
 pnpm --filter server dev
 pnpm --filter client dev
@@ -452,7 +513,7 @@ pnpm --filter client dev
 2. 至少 5 个产品。
 3. 至少 2 个方案。
 4. 至少 1 份可预览 PDF。
-5. 至少 3 条知识库片段。
+5. 至少 3 条知识库片段，并生成 chunk、event、entity、event-entity 关联。
 
 ## 11. 测试策略
 
@@ -461,7 +522,7 @@ pnpm --filter client dev
 | 选型算法 | Vitest | 精确、近似、兜底、空参数 |
 | API | Supertest | 权限、参数校验、错误码 |
 | 前端组件 | React Testing Library | 表单、列表、解锁弹窗 |
-| E2E | Playwright | 匿名选型、注册解锁、AI 问答、后台分配 |
+| E2E | Playwright | 匿名选型、注册解锁、SAG 问答、后台分配 |
 | 安全 | 手工 + 自动检查 | 越权预览、下载鉴权、限流 |
 
 上线前最低测试：
@@ -479,7 +540,7 @@ pnpm --filter client dev
 4. 实现产品、方案、资料后台 CRUD。
 5. 实现选型算法和选型页面。
 6. 实现 PDF 预览、注册解锁、下载审计。
-7. 实现知识库索引和 AI 问答。
+7. 实现 SAG 知识库索引和 AI 问答。
 8. 实现线索聚合、分配、导出。
 9. 做响应式、性能、安全和 E2E 验收。
 
@@ -488,7 +549,8 @@ pnpm --filter client dev
 1. 禁止在业务代码中使用 `any`、`@ts-ignore`、`eslint-disable` 绕过类型问题。
 2. 禁止接口直接返回存储永久地址。
 3. 禁止 AI 无来源回答技术结论。
-4. 禁止前端只做静态假数据页面而不接入真实接口。
-5. 禁止后台管理和外部用户端共用无权限判断的接口。
-6. 禁止上传资料默认上架。
-7. 禁止把敏感信息写入日志。
+4. 禁止把 SAG 原项目作为独立工作台硬嵌入本项目；只能按模块吸收检索内核。
+5. 禁止前端只做静态假数据页面而不接入真实接口。
+6. 禁止后台管理和外部用户端共用无权限判断的接口。
+7. 禁止上传资料默认上架。
+8. 禁止把敏感信息写入日志。

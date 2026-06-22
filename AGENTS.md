@@ -12,7 +12,7 @@
 |---|---|
 | 前端 | React 18 + TypeScript + Vite + Ant Design 5 + Tailwind CSS |
 | 后端 | Node.js 20 + TypeScript + Express + Prisma |
-| 数据库 | PostgreSQL 16 + Redis 7 + Qdrant |
+| 数据库 | PostgreSQL 16 + pgvector + Redis 7 |
 | 存储 | MinIO（开发可用本地） |
 | 包管理 | pnpm workspaces |
 
@@ -33,7 +33,8 @@ docs/            — PRD, design, tech（已定稿）
 
 ```bash
 pnpm install
-docker compose up -d postgres redis qdrant minio
+docker compose up -d postgres redis minio
+pnpm --filter server prisma:vector
 pnpm --filter server prisma:migrate && pnpm --filter server dev
 pnpm --filter client dev
 ```
@@ -51,12 +52,14 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm e2e
 - **Token**: Access 2h / Refresh 7d(轮换)，Refresh 存 HttpOnly Cookie
 - **测试**: 选型算法(Vitest) + API(Supertest) + 组件(RTL) + E2E(Playwright)
 - **RBAC**: 匿名→注册→内部→审核员→管理员，层级递增
+- **AI 知识库**: 采用 SAG 思路，基于 chunk/event/entity、pgvector、全文检索和 SQL 多跳扩展；普通向量召回只允许作为降级策略
 
 ## 禁止事项
 
 - `any` / `@ts-ignore` / `eslint-disable`
 - 前端假数据页面不接真实接口
 - AI 无来源回答
+- 将 Zleap-AI/SAG 原工作台作为独立服务硬嵌入本项目
 - 接口直接返回永久存储地址
 - 把敏感信息写入日志
 
@@ -95,4 +98,4 @@ pnpm install && pnpm --filter server prisma:migrate && pnpm build
 
 ## 依赖服务
 
-本地开发依赖 `docker compose` 启动 PostgreSQL + Redis + Qdrant + MinIO。数据库迁移与 seed 数据是首个可验证步骤。
+本地开发依赖 `docker compose` 启动 PostgreSQL + Redis + MinIO，并在 PostgreSQL 中启用 pgvector。数据库迁移与 seed 数据是首个可验证步骤。

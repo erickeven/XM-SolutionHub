@@ -43,7 +43,7 @@
 3. 产品详情：关键参数、优势、规格书、关联方案。
 4. 资料中心：规格书预览、DEMO 报告前 3 页预览、注册后完整预览与下载。
 5. 文件权限：匿名仅预览允许页数，下载必须登录，下载记录审计。
-6. AI 问答：RAG 检索、来源标注、无资料时拒答、反馈、历史记录。
+6. AI 问答：SAG 结构化检索、来源标注、无资料时拒答、反馈、历史记录。
 7. 线索管理：行为采集、线索聚合、状态流转、分配、导出。
 8. 运营后台：产品、方案、资料、知识库、用户、角色、线索管理。
 9. 响应式体验：PC、平板、手机均可完成核心路径。
@@ -186,7 +186,7 @@
 
 ### 7.4 AI 技术问答
 
-AI 问答只面向登录用户开放，必须基于知识库回答。
+AI 问答只面向登录用户开放，必须基于知识库回答。第一版知识库采用 SAG 思路：每个文档切片提取一个完整事项 `event` 和多个实体 `entity`，通过 SQL/pgvector/全文检索在查询时动态扩展关联证据，避免单纯向量 RAG 在多跳问题、结构约束和证据完整性上的缺陷。
 
 业务规则：
 
@@ -194,7 +194,10 @@ AI 问答只面向登录用户开放，必须基于知识库回答。
 2. 检索置信度不足时，回复“暂无相关资料支持该问题”，不得编造。
 3. 支持流式输出，但完整回答和来源需落库。
 4. 用户可对回答标记“有帮助”或“无帮助”。
-5. 管理员可查看问题、回答、来源、反馈和命中文档。
+5. 管理员可查看问题、回答、来源、反馈、命中 event/entity 和检索链路。
+6. 极速模式默认启用：先用实体全文/BM25 与向量召回候选，再做 SQL 多跳扩展和重排。
+7. 标准模式作为可配置选项：允许调用 LLM 抽取 query entities，再执行多路召回和精排。
+8. 普通向量召回仅作为降级策略，不作为第一版默认检索路径。
 
 验收标准：
 
@@ -202,6 +205,8 @@ AI 问答只面向登录用户开放，必须基于知识库回答。
 - 无命中文档时不调用或不输出自由编造答案。
 - 来源链接可跳转到对应资料或后台文档片段。
 - 历史对话仅用户本人和管理员可查看。
+- 多跳问题必须返回由至少 2 个相关 event/entity 支撑的证据链，无法构成证据链时降级为“资料不足”。
+- 后台可查看文档切片、event、entity、embedding 状态和最近一次检索 trace。
 
 ### 7.5 线索管理
 
@@ -248,6 +253,10 @@ AI 问答只面向登录用户开放，必须基于知识库回答。
 | Material | id, solutionId, type, title, storageKey, pageCount, previewPages, status |
 | KnowledgeDoc | id, materialId, title, sourceType, status, indexedAt |
 | KnowledgeChunk | id, docId, content, page, vectorId |
+| KnowledgeEvent | id, chunkId, summary, eventType, vectorId |
+| KnowledgeEntity | id, name, normalizedName, entityType, vectorId |
+| KnowledgeEventEntity | id, eventId, entityId, role |
+| SearchTrace | id, userId, query, mode, latencyMs, steps, createdAt |
 | Lead | id, userId, anonymousId, score, status, assignedTo, lastActiveAt |
 | LeadEvent | id, leadId, eventType, payload, createdAt |
 | ChatSession | id, userId, title, createdAt |
@@ -310,7 +319,7 @@ AI 问答只面向登录用户开放，必须基于知识库回答。
 | Phase 1 | 基础框架 | 前后端项目、数据库、认证、权限、CI | 可注册登录，后台可访问 |
 | Phase 2 | 选型闭环 | 产品管理、选型页、推荐结果、详情页 | 选型接口和页面可完整走通 |
 | Phase 3 | 资料闭环 | 方案资料、PDF 预览、注册解锁、下载审计 | 匿名和登录权限符合规则 |
-| Phase 4 | AI 问答 | 文档索引、RAG、问答、来源、反馈 | 有来源回答，低置信拒答 |
+| Phase 4 | AI 问答 | SAG 文档索引、问答、来源、反馈、检索 trace | 有来源回答，低置信拒答 |
 | Phase 5 | 线索后台 | 事件采集、线索聚合、分配、导出 | 线索能按状态流转 |
 | Phase 6 | 上线加固 | 压测、安全检查、响应式验收、部署 | 通过上线检查清单 |
 
@@ -334,6 +343,6 @@ AI 问答只面向登录用户开放，必须基于知识库回答。
 | 产品参数不标准 | 上线前建立参数字典，导入时强校验 |
 | 资料缺失或涉密 | 资料状态分为草稿、上架、下架；默认不上架 |
 | AI 幻觉 | 强制来源、置信度阈值、拒答策略、反馈闭环 |
+| SAG 融合复杂度 | 只吸收事件/实体索引与 SQL 多跳检索，避免直接嵌入完整工作台 |
 | 文件越权 | 所有预览和下载都走后端签权，不暴露永久直链 |
 | UI 模板感强 | 按 `design.md` 执行页面级验收和真实数据走查 |
-
