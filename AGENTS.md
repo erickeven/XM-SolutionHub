@@ -34,8 +34,9 @@ docs/            — PRD, design, tech（已定稿）
 ```bash
 pnpm install
 docker compose up -d postgres redis minio
-pnpm --filter server prisma:vector
-pnpm --filter server prisma:migrate && pnpm --filter server dev
+pnpm --filter server prisma:migrate
+pnpm --filter server dev
+pnpm --filter server worker:knowledge
 pnpm --filter client dev
 ```
 
@@ -98,4 +99,4 @@ pnpm install && pnpm --filter server prisma:migrate && pnpm build
 
 ## 依赖服务
 
-本地开发依赖 `docker compose` 启动 PostgreSQL + Redis + MinIO，并在 PostgreSQL 中启用 pgvector。数据库迁移与 seed 数据是首个可验证步骤。
+本地开发依赖 `docker compose` 启动 PostgreSQL + Redis + MinIO，并由版本化 migration 在 PostgreSQL 中启用 pgvector 与 pg_trgm。数据库迁移与 seed 数据是首个可验证步骤。
