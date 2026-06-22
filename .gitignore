@@ -1,0 +1,13 @@
+# Codegraph cache
+.codegraph/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Node / Python / etc (预留)
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
