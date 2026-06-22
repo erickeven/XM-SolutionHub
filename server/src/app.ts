@@ -7,6 +7,9 @@ import { requestIdMiddleware } from './middleware/requestId';
 import { authLimiter } from './middleware/rateLimit';
 import authRoutes from './modules/auth/auth.routes';
 import auditRoutes from './modules/audit/audit.routes';
+import productsRoutes from './modules/products/products.routes';
+import productsPublicRoutes from './modules/products/products.public.routes';
+import selectionRoutes from './modules/selection/selection.routes';
 import { errorHandler } from './middleware/errorHandler';
 
 const app: Express = express();
@@ -53,7 +56,16 @@ app.use('/api/v1/auth', authLimiter, authRoutes);
 // 9. Audit routes (admin only)
 app.use('/api/v1/admin/audit', auditRoutes);
 
-// 10. Error handler (last)
+// 10. Selection routes (public, no auth required)
+app.use('/api/v1/selection', selectionRoutes);
+
+// 11. Products admin routes (admin only)
+app.use('/api/v1/admin/products', productsRoutes);
+
+// 12. Products public routes (no auth required)
+app.use('/api/v1/products', productsPublicRoutes);
+
+// 13. Error handler (last)
 app.use(errorHandler);
 
 export default app;

@@ -236,7 +236,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
 
 ### Wave 2 — Phase 2: 选型闭环 (T11-T18)
 
-- [ ] 11. 产品管理 Admin CRUD API (`/api/v1/admin/products[/{id}]`)
+- [x] 11. 产品管理 Admin CRUD API (`/api/v1/admin/products[/{id}]`)
   What to do: 创建 `server/src/modules/products/` 7 文件; 实现 GET (列表, 分页, 搜索 model/series, 按 status 筛选), POST (创建, Zod 校验 params JSONB 结构对齐 tech.md §5.1), PATCH (更新), DELETE (软删除 status=INACTIVE); 全部管理员权限; 操作写 AuditLog; Product.model 唯一约束 (DB + Zod 双重校验); 参数单位统一 (V/A/W/mm/°C, PRD §7.2 L162)。
   Must NOT do: 不让匿名用户访问 admin 接口; DELETE 不是物理删除而是 status=INACTIVE; 产品状态非 ACTIVE 不进入外部推荐 (tech.md §5.2 rule 5)。
   Parallelization: Wave W2 | Blocked by: T8 | Blocks: T13 | Can parallelize with: T12
@@ -245,7 +245,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) Supertest: ADMIN 登录后 CRUD 全流程 → Evidence `.omo/evidence/task-11-products-crud.json`; (failure) Supertest: 重复 model 创建 → 400 code=3001; Supertest: USER 调用 → 403 → Evidence `.omo/evidence/task-11-products-fail.json`。
   Commit: Y | feat(server/products): Admin CRUD API + 唯一约束 + 审计日志
 
-- [ ] 12. 选型算法 — 5 维评分 + 精确/近似/兜底三级匹配 + TDD
+- [x] 12. 选型算法 — 5 维评分 + 精确/近似/兜底三级匹配 + TDD
   What to do: 创建 `server/src/modules/selection/selection.service.ts`; 实现 SelectionInput Zod schema (tech.md §5.1 L243-258); 实现 5 维评分: 电气参数 45, 应用类型 15, 能效待机 15, 合规认证 15, 环境尺寸 10 (tech.md §5.2 L272-278); 实现精确匹配 (电气参数完全覆盖 → matchLevel=exact), 近似匹配 (部分偏离 → 差异分 → matchLevel=approximate, diffs 面向用户可读如 "输出电流低于需求 0.2A"), 兜底 (无匹配 → 相似度最高 3 型号 → matchLevel=fallback, 必须展示不匹配原因); 排序: 精确优先 → 同类按 score 降序 → 同分按资料完整度高优先; 返回 MatchResult[] 含 matchLevel/score/reasons/diffs (tech.md §5.1 L260-267); 必填参数缺失返回参数错误 (1000-1999); 热门推荐仅在参数空或少时使用, 不是匹配结果, 不显示匹配分。
   Must NOT do: 电气参数不覆盖用户需求时不可标记为精确匹配 (tech.md §5.2 rule 2); 差异说明不用内部代码, 面向用户可读 (rule 3); 不排序时不考虑非 ACTIVE 产品 (rule 5)。
   Parallelization: Wave W2 | Blocked by: T3 | Blocks: T13 | Can parallelize with: T11
@@ -254,7 +254,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) Vitest: 输入 `{inputVoltageMin:85, inputVoltageMax:265, outputVoltage:12, outputCurrent:2, applicationType:"适配器"}` → 返回包含 exact 匹配结果 → Evidence `.omo/evidence/task-12-selection-exact.json`; (failure) Vitest: 输入 `outputCurrent:100` → 无精确匹配, 返回 approximate/fallback 且 diffs 含 "输出电流低于需求 X A" → Evidence `.omo/evidence/task-12-selection-approx.json`。
   Commit: Y | feat(server/selection): 5维评分+精确/近似/兜底匹配+TDD测试
 
-- [ ] 13. 选型 + 产品公开 API (`/api/v1/selection/match` + `/api/v1/products` + `/api/v1/products/{id}`)
+- [x] 13. 选型 + 产品公开 API (`/api/v1/selection/match` + `/api/v1/products` + `/api/v1/products/{id}`)
   What to do: 实现 POST `/api/v1/selection/match` (公开, Zod 校验 SelectionInput, 调用 selection.service, 返回 MatchResult[]); 实现 GET `/api/v1/products` (公开, 分页, 只返回 status=ACTIVE); 实现 GET `/api/v1/products/{id}` (公开, status=ACTIVE 或 404); 产品详情含关键参数、优势、规格书入口 (datasheetMaterialId 指向的 Material 可预览)、关联方案列表 (通过 ProductSolution 查询)。
   Must NOT do: 公开接口不返回 status=INACTIVE 的产品; 不返回原始 storageKey; 详情页不暴露 admin 字段。
   Parallelization: Wave W2 | Blocked by: T11, T12 | Blocks: T14, T15 | Can parallelize with: T16, T17
@@ -263,7 +263,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) Supertest: 提交完整参数到 match → 200 + 结果含 matchLevel/score/reasons/diffs → Evidence `.omo/evidence/task-13-api-ok.json`; (failure) Supertest: 缺少必填参数 → 400 code=1001; Supertest: 访问 INACTIVE 产品 id → 404 → Evidence `.omo/evidence/task-13-api-fail.json`。
   Commit: Y | feat(server/selection): 公开选型/产品 API + 详情含关联方案
 
-- [ ] 14. 前端 — 首页 (快速选型面板) + 选型页 (筛选+结果+卡片)
+- [x] 14. 前端 — 首页 (快速选型面板) + 选型页 (筛选+结果+卡片)
   What to do: 创建 `client/src/features/selection/`; 首页 (`/`): 左侧深色品牌区 (H1="芯茂微智能选型平台"), 右侧快速选型面板 (输入电压 min/max, 输出电压, 输出电流, 应用类型 下拉, 认证需求 可选), 面板按钮文案"开始选型", 首屏底部露出下一块内容, 下方模块 (热门应用/推荐型号/方案资料/AI入口); 选型页 (`/selection`): PC 左 320px 筛选栏 + 右结果区, 移动端顶部摘要+底部抽屉筛选; 推荐卡片含型号/系列/匹配等级/综合分/关键参数/推荐理由(≤3条)/差异点(近似+兜底)/规格书+方案资料+对比按钮; 筛选改动用 500ms 防抖; 已选条件可单独移除; 空结果展示参数建议; 对比栏最多 3 型号; 使用 TanStack Query 调用 `/api/v1/selection/match`; 使用 Ant Design ConfigProvider 统一 design.md §3 的 CSS 变量 token; Tailwind 负责布局间距; 四态完整 (加载/空/错误/无权限)。
   Must NOT do: 不做纯营销落地页 (design.md §2 L20); 不用大面积紫蓝渐变/浮球/廉价线条 (design.md §3.1 L53); 不用低密度大卡片堆叠; 卡片不靠重阴影 (design.md §3.1 L57); 不用 Tailwind 全局选择器覆盖 Antd DOM (design.md §6.6 L405)。
   Parallelization: Wave W2 | Blocked by: T13 | Blocks: T18 | Can parallelize with: T15, T16, T17
@@ -272,7 +272,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) Playwright (`1440x900`): 访问首页 → 输入参数 → 点击"开始选型" → 跳转选型页 → 看到匹配卡片 → Evidence `.omo/evidence/task-14-home-selection.png`; (failure) Playwright (`390x844`): 检查无横向滚动; 390px 下筛选抽屉可用 → Evidence `.omo/evidence/task-14-mobile.png`。
   Commit: Y | feat(client/selection): 首页快速选型面板 + 选型页筛选+结果+卡片+对比
 
-- [ ] 15. 前端 — 产品详情页
+- [x] 15. 前端 — 产品详情页
   What to do: 创建 `client/src/features/products/`; 页面结构: 产品头部 (型号/系列/状态标签/资料完整度), 关键参数矩阵 (2-4 列, 不用长段文字), 推荐应用, 规格书入口 (显示权限状态: 可预览/登录后下载/资料整理中), 关联方案列表; 从推荐列表进入详情页时保留选型上下文 (URL search params 或 React Router state); 参数单位统一展示 V/A/W/mm/°C; 产品下架时显示不可用提示。
   Must NOT do: 不用长段文字展示参数 (design.md §5.3); 不在前端硬编码产品数据; 不绕过 API 直接拿 storageKey。
   Parallelization: Wave W2 | Blocked by: T13 | Blocks: T18 | Can parallelize with: T14, T16, T17
@@ -281,7 +281,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) Playwright: 选型结果 → 点击型号 → 详情页显示参数矩阵和规格书入口 → Evidence `.omo/evidence/task-15-detail.png`; (failure) Playwright: 直接访问不存在的 product id → 显示 404 状态页非空白 → Evidence `.omo/evidence/task-15-404.png`。
   Commit: Y | feat(client/products): 详情页 + 参数矩阵 + 关联方案 + 选型上下文保留
 
-- [ ] 16. 前端 — 空参数行为 + 热门型号展示
+- [x] 16. 前端 — 空参数行为 + 热门型号展示
   What to do: 用户主动清空全部参数时不调用匹配接口, 前端展示热门型号并提示补充参数; 热门型号不是匹配结果, 不显示匹配分 (matchLevel/score); 在选型页和首页快速面板均有此逻辑。
   Must NOT do: 热门型号不调用 `/api/v1/selection/match` (由前端展示, 后端可提供 `/api/v1/products?sort=popular` 或类似); 不展示热门型号的 matchLevel/score (PRD §7.1 L149 明确)。
   Parallelization: Wave W2 | Blocked by: T13 | Blocks: T18 | Can parallelize with: T14, T15, T17
@@ -290,7 +290,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) Playwright: 选型页清空全部筛选 → Network 面板无 `/selection/match` 请求 → 看到热门型号 → Evidence `.omo/evidence/task-16-empty-params.png`; (failure) 如果清空后仍发起了 match 请求 → 测试失败。
   Commit: Y | feat(client/selection): 空参数展示热门型号不发请求
 
-- [ ] 17. 选型算法 TDD 补全 — 边界条件 + 性能验证
+- [x] 17. 选型算法 TDD 补全 — 边界条件 + 性能验证
   What to do: 补充 Vitest 测试: 精确匹配 (完整覆盖), 近似匹配 (单参数偏离 + 多参数偏离), 兜底 (无匹配), 空参数 (前端不调用但后端应返回验证错误), 分数排序 (精确>近似>兜底, 同类按 score 降序, 同分按资料完整度), 必填参数缺失 (400), 性能测试 (5 种产品到 100 种产品的 match 时间 < 2s P95); 前后端双重校验测试 (前端 Zod + 后端 Zod 对同一非法输入均拒绝)。
   Must NOT do: 不删除 T12 写的初始测试; 不跳过性能验证 (PRD §3 P95 < 2s 是成功指标)。
   Parallelization: Wave W2 | Blocked by: T12 | Blocks: T18 | Can parallelize with: T13-T16
@@ -299,7 +299,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) `pnpm --filter server test -- --reporter=verbose` → 所有 selection 测试 PASS → Evidence `.omo/evidence/task-17-test-output.txt`; (failure) 修改评分权重为错误值 → 测试 FAIL。
   Commit: Y | test(server/selection): 边界条件+排序+性能P95<2s 补全测试
 
-- [ ] 18. Phase 2 验收门 — 选型接口和页面可完整走通
+- [x] 18. Phase 2 验收门 — 选型接口和页面可完整走通
   What to do: 执行验收脚本: (1) `pnpm typecheck` 退出码 0; (2) `pnpm --filter server test` 全过; (3) Playwright E2E: 首页输入参数 → "开始选型" → 选型页看到精确匹配卡片 → 点击进入详情页 → 参数矩阵正确 → 规格书入口存在; (4) Playwright (`390x844`): 移动端选型无横向滚动; (5) Supertest: `/api/v1/selection/match` P95 < 2s (用 100 条 seed 产品测试)。
   Must NOT do: 不跳过任何验收项; 不用 mock 数据替代真实 API 验证。
   Parallelization: Wave W2 | Blocked by: T14, T15, T16, T17 | Blocks: 无
