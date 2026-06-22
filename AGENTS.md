@@ -68,6 +68,31 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm e2e
 - 首屏必须有选型入口，不做纯营销落地页
 - 加载 / 空 / 错误 / 无权限 四态必须完整实现
 
+## 部署服务器（本地局域网）
+
+| 项目 | 值 |
+|---|---|
+| IP | `172.16.12.85` |
+| SSH 端口 | `22` |
+| 系统 | Ubuntu 22.04.5 LTS |
+| 环境 | 宝塔面板 / Docker / Node.js / Nginx |
+
+敏感凭据（密码等）存于 `.env.local`（已加入 `.gitignore`，勿提交），内容包括 `DEPLOY_HOST`、`DEPLOY_USER`、`DEPLOY_PASSWORD`、`DEPLOY_PORT`。
+
+首次部署流程（待实施）：
+```bash
+# 从项目根目录
+rsync -avz --exclude '.git' --exclude '.env.local' --exclude 'node_modules' \
+  ./ root@172.16.12.85:/opt/xinmaowei/
+
+# SSH 登入后
+ssh root@172.16.12.85
+cd /opt/xinmaowei
+docker compose up -d
+pnpm install && pnpm --filter server prisma:migrate && pnpm build
+# Nginx 反代配置见宝塔面板
+```
+
 ## 依赖服务
 
 本地开发依赖 `docker compose` 启动 PostgreSQL + Redis + Qdrant + MinIO。数据库迁移与 seed 数据是首个可验证步骤。

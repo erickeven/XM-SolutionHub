@@ -1,6 +1,9 @@
 # Codegraph cache
 .codegraph/
 
+# Local deploy config (sensitive)
+.env.local
+
 # OS
 Thumbs.db
 .DS_Store
