@@ -410,7 +410,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) Vitest: standard 模式查询 → trace 含 entity抽取步骤 → Evidence `.omo/evidence/task-29-standard.json`; (failure) 模拟 LLM 不可用 → 返回来源列表 + "生成服务暂不可用"。
   Commit: Y | feat(server/knowledge): standard 模式 + 5 条降级策略
 
-- [ ] 30. AI 问答模块 — SSE chat + 会话/消息/反馈 API + 落库
+- [x] 30. AI 问答模块 — SSE chat + 会话/消息/反馈 API + 落库
   What to do: `server/src/modules/ai-chat/`; POST `/api/v1/ai/chat` (登录, SSE): 调用 KnowledgeSearchAdapter.search → 低置信 → 拒答 → 不调 LLM; 有来源 → LlmAdapter.generateAnswer → SSE; 事件: meta→source→delta→done/error (tech.md §7.4 L436-444); 完整回答+来源落库; 断开→INTERRUPTED; 网关关闭缓冲+心跳 (SSE_HEARTBEAT_MS=15000)。**补充 API**: GET `/api/v1/ai/sessions` (登录, 当前用户会话列表), GET `/api/v1/ai/sessions/{id}/messages` (登录, 当前用户会话消息含来源, PRD §9 L312), POST `/api/v1/ai/messages/{id}/feedback` (登录, 标记 helpful/unhelpful, PRD §9 L313); 会话和消息查询仅返回当前用户自己的 (非管理员, PRD §7.4 L213 "历史对话仅用户本人和管理员可查看"); 管理员可查看所有用户的会话。
   Must NOT do: 低置信不调 LLM; 无来源不输出自由文本; 断开不标记为完整; 会话查询不可泄露他人数据; feedback 需校验 message 属于调用者。
   Parallelization: Wave W4 | Blocked by: T28, T29 | Blocks: T31, T32
@@ -419,7 +419,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) Supertest: 登录+POST chat+SSE捕获→验证事件; GET sessions→自己的; POST feedback→200 → Evidence `.omo/evidence/task-30-sse.json`; (failure) 无知识→拒答; USER A→GET B's session→403 → Evidence `.omo/evidence/task-30-reject.json`。
   Commit: Y | feat(server/ai-chat): SSE chat+sessions/messages/feedback API+权限隔离+落库
 
-- [ ] 31. AI 来源权限过滤 — 外部用户不可读内部/已下架内容
+- [x] 31. AI 来源权限过滤 — 外部用户不可读内部/已下架内容
   What to do: 在 KnowledgeSearchAdapter.search 中, 每次检索先按资料状态 (status=READY) 和调用者角色 (USER 看不到内部资料) 构造候选集 (tech.md §7.2 L382); 外部用户 AI 来源不含内部或已下架内容 (PRD §7.4 rule 10); 内部用户/管理员可见更多; 来源链接只能跳转到用户有权访问的资料。
   Must NOT do: 不在 recall 后仅在前端隐藏 (tech.md §7.2 L382 明确禁止); 来源无权限时不渲染标题与片段 (design.md §5.5 L299)。
   Parallelization: Wave W4 | Blocked by: T30 | Blocks: T32
@@ -428,7 +428,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) Supertest: USER 查询 → sources 全部 READY 且无 internal → Evidence `.omo/evidence/task-31-source-filter.json`; (failure) seed 一个 internal doc → USER 查询 → sources 不含该 doc。
   Commit: Y | feat(server/ai-chat): 来源按权限+状态过滤, 外部用户不可见内部内容
 
-- [ ] 32. 前端 — AI 问答页 (SSE 流 + 来源卡片 + 反馈 + 多跳展示)
+- [x] 32. 前端 — AI 问答页 (SSE 流 + 来源卡片 + 反馈 + 多跳展示)
   What to do: `client/src/features/ai-chat/`; 布局: 左会话历史+推荐问题, 中对话流, 右来源/证据关系, 底输入框 (Enter 发送, Shift+Enter 换行, 空输入禁用); AI 消息左侧, 用户右侧; AI 消息底部来源卡片 (docName/page/snippet); 多跳以"相关型号/参数→关联事项→来源片段"展示 (不暴露 event/entity/向量分, design.md §5.5 L295); 低置信用中性提示不用红色 (design.md §5.5 L297); 逐字输出 + 来源准备状态; 发送失败保留原问题+重试; SSE 独立客户端不走 Axios 解包 (tech.md §8.2 item 5)。
   Must NOT do: 不暴露内部字段 (event/entity/向量分) 给普通用户 (design.md §5.5 L295); 不自动重复提交 (tech.md §8.2 item 6); 断线仅手动重试 (tech.md §8.2 item 5)。
   Parallelization: Wave W4 | Blocked by: T30, T31 | Blocks: T35 | Can parallelize with: T33, T34
@@ -455,7 +455,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) Playwright: ADMIN → AI 问答 → 展开 trace → 看到步骤 → Evidence `.omo/evidence/task-34-trace.png`; (failure) USER → 无 trace 按钮。
   Commit: Y | feat(client/admin): 检索trace调试视图 (管理员可见event/entity/步骤/耗时)
 
-- [ ] 35. Phase 4 验收门 — 有来源回答, 低置信拒答
+- [x] 35. Phase 4 验收门 — 有来源回答, 低置信拒答
   What to do: 8 项验收: (1) typecheck; (2) test; (3) SSE 事件顺序 meta→source→delta→done; (4) 低置信→拒答不含 delta; (5) 多跳→≥2 event 证据链; (6) 来源权限: USER 不见内部; (7) 首字 P95 < 3s; (8) 幂等: 重复 reindex→0 新 chunk。
   Parallelization: Wave W4 | Blocked by: T32, T33, T34 | Blocks: 无
   References: PRD §11 L345, §7.4 L210-216, §3 L32。

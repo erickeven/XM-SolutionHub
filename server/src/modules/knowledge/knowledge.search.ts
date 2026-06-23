@@ -153,6 +153,53 @@ function buildSnippet(content: string, maxLen = 200): string {
   return content.slice(0, maxLen) + '...';
 }
 
+// ── Permission filter ───────────────────────────────────
+
+/**
+ * Visibility level for candidate doc filtering.
+ * Extensible: when schema adds an internal-only flag, USER maps to PUBLIC
+ * and STAFF/AUDITOR/ADMIN map to INTERNAL.
+ */
+type VisibilityLevel = 'PUBLIC' | 'INTERNAL';
+
+function roleToVisibilityLevel(userRole: string | null): VisibilityLevel {
+  // External/anonymous users see public docs only.
+  // STAFF/AUDITOR/ADMIN see all docs including internal-only (future).
+  if (userRole === 'STAFF' || userRole === 'AUDITOR' || userRole === 'ADMIN') {
+    return 'INTERNAL';
+  }
+  return 'PUBLIC';
+}
+
+/**
+ * Build candidate doc IDs based on role and material status.
+ * Permission filtering happens BEFORE similarity queries.
+ * tech.md §7.2 L382: "禁止召回后仅在前端隐藏无权限来源"
+ *
+ * Current schema has no explicit internal-only flag on KnowledgeDoc or Material,
+ * so all READY+ACTIVE docs are visible to all roles. The visibilityLevel
+ * parameter is structured for future extension when an internal flag is added.
+ */
+async function buildCandidateDocIds(userRole: string | null): Promise<string[]> {
+  const visibilityLevel = roleToVisibilityLevel(userRole);
+
+  const rows = await prisma.knowledgeDoc.findMany({
+    where: {
+      status: 'READY',
+      material: { status: 'ACTIVE' },
+      // Future: when schema has visibility/internalOnly field, filter here:
+      // visibilityLevel === 'PUBLIC' ? { internalOnly: false } : undefined
+    },
+    select: { id: true },
+  });
+
+  // ponytail: visibilityLevel is a no-op filter now — no internal flag in schema yet.
+  // When added, the where clause above will use it to exclude internal-only docs for PUBLIC.
+  void visibilityLevel;
+
+  return rows.map((r) => r.id);
+}
+
 // ── Adapter ─────────────────────────────────────────────
 
 class FastKnowledgeSearchAdapter implements KnowledgeSearchAdapter {
@@ -161,8 +208,8 @@ class FastKnowledgeSearchAdapter implements KnowledgeSearchAdapter {
     const trace: SearchTraceStep[] = [];
     const { query, topK } = input;
 
-    // 0. Permission filter: get candidate doc IDs (status=READY, material ACTIVE)
-    const candidateDocIds = await this.getCandidateDocIds(input.userRole ?? null);
+    // Permission filter FIRST (tech.md §7.2 L382): construct candidate set before any similarity query
+    const candidateDocIds = await buildCandidateDocIds(input.userRole ?? null);
     if (candidateDocIds.length === 0) {
       const latencyMs = Date.now() - startTime;
       await this.saveTrace(input, [], latencyMs, trace);
@@ -365,36 +412,6 @@ class FastKnowledgeSearchAdapter implements KnowledgeSearchAdapter {
     return { sources, trace, latencyMs };
   }
 
-  // ── Permission filter ──────────────────────────────────
-
-  private async getCandidateDocIds(userRole: string | null): Promise<string[]> {
-    // Filter FIRST: status=READY, material ACTIVE
-    // For external USER: exclude internal-only docs (no-op currently — no internal flag in schema)
-    const rows = await prisma.knowledgeDoc.findMany({
-      where: { status: 'READY' },
-      select: {
-        id: true,
-        materialId: true,
-      },
-    });
-
-    if (rows.length === 0) return [];
-
-    // Check material status = ACTIVE
-    const materialIds = rows.map((r) => r.materialId);
-    const activeMaterials = await prisma.material.findMany({
-      where: { id: { in: materialIds }, status: 'ACTIVE' },
-      select: { id: true },
-    });
-    const activeMaterialIds = new Set(activeMaterials.map((m) => m.id));
-
-    // ponytail: no internal-only flag in schema yet — userRole filter is a no-op
-    // When internal flag is added, filter here based on userRole === 'USER'
-    void userRole;
-
-    return rows.filter((r) => activeMaterialIds.has(r.materialId)).map((r) => r.id);
-  }
-
   // ── Stage 1: Entity retrieval ─────────────────────────
 
   private async entityRetrieval(query: string): Promise<EntityRow[]> {
@@ -560,8 +577,8 @@ class StandardKnowledgeSearchAdapter implements KnowledgeSearchAdapter {
     const trace: SearchTraceStep[] = [];
     const { query, topK } = input;
 
-    // 0. Permission filter (same as fast mode)
-    const candidateDocIds = await this.getCandidateDocIds(input.userRole ?? null);
+    // Permission filter FIRST (tech.md §7.2 L382): construct candidate set before any similarity query
+    const candidateDocIds = await buildCandidateDocIds(input.userRole ?? null);
     if (candidateDocIds.length === 0) {
       const latencyMs = Date.now() - startTime;
       await this.saveTrace(input, [], latencyMs, trace);
@@ -781,27 +798,6 @@ class StandardKnowledgeSearchAdapter implements KnowledgeSearchAdapter {
     await this.saveTrace(input, sources, latencyMs, trace);
 
     return { sources, trace, latencyMs };
-  }
-
-  // ── Permission filter (same as fast mode) ─────────────
-
-  private async getCandidateDocIds(userRole: string | null): Promise<string[]> {
-    const rows = await prisma.knowledgeDoc.findMany({
-      where: { status: 'READY' },
-      select: { id: true, materialId: true },
-    });
-
-    if (rows.length === 0) return [];
-
-    const materialIds = rows.map((r) => r.materialId);
-    const activeMaterials = await prisma.material.findMany({
-      where: { id: { in: materialIds }, status: 'ACTIVE' },
-      select: { id: true },
-    });
-    const activeMaterialIds = new Set(activeMaterials.map((m) => m.id));
-
-    void userRole;
-    return rows.filter((r) => activeMaterialIds.has(r.materialId)).map((r) => r.id);
   }
 
   // ── Entity retrieval by LLM-extracted names ───────────

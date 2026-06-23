@@ -13,6 +13,7 @@ import selectionRoutes from './modules/selection/selection.routes';
 import { adminRoutes as solutionAdminRoutes, publicRoutes as solutionPublicRoutes } from './modules/solutions/solutions.routes';
 import { adminRoutes as materialAdminRoutes, publicRoutes as materialPublicRoutes, materialPublicRoutes as materialPreviewRoutes } from './modules/materials/materials.routes';
 import knowledgeRoutes from './modules/knowledge/knowledge.routes';
+import aiChatRoutes from './modules/ai-chat/ai-chat.routes';
 import { errorHandler } from './middleware/errorHandler';
 
 const app: Express = express();
@@ -86,7 +87,10 @@ app.use('/api/v1/materials', materialPreviewRoutes);
 // 18. Knowledge admin routes (admin only)
 app.use('/api/v1/admin/knowledge', knowledgeRoutes);
 
-// 19. Error handler (last)
+// 19. AI chat routes (authenticated users)
+app.use('/api/v1/ai', aiChatRoutes);
+
+// 20. Error handler (last)
 app.use(errorHandler);
 
 export default app;

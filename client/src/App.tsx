@@ -9,6 +9,7 @@ import { ProductDetailPage } from './features/products/ProductDetailPage';
 import { LoginPage } from './features/auth/LoginPage';
 import { RegisterPage } from './features/auth/RegisterPage';
 import { SolutionDetailPage } from './features/solutions/SolutionDetailPage';
+import { AiChatPage } from './features/ai-chat/AiChatPage';
 import { TraceDebugPage } from './features/admin/trace/TraceDebugPage';
 import { KnowledgeListPage } from './features/admin/knowledge/KnowledgeListPage';
 
@@ -39,7 +40,8 @@ export default function App() {
               <Route path="/products/:id" element={<ProductDetailPage />} />
               <Route path="/solutions/:id" element={<SolutionDetailPage />} />
               <Route path="/solutions" element={<PlaceholderPage title="方案资料" />} />
-              <Route path="/ai-chat" element={<PlaceholderPage title="AI 问答" />} />
+              <Route path="/ai-chat" element={<AiChatPage />} />
+              <Route path="/ai-chat/:sessionId" element={<AiChatPage />} />
               <Route path="/profile" element={<PlaceholderPage title="个人中心" />} />
               <Route path="/admin/knowledge" element={<KnowledgeListPage />} />
               <Route path="/admin/trace/:docId" element={<TraceDebugPage />} />
