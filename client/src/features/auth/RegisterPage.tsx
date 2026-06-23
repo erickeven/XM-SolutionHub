@@ -34,7 +34,6 @@ export function RegisterPage() {
   const { register: registerUser } = useAuth();
 
   const {
-    register: registerField,
     control,
     handleSubmit,
     watch,
@@ -80,12 +79,18 @@ export function RegisterPage() {
             validateStatus={errors.email ? 'error' : ''}
             help={errors.email?.message}
           >
-            <Input
-              {...registerField('email')}
-              type="email"
-              size="large"
-              style={{ minHeight: 44 }}
-              placeholder=""
+            <Controller
+              name="email"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  type="email"
+                  size="large"
+                  style={{ minHeight: 44 }}
+                  placeholder=""
+                />
+              )}
             />
           </Form.Item>
 
@@ -94,11 +99,17 @@ export function RegisterPage() {
             validateStatus={errors.password ? 'error' : ''}
             help={errors.password?.message}
           >
-            <Input.Password
-              {...registerField('password')}
-              size="large"
-              style={{ minHeight: 44 }}
-              placeholder=""
+            <Controller
+              name="password"
+              control={control}
+              render={({ field }) => (
+                <Input.Password
+                  {...field}
+                  size="large"
+                  style={{ minHeight: 44 }}
+                  placeholder=""
+                />
+              )}
             />
             {password && <PasswordStrength password={password} />}
           </Form.Item>
@@ -108,11 +119,17 @@ export function RegisterPage() {
             validateStatus={errors.confirmPassword ? 'error' : ''}
             help={errors.confirmPassword?.message}
           >
-            <Input.Password
-              {...registerField('confirmPassword')}
-              size="large"
-              style={{ minHeight: 44 }}
-              placeholder=""
+            <Controller
+              name="confirmPassword"
+              control={control}
+              render={({ field }) => (
+                <Input.Password
+                  {...field}
+                  size="large"
+                  style={{ minHeight: 44 }}
+                  placeholder=""
+                />
+              )}
             />
           </Form.Item>
 

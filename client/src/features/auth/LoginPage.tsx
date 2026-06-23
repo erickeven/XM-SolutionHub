@@ -1,4 +1,4 @@
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, Input, Button, message, Typography } from 'antd';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
@@ -14,7 +14,7 @@ export function LoginPage() {
   const { login } = useAuth();
 
   const {
-    register: registerField,
+    control,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<LoginInput>({
@@ -51,12 +51,18 @@ export function LoginPage() {
             validateStatus={errors.email ? 'error' : ''}
             help={errors.email?.message}
           >
-            <Input
-              {...registerField('email')}
-              type="email"
-              size="large"
-              style={{ minHeight: 44 }}
-              placeholder=""
+            <Controller
+              name="email"
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  type="email"
+                  size="large"
+                  style={{ minHeight: 44 }}
+                  placeholder=""
+                />
+              )}
             />
           </Form.Item>
 
@@ -65,11 +71,17 @@ export function LoginPage() {
             validateStatus={errors.password ? 'error' : ''}
             help={errors.password?.message}
           >
-            <Input.Password
-              {...registerField('password')}
-              size="large"
-              style={{ minHeight: 44 }}
-              placeholder=""
+            <Controller
+              name="password"
+              control={control}
+              render={({ field }) => (
+                <Input.Password
+                  {...field}
+                  size="large"
+                  style={{ minHeight: 44 }}
+                  placeholder=""
+                />
+              )}
             />
           </Form.Item>
 
