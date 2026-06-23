@@ -529,7 +529,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
 
 ### Wave 6 — Phase 6: 上线加固 (T43-T48)
 
-- [ ] 43. 性能验证 — 选型 P95<2s + AI 首字 P95<3s + PDF LCP P95<1.5s
+- [x] 43. 性能验证 — 选型 P95<2s + AI 首字 P95<3s + PDF LCP P95<1.5s
   What to do: 使用 Supertest + k6/autocannon 或 Vitest bench; seed 100+ 产品; `/selection/match` P95<2s (PRD §3 L30); AI SSE 首字 P95<3s (PRD §3 L32); PDF 首屏渲染第 1 页 P95<1.5s (PRD §3 L31)。
   Must NOT do: 不用 mock 替代真实性能; 不跳过任何 KPI。
   Parallelization: Wave W6 | Blocked by: T18, T25, T35, T42 | Can parallelize with: T44-T48
@@ -547,7 +547,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) 3 视口截图 → Evidence `.omo/evidence/task-44-responsive/`; (failure) 移动端横向滚动 → FAIL。
   Commit: Y | test(responsive): 3视口截图+数据量走查+6态验证
 
-- [ ] 45. 安全审计 — 越权/CSRF/限流/文件鉴权/输入校验
+- [x] 45. 安全审计 — 越权/CSRF/限流/文件鉴权/输入校验
   What to do: Supertest + 手工: (1) 匿名篡改页码/Range→不可读第4页后 (复验); (2) CSRF: 缺 token→403 (复验); (3) 限流: 登录5/min, AI 10/min (复验); (4) RBAC: 匿名→admin→403, USER→leads→403; (5) 输入校验: XSS payload in param→sanitized; (6) 文件: 永久直链不存在; (7) 日志无敏感信息。
   Must NOT do: 不跳过任何安全检查; 不接受"应该安全"无证据。
   Parallelization: Wave W6 | Blocked by: T25, T35 | Can parallelize with: T43, T44, T46-T48
@@ -556,7 +556,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) 全 PASS → Evidence `.omo/evidence/task-45-security.txt`; (failure) 任一→阻塞上线。
   Commit: Y | test(security): 越权/CSRF/限流/RBAC/输入/文件/日志 7 项审计
 
-- [ ] 46. 部署配置 — Docker 生产 compose + Nginx 反代 + README
+- [x] 46. 部署配置 — Docker 生产 compose + Nginx 反代 + README
   What to do: 生产 `docker-compose.prod.yml` (API + Worker 两服务, 复用同一镜像); Nginx 反代配置 (API /api, 前端 /, SSE 关闭缓冲+心跳); `README.md` 零启动文档 (含 docker compose, migrate, seed, build 步骤); `.env.example` 覆盖全部变量 (复验 T10)。
   Must NOT do: 不把生产密钥写入 compose; 不在 README 暴露内网 IP。
   Parallelization: Wave W6 | Blocked by: T42 | Can parallelize with: T43-T45, T47, T48
@@ -565,7 +565,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) 按 README 步骤 → 服务启动 → Evidence `.omo/evidence/task-46-deploy.txt`; (failure) 缺少步骤 → FAIL。
   Commit: Y | chore(deploy): Docker prod compose + Nginx + README 零启动文档
 
-- [ ] 47. 备份恢复演练 — 数据库 + 文件存储
+- [x] 47. 备份恢复演练 — 数据库 + 文件存储
   What to do: PostgreSQL: pg_dump 备份 → 删库 → psql 恢复 → 验证数据一致; MinIO: 备份 bucket → 删除 → 恢复 → 验证文件存在; 记录恢复演练结果。
   Must NOT do: 不跳过恢复 (只备份不恢复不算); 不在上线后做首次演练 (上线前必须完成)。
   Parallelization: Wave W6 | Blocked by: T46 | Can parallelize with: T43-T45, T48
@@ -574,7 +574,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) pg_dump → drop → psql → count 一致 → Evidence `.omo/evidence/task-47-restore.txt`; (failure) 恢复后数据不一致 → FAIL。
   Commit: Y | chore(ops): 备份恢复演练+记录结果
 
-- [ ] 48. 上线检查清单验证 — PRD §12 全部 12 项
+- [x] 48. 上线检查清单验证 — PRD §12 全部 12 项
   What to do: 逐项验证 PRD §12 L349-362: (1) P0 功能可演示; (2) 三类角色路径通过 (匿名/注册/管理员 E2E); (3) 文件无越权; (4) AI 有来源+无资料拒答; (5) 索引失败可见可重试; (6) 后台可维护全部资源; (7) PC/平板/手机无横向滚动; (8) 关键接口日志/限流/错误/审计; (9) .env.example 完整; (10) 空库迁移成功; (11) README 零启动; (12) 备份恢复演练完成。
   Must NOT do: 不跳过任何检查项; 不接受"应该通过"无证据。
   Parallelization: Wave W6 | Blocked by: T43-T47 | Blocks: 无

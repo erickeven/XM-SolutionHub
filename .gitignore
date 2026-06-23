@@ -7,6 +7,10 @@
 # OpenCode run continuation
 .omo/run-continuation/
 
+# Build outputs
+client/dist/
+server/dist/
+
 # OS
 Thumbs.db
 .DS_Store
