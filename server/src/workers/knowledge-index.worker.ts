@@ -253,8 +253,8 @@ async function processMessages(): Promise<number> {
   // Read new messages for this consumer
   const raw = await redis.xreadgroup(
     'GROUP', GROUP, CONSUMER,
-    'STREAMS', STREAM, '>',
     'COUNT', 10,
+    'STREAMS', STREAM, '>',
   );
 
   const messages = raw as unknown as StreamMessages;
