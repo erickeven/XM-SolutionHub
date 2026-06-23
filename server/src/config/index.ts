@@ -13,6 +13,7 @@ const envBoolean = z.preprocess((value) => {
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  COOKIE_SECURE: envBoolean.optional(),
   PORT: z.coerce.number().default(3000),
   WEB_ORIGIN: z.string().url().default('http://localhost:5173'),
   DATABASE_URL: z.string(),

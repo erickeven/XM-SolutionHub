@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import * as authApi from '../api/auth';
+import { restoreAccessToken } from '../api/client';
 import type { AuthUser, LoginInput, RegisterInput } from '../types/auth';
 
 interface UseAuthResult {
@@ -24,11 +25,10 @@ function bootstrapSession(): Promise<void> {
   }
 
   if (!bootstrapPromise) {
-    bootstrapPromise = authApi
-      .getMe()
-      .then((user) => {
-        const token = useAuthStore.getState().accessToken;
-        if (token) useAuthStore.getState().setAuth(user, token);
+    bootstrapPromise = restoreAccessToken()
+      .then(async (token) => {
+        const user = await authApi.getMe();
+        useAuthStore.getState().setAuth(user, token);
       })
       .catch(() => useAuthStore.getState().clearAuth())
       .finally(() => {

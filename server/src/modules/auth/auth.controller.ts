@@ -15,11 +15,15 @@ const REFRESH_COOKIE = 'refreshToken';
 const CSRF_COOKIE = 'csrf-token';
 const REFRESH_COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 
+function useSecureCookies(): boolean {
+  return config.COOKIE_SECURE ?? config.NODE_ENV === 'production';
+}
+
 function cookieOptions() {
   return {
     httpOnly: true,
     sameSite: 'lax' as const,
-    secure: config.NODE_ENV === 'production',
+    secure: useSecureCookies(),
     path: '/',
     maxAge: REFRESH_COOKIE_MAX_AGE,
   };
@@ -29,7 +33,7 @@ function csrfCookieOptions() {
   return {
     httpOnly: false,
     sameSite: 'lax' as const,
-    secure: config.NODE_ENV === 'production',
+    secure: useSecureCookies(),
     path: '/',
     maxAge: REFRESH_COOKIE_MAX_AGE,
   };

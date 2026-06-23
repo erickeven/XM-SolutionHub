@@ -61,6 +61,10 @@ async function refreshAccessToken(): Promise<string> {
   return refreshPromise;
 }
 
+export function restoreAccessToken(): Promise<string> {
+  return refreshAccessToken();
+}
+
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
