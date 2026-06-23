@@ -1,5 +1,7 @@
 import {
   S3Client,
+  CreateBucketCommand,
+  HeadBucketCommand,
   PutObjectCommand,
   GetObjectCommand,
   DeleteObjectCommand,
@@ -19,6 +21,7 @@ export interface MinioStorageAdapterOptions {
 export class MinioStorageAdapter implements StorageAdapter {
   private readonly client: S3Client;
   private readonly bucket: string;
+  private bucketReady: Promise<void> | null = null;
 
   constructor(options: MinioStorageAdapterOptions) {
     this.bucket = options.bucket;
@@ -37,7 +40,24 @@ export class MinioStorageAdapter implements StorageAdapter {
     });
   }
 
+  private async ensureBucket(): Promise<void> {
+    if (!this.bucketReady) {
+      this.bucketReady = (async () => {
+        try {
+          await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
+        } catch {
+          await this.client.send(new CreateBucketCommand({ Bucket: this.bucket }));
+        }
+      })().catch((error: unknown) => {
+        this.bucketReady = null;
+        throw error;
+      });
+    }
+    await this.bucketReady;
+  }
+
   async getObject(storageKey: string): Promise<Buffer> {
+    await this.ensureBucket();
     const command = new GetObjectCommand({
       Bucket: this.bucket,
       Key: storageKey,
@@ -53,6 +73,7 @@ export class MinioStorageAdapter implements StorageAdapter {
   }
 
   async putObject(options: PutObjectOptions): Promise<void> {
+    await this.ensureBucket();
     const command = new PutObjectCommand({
       Bucket: this.bucket,
       Key: options.storageKey,
@@ -67,6 +88,7 @@ export class MinioStorageAdapter implements StorageAdapter {
   }
 
   async removeObject(storageKey: string): Promise<void> {
+    await this.ensureBucket();
     const command = new DeleteObjectCommand({
       Bucket: this.bucket,
       Key: storageKey,
