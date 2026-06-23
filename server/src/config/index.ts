@@ -4,13 +4,20 @@ import { logger } from '../lib/logger';
 const DEVELOPMENT_STORAGE_SIGNING_SECRET =
   'development-storage-signing-secret-change-me';
 
+const envBoolean = z.preprocess((value) => {
+  if (typeof value !== 'string') return value;
+  if (value.toLowerCase() === 'true') return true;
+  if (value.toLowerCase() === 'false') return false;
+  return value;
+}, z.boolean());
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().default(3000),
   WEB_ORIGIN: z.string().url().default('http://localhost:5173'),
   DATABASE_URL: z.string(),
   REDIS_URL: z.string(),
-  PGVECTOR_ENABLED: z.coerce.boolean().default(true),
+  PGVECTOR_ENABLED: envBoolean.default(true),
   KNOWLEDGE_SEARCH_MODE: z.enum(['fast', 'standard']).default('fast'),
   KNOWLEDGE_INDEX_VERSION: z.string().default('v1'),
   KNOWLEDGE_SCORE_THRESHOLD: z.coerce.number().default(0.72),
@@ -26,7 +33,7 @@ const envSchema = z.object({
   MINIO_PORT: z.coerce.number().default(9000),
   MINIO_ACCESS_KEY: z.string().optional(),
   MINIO_SECRET_KEY: z.string().optional(),
-  MINIO_USE_SSL: z.coerce.boolean().default(false),
+  MINIO_USE_SSL: envBoolean.default(false),
   MINIO_BUCKET: z.string().default('xinmaowei'),
   STORAGE_SIGNING_SECRET: z
     .string()
