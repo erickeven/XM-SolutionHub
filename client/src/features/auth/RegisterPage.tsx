@@ -1,4 +1,4 @@
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, Input, Button, message, Typography, Checkbox } from 'antd';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
@@ -35,6 +35,7 @@ export function RegisterPage() {
 
   const {
     register: registerField,
+    control,
     handleSubmit,
     watch,
     formState: { errors, isSubmitting },
@@ -119,9 +120,19 @@ export function RegisterPage() {
             validateStatus={errors.privacyAccepted ? 'error' : ''}
             help={errors.privacyAccepted?.message}
           >
-            <Checkbox {...registerField('privacyAccepted')}>
-              <Text className="text-sm">我已阅读并同意《隐私政策》</Text>
-            </Checkbox>
+            <Controller
+              name="privacyAccepted"
+              control={control}
+              render={({ field }) => (
+                <Checkbox
+                  checked={field.value}
+                  onBlur={field.onBlur}
+                  onChange={(event) => field.onChange(event.target.checked)}
+                >
+                  <Text className="text-sm">我已阅读并同意《隐私政策》</Text>
+                </Checkbox>
+              )}
+            />
           </Form.Item>
 
           <Form.Item>
