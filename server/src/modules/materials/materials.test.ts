@@ -233,4 +233,103 @@ describe.skipIf(!process.env.DATABASE_URL)('Materials Admin API', () => {
       expect(found).toBeUndefined();
     });
   });
+
+  // Helper: create + activate a material, return its id
+  async function createActiveMaterial(token: string): Promise<string> {
+    const solutionId = await createSolution(token);
+
+    await request
+      .post('/api/v1/admin/materials')
+      .set('Authorization', `Bearer ${token}`)
+      .field('type', 'datasheet')
+      .field('title', `Preview Test ${Date.now()}`)
+      .field('solutionId', solutionId)
+      .attach('file', minimalPdf, 'preview-test.pdf');
+
+    const listRes = await request
+      .get(`/api/v1/admin/materials?solutionId=${solutionId}`)
+      .set('Authorization', `Bearer ${token}`);
+    const materialId = listRes.body.data.items[0].id as string;
+
+    await request
+      .patch(`/api/v1/admin/materials/${materialId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ status: 'ACTIVE' });
+
+    return materialId;
+  }
+
+  describe('GET /api/v1/materials/:id/preview', () => {
+    it('should return 200 with preview URL for anonymous', async () => {
+      const token = await loginAdmin();
+      const materialId = await createActiveMaterial(token);
+
+      const res = await request.get(`/api/v1/materials/${materialId}/preview`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.code).toBe(0);
+      expect(res.body.data).toHaveProperty('url');
+      expect(res.body.data).toHaveProperty('previewPages');
+    });
+
+    it('should return 200 with full PDF URL for authenticated user', async () => {
+      const token = await loginAdmin();
+      const materialId = await createActiveMaterial(token);
+
+      const res = await request
+        .get(`/api/v1/materials/${materialId}/preview`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.code).toBe(0);
+      expect(res.body.data).toHaveProperty('url');
+      expect(res.body.data).toHaveProperty('previewPages');
+    });
+
+    it('should return 404 for INACTIVE material', async () => {
+      const token = await loginAdmin();
+      const solutionId = await createSolution(token);
+
+      await request
+        .post('/api/v1/admin/materials')
+        .set('Authorization', `Bearer ${token}`)
+        .field('type', 'datasheet')
+        .field('title', 'Inactive Preview Test')
+        .field('solutionId', solutionId)
+        .attach('file', minimalPdf, 'inactive-preview.pdf');
+
+      const listRes = await request
+        .get(`/api/v1/admin/materials?solutionId=${solutionId}`)
+        .set('Authorization', `Bearer ${token}`);
+      const materialId = listRes.body.data.items[0].id as string;
+
+      // Material is DRAFT (not ACTIVE) → 404
+      const res = await request.get(`/api/v1/materials/${materialId}/preview`);
+      expect(res.status).toBe(404);
+    });
+  });
+
+  describe('POST /api/v1/materials/:id/download', () => {
+    it('should return 401 for anonymous (no auth)', async () => {
+      const token = await loginAdmin();
+      const materialId = await createActiveMaterial(token);
+
+      const res = await request.post(`/api/v1/materials/${materialId}/download`);
+      expect(res.status).toBe(401);
+    });
+
+    it('should return 200 with watermarked URL for authenticated user', async () => {
+      const token = await loginAdmin();
+      const materialId = await createActiveMaterial(token);
+
+      const res = await request
+        .post(`/api/v1/materials/${materialId}/download`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.code).toBe(0);
+      expect(res.body.data).toHaveProperty('url');
+      expect(res.body.data.expiresInSeconds).toBe(600);
+    });
+  });
 });

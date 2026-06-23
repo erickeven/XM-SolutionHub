@@ -38,6 +38,30 @@ export async function findById(id: string): Promise<Material | null> {
   return prisma.material.findUnique({ where: { id } });
 }
 
+export async function findActiveById(id: string): Promise<Material | null> {
+  return prisma.material.findFirst({ where: { id, status: 'ACTIVE' } });
+}
+
+export async function createLeadEvent(data: {
+  leadId: string;
+  eventType: string;
+  payload: Record<string, unknown>;
+}): Promise<void> {
+  await prisma.leadEvent.create({
+    data: {
+      leadId: data.leadId,
+      eventType: data.eventType,
+      payload: data.payload as never,
+    },
+  });
+}
+
+export async function findLeadByUserId(
+  userId: string,
+): Promise<{ id: string } | null> {
+  return prisma.lead.findFirst({ where: { userId }, select: { id: true } });
+}
+
 export async function findByStorageKey(
   storageKey: string,
 ): Promise<Material | null> {

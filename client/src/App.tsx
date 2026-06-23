@@ -6,6 +6,9 @@ import { MainLayout } from './layouts/MainLayout';
 import { HomePage } from './features/selection/HomePage';
 import { SelectionPage } from './features/selection/SelectionPage';
 import { ProductDetailPage } from './features/products/ProductDetailPage';
+import { LoginPage } from './features/auth/LoginPage';
+import { RegisterPage } from './features/auth/RegisterPage';
+import { SolutionDetailPage } from './features/solutions/SolutionDetailPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,15 +26,18 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <Routes>
+            {/* Auth pages — outside MainLayout, full page */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+
+            {/* Main layout pages */}
             <Route element={<MainLayout />}>
               <Route path="/" element={<HomePage />} />
               <Route path="/selection" element={<SelectionPage />} />
               <Route path="/products/:id" element={<ProductDetailPage />} />
-              <Route path="/solutions/:id" element={<PlaceholderPage title="方案资料" />} />
+              <Route path="/solutions/:id" element={<SolutionDetailPage />} />
               <Route path="/solutions" element={<PlaceholderPage title="方案资料" />} />
               <Route path="/ai-chat" element={<PlaceholderPage title="AI 问答" />} />
-              <Route path="/login" element={<PlaceholderPage title="登录" />} />
-              <Route path="/register" element={<PlaceholderPage title="注册" />} />
               <Route path="/profile" element={<PlaceholderPage title="个人中心" />} />
               <Route path="/admin/*" element={<PlaceholderPage title="后台管理" />} />
             </Route>

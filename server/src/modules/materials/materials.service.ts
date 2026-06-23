@@ -1,6 +1,8 @@
 import { AppError } from '../../lib/errors';
 import { getStorageAdapter } from '../../lib/storage';
+import { addWatermark } from '../../lib/pdf/watermark';
 import { logFromContext } from '../audit/audit.service';
+import type { AuthUser } from '../../middleware/auth';
 import * as repository from './materials.repository';
 import type {
   CreateMaterialInput,
@@ -8,6 +10,8 @@ import type {
   MaterialPaginatedResult,
   MaterialDetail,
 } from './materials.types';
+
+const SIGNED_URL_EXPIRES = 600;
 
 export async function listMaterials(
   query: MaterialQuery,
@@ -219,4 +223,97 @@ export async function getPublicMaterialsBySolution(
       previewPages: m.previewPages,
     };
   });
+}
+
+export async function getPreviewUrl(
+  materialId: string,
+  isAuthenticated: boolean,
+): Promise<{ url: string; previewPages: number }> {
+  const material = await repository.findActiveById(materialId);
+  if (!material) {
+    throw new AppError(3001, 'Material not found', 404);
+  }
+
+  const adapter = getStorageAdapter();
+
+  if (isAuthenticated) {
+    // Authenticated: full PDF, inline
+    const url = await adapter.createSignedUrl({
+      storageKey: material.originalStorageKey,
+      expiresInSeconds: SIGNED_URL_EXPIRES,
+      disposition: 'inline',
+    });
+    return { url, previewPages: material.previewPages };
+  }
+
+  // Anonymous: preview PDF (3 pages), inline
+  if (!material.previewStorageKey) {
+    throw new AppError(3003, '预览未生成', 404);
+  }
+
+  const url = await adapter.createSignedUrl({
+    storageKey: material.previewStorageKey,
+    expiresInSeconds: SIGNED_URL_EXPIRES,
+    disposition: 'inline',
+  });
+  return { url, previewPages: material.previewPages };
+}
+
+export async function getDownloadUrl(
+  materialId: string,
+  user: AuthUser,
+  ip?: string,
+): Promise<{ url: string; expiresInSeconds: number }> {
+  const material = await repository.findActiveById(materialId);
+  if (!material) {
+    throw new AppError(3001, 'Material not found', 404);
+  }
+
+  const adapter = getStorageAdapter();
+
+  // 1. Download original PDF
+  const originalBuffer = await adapter.getObject(material.originalStorageKey);
+
+  // 2. Add watermark with user email
+  const watermarkedBuffer = await addWatermark(originalBuffer, user.email);
+
+  // 3. Upload watermarked PDF as temporary key
+  const tempKey = `tmp/watermark-${materialId}-${user.userId}-${Date.now()}.pdf`;
+  await adapter.putObject({
+    storageKey: tempKey,
+    body: watermarkedBuffer,
+    contentType: 'application/pdf',
+  });
+
+  // 4. Generate signed URL for download
+  const url = await adapter.createSignedUrl({
+    storageKey: tempKey,
+    expiresInSeconds: SIGNED_URL_EXPIRES,
+    disposition: 'attachment',
+  });
+
+  // 5. Write AuditLog
+  logFromContext({
+    actorId: user.userId,
+    action: 'material_download',
+    targetType: 'material',
+    targetId: materialId,
+    payload: { userId: user.userId, materialId, ip: ip ?? null },
+  });
+
+  // 6. Write LeadEvent (best-effort)
+  try {
+    const lead = await repository.findLeadByUserId(user.userId);
+    if (lead) {
+      await repository.createLeadEvent({
+        leadId: lead.id,
+        eventType: 'download',
+        payload: { materialId, title: material.title },
+      });
+    }
+  } catch {
+    // LeadEvent is best-effort, must not break download
+  }
+
+  return { url, expiresInSeconds: SIGNED_URL_EXPIRES };
 }

@@ -20,4 +20,14 @@ const publicRoutes: Router = Router();
 publicRoutes.use(apiLimiter);
 publicRoutes.get('/', controller.publicListBySolutionHandler);
 
-export { adminRoutes, publicRoutes };
+// Material preview/download routes — mounted at /api/v1/materials
+const materialPublicRoutes: Router = Router();
+materialPublicRoutes.use(apiLimiter);
+materialPublicRoutes.get('/:id/preview', controller.previewHandler);
+materialPublicRoutes.post(
+  '/:id/download',
+  authMiddleware,
+  controller.downloadHandler,
+);
+
+export { adminRoutes, publicRoutes, materialPublicRoutes };

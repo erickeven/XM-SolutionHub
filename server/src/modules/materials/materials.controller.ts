@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { AppError } from '../../lib/errors';
 import { successResponse } from '../../lib/response';
-import { optionalAuth } from '../../middleware/auth';
+import { optionalAuth, type AuthUser } from '../../middleware/auth';
 import {
   materialQuerySchema,
   createMaterialSchema,
@@ -145,6 +145,39 @@ export async function publicListBySolutionHandler(
       );
       res.status(200).json(successResponse({ items: materials }));
     });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function previewHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const id = requireId(req);
+    await optionalAuth(req, res, async () => {
+      const isAuthenticated = req.user !== null;
+      const result = await service.getPreviewUrl(id, isAuthenticated);
+      res.status(200).json(successResponse(result));
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function downloadHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const id = requireId(req);
+    const user = req.user as AuthUser;
+    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ?? req.ip ?? undefined;
+    const result = await service.getDownloadUrl(id, user, ip);
+    res.status(200).json(successResponse(result));
   } catch (err) {
     next(err);
   }

@@ -11,7 +11,7 @@ import productsRoutes from './modules/products/products.routes';
 import productsPublicRoutes from './modules/products/products.public.routes';
 import selectionRoutes from './modules/selection/selection.routes';
 import { adminRoutes as solutionAdminRoutes, publicRoutes as solutionPublicRoutes } from './modules/solutions/solutions.routes';
-import { adminRoutes as materialAdminRoutes, publicRoutes as materialPublicRoutes } from './modules/materials/materials.routes';
+import { adminRoutes as materialAdminRoutes, publicRoutes as materialPublicRoutes, materialPublicRoutes as materialPreviewRoutes } from './modules/materials/materials.routes';
 import { errorHandler } from './middleware/errorHandler';
 
 const app: Express = express();
@@ -79,7 +79,10 @@ app.use('/api/v1/admin/materials', materialAdminRoutes);
 // 16. Public materials by solution (no auth required)
 app.use('/api/v1/solutions/:id/materials', materialPublicRoutes);
 
-// 17. Error handler (last)
+// 17. Material preview and download (mounted at /api/v1/materials)
+app.use('/api/v1/materials', materialPreviewRoutes);
+
+// 18. Error handler (last)
 app.use(errorHandler);
 
 export default app;

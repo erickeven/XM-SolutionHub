@@ -337,7 +337,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) 上传 10 页 PDF → 派生 3 页 → Evidence `.omo/evidence/task-21-derive.json`; (failure) 损坏 PDF → DRAFT 不变。
   Commit: Y | feat(server/materials): PDF 派生前3页预览件 + pageCount + storageKey隔离
 
-- [ ] 22. 资料预览 + 下载 API — 权限签发 + 水印 + 审计 + 10min 过期
+- [x] 22. 资料预览 + 下载 API — 权限签发 + 水印 + 审计 + 10min 过期
   What to do: GET `/api/v1/materials/{id}/preview` (公开): 匿名签 previewStorageKey (3 页), 登录签 originalStorageKey (全页), `Disposition: inline`; POST `/api/v1/materials/{id}/download` (登录): `pdf-lib` 加用户标识水印 → 临时 storageKey → 10min attachment 签名链接; 写 LeadEvent(download) + AuditLog(user/file/IP/time/source)。
   Must NOT do: 不返回永久直链; 匿名不可 download; 匿名不可签 originalStorageKey; 篡改页码/Range 不可读第 4 页后 (PRD §7.3 L189)。
   Parallelization: Wave W3 | Blocked by: T20, T21 | Blocks: T24 | Can parallelize with: T23
@@ -346,7 +346,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) Supertest 匿名 preview+登录 download → Evidence `.omo/evidence/task-22-preview-download.json`; (failure) 匿名 download→401; 11min 后→403。
   Commit: Y | feat(server/materials): 预览/下载 API + 派生件+水印+10min过期+审计
 
-- [ ] 23. 前端 — 登录/注册页 + 解锁弹窗 + 回跳恢复
+- [x] 23. 前端 — 登录/注册页 + 解锁弹窗 + 回跳恢复
   What to do: `client/src/features/auth/`; 登录+注册页 (邮箱+密码+确认+隐私勾选+强度提示), React Hook Form + Zod 前端校验; 解锁弹窗文案 (design.md §5.6 L325); 注册/登录后回跳原页面 (PRD §7.3 L177); 移动端输入 ≥44px (design.md §6.2 L373)。
   Must NOT do: 不做大营销插图 (design.md §5.6 L315); 不用 placeholder 替代 label (design.md §6.2 L369)。
   Parallelization: Wave W3 | Blocked by: T22 | Blocks: T24
@@ -355,7 +355,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) Playwright: 匿名第4页→弹窗→注册→回第4页 → Evidence `.omo/evidence/task-23-unlock.png`; (failure) 7位密码→不可提交。
   Commit: Y | feat(client/auth): 登录/注册+解锁弹窗+回跳+前端校验
 
-- [ ] 24. 前端 — 方案资料页 (PDF 预览 + 权限遮罩 + 三栏/移动)
+- [x] 24. 前端 — 方案资料页 (PDF 预览 + 权限遮罩 + 三栏/移动)
   What to do: `client/src/features/solutions/`; PC: 左目录+权限, 中 PDF 预览, 右方案摘要+型号+下载; 移动: 顶部摘要, 中 Tabs, 底部固定操作; pdfjs-dist 预览; 页码/缩放/下载固定顶部; 匿名第4页遮罩; 登录回原页码; 加载失败有重试; 缺失显示"资料整理中"。
   Must NOT do: 遮罩非安全边界 (design.md §5.4 L273); 不暴露原始 PDF 地址; 不用空白/死链。
   Parallelization: Wave W3 | Blocked by: T22, T23 | Blocks: T25
@@ -364,7 +364,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) Playwright PC: 匿名3页→遮罩 → Evidence `.omo/evidence/task-24-pc.png`; (failure) 390px 无横向滚动 → Evidence `.omo/evidence/task-24-mobile.png`。
   Commit: Y | feat(client/solutions): 方案资料页 PDF预览+遮罩+三栏+移动+四态
 
-- [ ] 25. Phase 3 验收门 — 匿名和登录权限符合规则
+- [x] 25. Phase 3 验收门 — 匿名和登录权限符合规则
   What to do: 7 项验收: (1) typecheck; (2) test; (3) Supertest 越权: 篡改页码/Range→无法读第4页后; (4) 10min后链接失效; (5) 水印含用户标识; (6) Playwright E2E: 匿名选型→详情→预览3页→弹窗→注册→回第4页→下载; (7) 移动端无横向滚动。
   Parallelization: Wave W3 | Blocked by: T24 | Blocks: 无
   References: PRD §11 L344, §7.3 L185-190, §12 L351。

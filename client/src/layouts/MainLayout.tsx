@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
-import { Button, Drawer } from 'antd';
-import { MenuOutlined, RobotOutlined } from '@ant-design/icons';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Button, Drawer, Dropdown, message } from 'antd';
+import { MenuOutlined, RobotOutlined, UserOutlined, LogoutOutlined } from '@ant-design/icons';
+import { useAuth } from '../hooks/useAuth';
 
 const NAV_ITEMS = [
   { path: '/', label: '首页' },
@@ -12,7 +13,9 @@ const NAV_ITEMS = [
 
 export function MainLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, isAuthenticated, logout } = useAuth();
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
@@ -49,16 +52,47 @@ export function MainLayout() {
 
           {/* Login status */}
           <div className="hidden items-center gap-3 md:flex">
-            <Link to="/login">
-              <Button type="text" size="small" className="!text-slate-300 hover:!text-white">
-                登录
-              </Button>
-            </Link>
-            <Link to="/register">
-              <Button type="primary" size="small">
-                注册
-              </Button>
-            </Link>
+            {isAuthenticated && user ? (
+              <Dropdown
+                menu={{
+                  items: [
+                    {
+                      key: 'profile',
+                      label: '个人中心',
+                      onClick: () => navigate('/profile'),
+                    },
+                    {
+                      key: 'logout',
+                      label: '退出登录',
+                      icon: <LogoutOutlined />,
+                      onClick: async () => {
+                        await logout();
+                        message.success('已退出登录');
+                        navigate('/');
+                      },
+                    },
+                  ],
+                }}
+              >
+                <Button type="text" size="small" className="!text-slate-300 hover:!text-white">
+                  <UserOutlined className="!mr-1" />
+                  {user.email}
+                </Button>
+              </Dropdown>
+            ) : (
+              <>
+                <Link to="/login">
+                  <Button type="text" size="small" className="!text-slate-300 hover:!text-white">
+                    登录
+                  </Button>
+                </Link>
+                <Link to="/register">
+                  <Button type="primary" size="small">
+                    注册
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile hamburger */}
@@ -93,20 +127,45 @@ export function MainLayout() {
             </Link>
           ))}
           <hr className="border-slate-200" />
-          <Link
-            to="/login"
-            onClick={() => setMobileMenuOpen(false)}
-            className="text-base text-slate-700"
-          >
-            登录
-          </Link>
-          <Link
-            to="/register"
-            onClick={() => setMobileMenuOpen(false)}
-            className="text-base text-slate-700"
-          >
-            注册
-          </Link>
+          {isAuthenticated && user ? (
+            <>
+              <Link
+                to="/profile"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-base text-slate-700"
+              >
+                {user.email}
+              </Link>
+              <button
+                onClick={async () => {
+                  await logout();
+                  setMobileMenuOpen(false);
+                  message.success('已退出登录');
+                  navigate('/');
+                }}
+                className="text-left text-base text-slate-700"
+              >
+                退出登录
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                to="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-base text-slate-700"
+              >
+                登录
+              </Link>
+              <Link
+                to="/register"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-base text-slate-700"
+              >
+                注册
+              </Link>
+            </>
+          )}
         </nav>
       </Drawer>
 
