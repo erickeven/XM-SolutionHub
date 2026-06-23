@@ -4,7 +4,7 @@ import { logger } from './config';
 import { helmetMiddleware } from './middleware/helmet';
 import { corsMiddleware } from './middleware/cors';
 import { requestIdMiddleware } from './middleware/requestId';
-import { authLimiter } from './middleware/rateLimit';
+import { authLimiter, eventLimiter } from './middleware/rateLimit';
 import authRoutes from './modules/auth/auth.routes';
 import auditRoutes from './modules/audit/audit.routes';
 import productsRoutes from './modules/products/products.routes';
@@ -14,6 +14,9 @@ import { adminRoutes as solutionAdminRoutes, publicRoutes as solutionPublicRoute
 import { adminRoutes as materialAdminRoutes, publicRoutes as materialPublicRoutes, materialPublicRoutes as materialPreviewRoutes } from './modules/materials/materials.routes';
 import knowledgeRoutes from './modules/knowledge/knowledge.routes';
 import aiChatRoutes from './modules/ai-chat/ai-chat.routes';
+import eventsRoutes from './modules/leads/events.routes';
+import leadsAdminRoutes from './modules/leads/leads.routes';
+import usersRoutes from './modules/users/users.routes';
 import { errorHandler } from './middleware/errorHandler';
 
 const app: Express = express();
@@ -90,7 +93,16 @@ app.use('/api/v1/admin/knowledge', knowledgeRoutes);
 // 19. AI chat routes (authenticated users)
 app.use('/api/v1/ai', aiChatRoutes);
 
-// 20. Error handler (last)
+// 20. Events routes (public, rate limited 30/min)
+app.use('/api/v1/events', eventLimiter, eventsRoutes);
+
+// 21. User admin routes (admin only)
+app.use('/api/v1/admin/users', usersRoutes);
+
+// 22. Leads admin routes (STAFF+ with dataScope)
+app.use('/api/v1/admin/leads', leadsAdminRoutes);
+
+// 23. Error handler (last)
 app.use(errorHandler);
 
 export default app;

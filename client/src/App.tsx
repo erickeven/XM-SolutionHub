@@ -12,6 +12,10 @@ import { SolutionDetailPage } from './features/solutions/SolutionDetailPage';
 import { AiChatPage } from './features/ai-chat/AiChatPage';
 import { TraceDebugPage } from './features/admin/trace/TraceDebugPage';
 import { KnowledgeListPage } from './features/admin/knowledge/KnowledgeListPage';
+import { UserListPage } from './features/admin/users/UserListPage';
+import { AuditLogPage } from './features/admin/audit/AuditLogPage';
+import { LeadsListPage } from './features/admin/leads/LeadsListPage';
+import { ProfilePage } from './features/profile/ProfilePage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -42,9 +46,12 @@ export default function App() {
               <Route path="/solutions" element={<PlaceholderPage title="方案资料" />} />
               <Route path="/ai-chat" element={<AiChatPage />} />
               <Route path="/ai-chat/:sessionId" element={<AiChatPage />} />
-              <Route path="/profile" element={<PlaceholderPage title="个人中心" />} />
+              <Route path="/profile" element={<ProfilePage />} />
               <Route path="/admin/knowledge" element={<KnowledgeListPage />} />
               <Route path="/admin/trace/:docId" element={<TraceDebugPage />} />
+              <Route path="/admin/users" element={<UserListPage />} />
+              <Route path="/admin/audit" element={<AuditLogPage />} />
+              <Route path="/admin/leads" element={<LeadsListPage />} />
               <Route path="/admin/*" element={<PlaceholderPage title="后台管理" />} />
             </Route>
           </Routes>

@@ -44,3 +44,21 @@ export async function findMany(
 
   return { items, total };
 }
+
+export async function findAll(query: AuditQuery): Promise<AuditLog[]> {
+  const where: Record<string, unknown> = {};
+  if (query.actorId) where.actorId = query.actorId;
+  if (query.action) where.action = query.action;
+  if (query.targetType) where.targetType = query.targetType;
+  if (query.targetId) where.targetId = query.targetId;
+  if (query.startDate || query.endDate) {
+    where.createdAt = {};
+    if (query.startDate) (where.createdAt as Record<string, unknown>).gte = query.startDate;
+    if (query.endDate) (where.createdAt as Record<string, unknown>).lte = query.endDate;
+  }
+
+  return prisma.auditLog.findMany({
+    where,
+    orderBy: { createdAt: 'desc' },
+  });
+}

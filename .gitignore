@@ -4,6 +4,9 @@
 # Local deploy config (sensitive)
 .env.local
 
+# OpenCode run continuation
+.omo/run-continuation/
+
 # OS
 Thumbs.db
 .DS_Store

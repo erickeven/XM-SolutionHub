@@ -465,7 +465,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
 
 ### Wave 5 — Phase 5: 线索后台 (T36-T42)
 
-- [ ] 36. 事件采集 API — `/api/v1/events` POST + 限流 + 白名单
+- [x] 36. 事件采集 API — `/api/v1/events` POST + 限流 + 白名单
   What to do: `server/src/modules/leads/events.api.ts`; POST `/api/v1/events` (公开, 限流 30/min); 接受白名单内行为: selection/product_view/material_preview/material_download/ai_question/ai_feedback/register; 不信任客户端分值 (PRD §9 L302); 采集 anonymousId (未登录) 或 userId (登录, 从 JWT 获取, 不信任客户端传的 userId); payload 含行为类型+时间戳+页面路径+额外参数。
   Must NOT do: 不信任客户端分值; 不接受白名单外的行为类型; 不信任客户端 userId。
   Parallelization: Wave W5 | Blocked by: T8 | Blocks: T37
@@ -474,7 +474,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) Supertest: POST 5 种行为 → 200 → Evidence `.omo/evidence/task-36-events.json`; (failure) 非白名单 → 400; 31次/分钟 → 429。
   Commit: Y | feat(server/leads): 事件采集API+白名单+限流+不信任客户端分值
 
-- [ ] 37. 线索聚合 — 匿名合并 + 热度评分 + 状态流转
+- [x] 37. 线索聚合 — 匿名合并 + 热度评分 + 状态流转
   What to do: `server/src/modules/leads/leads.service.ts`; 登录用户按 userId 聚合; 未登录按 anonymousId 聚合, 注册后合并 (LeadEvent 迁移到 userId, PRD §7.5 L226); 热度分: download>register>ai_question>solution_preview>selection (PRD §7.5 L227); 状态流转: NEW→ASSIGNED→FOLLOWING→CONVERTED/ABANDONED (PRD §7.5 L232-234); 注册成功后 5 秒内生成或合并线索 (PRD §7.5 L238); 同一用户保留完整行为明细不覆盖历史。
   Must NOT do: 不覆盖历史行为; 不在前端做聚合; 不跳过匿名→注册合并。
   Parallelization: Wave W5 | Blocked by: T36 | Blocks: T38
@@ -483,7 +483,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) Vitest: 匿名 events → 注册 → Lead 合并到 userId, 热度分含 download 权重 → Evidence `.omo/evidence/task-37-aggregation.json`; (failure) 注册后 Lead 不存在 → FAIL。
   Commit: Y | feat(server/leads): 匿名合并+热度评分+状态流转+5s内生成
 
-- [ ] 38. 线索后台 API — 列表/筛选/分配/状态/导出 + dataScope
+- [x] 38. 线索后台 API — 列表/筛选/分配/状态/导出 + dataScope
   What to do: GET `/api/v1/admin/leads` (内部用户: 仅返回 assignedTo=自己; 审核员+:全量, PRD §9 L319); POST `/api/v1/admin/leads/{id}/assign` (审核员+); PATCH `/api/v1/admin/leads/{id}/status` (内部用户:仅自己的; 审核员+:全量); POST `/api/v1/admin/leads/export` (审核员+, 按当前筛选条件导出); 分配和状态变更加写 AuditLog。
   Must NOT do: 内部用户不能改派/导出/访问他人线索 (PRD §7.5 L240); 外部用户不可访问 (PRD §7.5 L242); dataScope 下推到 Repository (T8)。
   Parallelization: Wave W5 | Blocked by: T37 | Blocks: T40 | Can parallelize with: T39
@@ -492,7 +492,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) Supertest: AUDITOR 列表+assign+status+export → Evidence `.omo/evidence/task-38-leads-api.json`; (failure) STAFF→仅自己; USER→403。
   Commit: Y | feat(server/leads): 列表/筛选/分配/状态/导出+dataScope+审计
 
-- [ ] 39. 审计日志查询 API — `/api/v1/admin/audit` (管理员)
+- [x] 39. 审计日志查询 API — `/api/v1/admin/audit` (管理员)
   What to do: `server/src/modules/audit/audit.routes.ts`; GET `/api/v1/admin/audit` (管理员, 分页, 按 actorId/action/targetType/date 筛选, PRD §9 L324); 支持导出; payload 为 JSON (不展示敏感字段)。
   Must NOT do: 非管理员→403; payload 不含密码/token 明文。
   Parallelization: Wave W5 | Blocked by: T8 | Blocks: T41 | Can parallelize with: T38
@@ -501,7 +501,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) Supertest: ADMIN → audit 列表 → Evidence `.omo/evidence/task-39-audit.json`; (failure) STAFF → 403。
   Commit: Y | feat(server/audit): 审计日志查询/筛选/导出+管理员权限
 
-- [ ] 40. 前端 — 线索管理后台 (表格+筛选+分配+状态+导出)
+- [x] 40. 前端 — 线索管理后台 (表格+筛选+分配+状态+导出)
   What to do: `client/src/features/admin/leads/`; 后台布局: 固定侧栏 240px, 顶部 56px, 表格+分页 (design.md §5.7 L331-349); 支持搜索/筛选/分页/排序; 操作列固定右; 状态用标签不用纯文字; 高风险操作二次确认; 移动端降级为卡片列表。
   Must NOT do: 不做营销式卡片堆叠 (design.md §5.7 L329); 删除/下架/重建必须二次确认 (design.md §5.7 L348)。
   Parallelization: Wave W5 | Blocked by: T38 | Blocks: T42 | Can parallelize with: T41
@@ -510,7 +510,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) Playwright: AUDITOR → leads 列表 → assign → status → export → Evidence `.omo/evidence/task-40-leads-admin.png`; (failure) STAFF → 仅自己, 无 assign 按钮。
   Commit: Y | feat(client/admin/leads): 表格+筛选+分配+状态+导出+二次确认
 
-- [ ] 41. 用户管理后端 API + 审计日志 API + 个人中心 + 后台前端
+- [x] 41. 用户管理后端 API + 审计日志 API + 个人中心 + 后台前端
   What to do: **后端**: `server/src/modules/users/` 实现 `/api/v1/admin/users[/{id}]` GET/POST/PATCH/DELETE (管理员); 创建用户 (email+password+role), 编辑角色, 禁用用户 (status=INACTIVE → 撤销全部 RefreshToken, PRD §7.6 item 8), 写 AuditLog; `server/src/modules/audit/audit.routes.ts` GET `/api/v1/admin/audit` (管理员, 筛选 actor/action/target/date, 支持导出); **前端**: `client/src/features/admin/audit/` (表格+筛选+导出) + `client/src/features/admin/users/` (CRUD+角色+禁用, 二次确认) + `client/src/features/profile/` (`/profile` 个人中心: 显示用户信息+修改密码入口, tech.md §8.1 L461); 高风险操作二次确认。
   Must NOT do: 审计 payload 不展示敏感字段; 非管理员→403; 禁用用户时同步撤销 token 不可遗漏 (PRD §7.6 item 8)。
   Parallelization: Wave W5 | Blocked by: T39 | Blocks: T42 | Can parallelize with: T40
@@ -519,7 +519,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) Supertest: ADMIN 禁用用户→该用户 refresh→401; Playwright: ADMIN→users→创建 STAFF→列表出现 → Evidence `.omo/evidence/task-41-users-admin.png`; (failure) 禁用后 refresh→401; USER→admin→403。
   Commit: Y | feat(server/users)+feat(client/admin): 用户管理API+审计API+个人中心+后台前端
 
-- [ ] 42. Phase 5 验收门 — 线索能按状态流转
+- [x] 42. Phase 5 验收门 — 线索能按状态流转
   What to do: 6 项: (1) typecheck; (2) test; (3) 匿名行为→注册→线索合并; (4) STAFF 仅自己线索; (5) assign+status 写 AuditLog; (6) export 生成文件。
   Parallelization: Wave W5 | Blocked by: T40, T41 | Blocks: 无
   References: PRD §11 L346。
