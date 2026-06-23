@@ -120,7 +120,7 @@ services:
       dockerfile: nginx/Dockerfile
     container_name: xm-nginx
     ports:
-      - '80:80'
+      - '${WEB_PORT:-8082}:80'
     depends_on:
       api:
         condition: service_healthy
