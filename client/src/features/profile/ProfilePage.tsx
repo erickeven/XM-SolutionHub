@@ -64,7 +64,7 @@ export function ProfilePage() {
             </Descriptions.Item>
             <Descriptions.Item label="用户ID">
               <span className="text-sm text-slate-500">
-                {user.userId ?? '—'}
+                {user.id}
               </span>
             </Descriptions.Item>
           </Descriptions>

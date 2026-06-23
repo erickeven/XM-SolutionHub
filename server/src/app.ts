@@ -17,6 +17,7 @@ import aiChatRoutes from './modules/ai-chat/ai-chat.routes';
 import eventsRoutes from './modules/leads/events.routes';
 import leadsAdminRoutes from './modules/leads/leads.routes';
 import usersRoutes from './modules/users/users.routes';
+import filesRoutes from './modules/files/files.routes';
 import { errorHandler } from './middleware/errorHandler';
 
 const app: Express = express();
@@ -56,6 +57,8 @@ app.use(pinoHttp({ logger }));
 app.get('/api/v1/health', (_req, res) => {
   res.json({ code: 0, message: 'ok', data: { status: 'healthy' } });
 });
+
+app.use('/api/v1/files', filesRoutes);
 
 // 8. Auth routes with rate limiting
 app.use('/api/v1/auth', authLimiter, authRoutes);

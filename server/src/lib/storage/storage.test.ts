@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { LocalStorageAdapter } from './local.adapter';
+import { verifyStorageToken } from './signed-token';
 
 const tmpDir = path.resolve('./test-uploads-tmp');
 
@@ -35,8 +36,12 @@ describe('LocalStorageAdapter', () => {
       disposition: 'inline',
     });
     expect(typeof url).toBe('string');
-    expect(url).toContain('test.txt');
-    expect(url).toContain('expires=');
+    expect(url).toMatch(/^\/api\/v1\/files\//);
+    const token = url.slice('/api/v1/files/'.length);
+    expect(verifyStorageToken(token)).toMatchObject({
+      key: 'test.txt',
+      disposition: 'inline',
+    });
   });
 
   it('removeObject deletes the file', async () => {
@@ -51,5 +56,11 @@ describe('LocalStorageAdapter', () => {
 
   it('removeObject on non-existent key throws error', async () => {
     await expect(adapter.removeObject('no-such-file.txt')).rejects.toThrow();
+  });
+
+  it('rejects storage keys outside the configured directory', async () => {
+    await expect(adapter.getObject('../secret.txt')).rejects.toThrow(
+      'Invalid storage key',
+    );
   });
 });

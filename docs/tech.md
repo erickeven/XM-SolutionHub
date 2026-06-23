@@ -514,6 +514,7 @@ MINIO_ENDPOINT=http://localhost:9000
 MINIO_ACCESS_KEY=minio
 MINIO_SECRET_KEY=minio123
 MINIO_BUCKET=xinmaowei
+STORAGE_SIGNING_SECRET=replace_with_at_least_32_random_characters
 
 JWT_ACCESS_SECRET=replace_me
 JWT_REFRESH_SECRET=replace_me

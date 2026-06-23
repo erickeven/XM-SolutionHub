@@ -1,6 +1,10 @@
 import { AppError } from '../../lib/errors';
 import { getStorageAdapter } from '../../lib/storage';
 import { addWatermark } from '../../lib/pdf/watermark';
+import {
+  extractFirstNPages,
+  getPdfPageCount,
+} from '../../lib/pdf/derive';
 import { logFromContext } from '../audit/audit.service';
 import type { AuthUser } from '../../middleware/auth';
 import * as repository from './materials.repository';
@@ -73,58 +77,88 @@ export async function createMaterial(
   );
 
   const adapter = getStorageAdapter();
-  await adapter.putObject({
-    storageKey,
-    body: input.fileBuffer,
-    contentType: input.mimeType,
-  });
+  const uploadedKeys: string[] = [];
+  let previewStorageKey: string | undefined;
+  let pageCount: number | undefined;
 
-  const material = await repository.create({
-    type: input.type,
-    title: input.title,
-    solutionId: input.solutionId,
-    productId: input.productId,
-    originalStorageKey: storageKey,
-    mimeType: input.mimeType,
-  });
+  try {
+    await adapter.putObject({
+      storageKey,
+      body: input.fileBuffer,
+      contentType: input.mimeType,
+    });
+    uploadedKeys.push(storageKey);
 
-  logFromContext({
-    actorId,
-    action: 'material.create',
-    targetType: 'Material',
-    targetId: material.id,
-    payload: { type: input.type, title: input.title, storageKey },
-  });
+    if (input.mimeType === 'application/pdf') {
+      pageCount = await getPdfPageCount(input.fileBuffer);
+      previewStorageKey = `previews/${storageKey}`;
+      const previewBuffer = await extractFirstNPages(input.fileBuffer, 3);
+      await adapter.putObject({
+        storageKey: previewStorageKey,
+        body: previewBuffer,
+        contentType: 'application/pdf',
+      });
+      uploadedKeys.push(previewStorageKey);
+    }
 
-  return {
-    id: material.id,
-    solutionId: material.solutionId,
-    productId: material.productId,
-    type: material.type,
-    title: material.title,
-    originalStorageKey: material.originalStorageKey,
-    previewStorageKey: material.previewStorageKey,
-    mimeType: material.mimeType,
-    pageCount: material.pageCount,
-    previewPages: material.previewPages,
-    status: material.status,
-    createdAt: material.createdAt,
-    updatedAt: material.updatedAt,
-  };
+    const material = await repository.create({
+      type: input.type,
+      title: input.title,
+      solutionId: input.solutionId,
+      productId: input.productId,
+      originalStorageKey: storageKey,
+      previewStorageKey,
+      pageCount,
+      mimeType: input.mimeType,
+    });
+
+    logFromContext({
+      actorId,
+      action: 'material.create',
+      targetType: 'Material',
+      targetId: material.id,
+      payload: { type: input.type, title: input.title, storageKey },
+    });
+
+    return {
+      id: material.id,
+      solutionId: material.solutionId,
+      productId: material.productId,
+      type: material.type,
+      title: material.title,
+      originalStorageKey: material.originalStorageKey,
+      previewStorageKey: material.previewStorageKey,
+      mimeType: material.mimeType,
+      pageCount: material.pageCount,
+      previewPages: material.previewPages,
+      status: material.status,
+      createdAt: material.createdAt,
+      updatedAt: material.updatedAt,
+    };
+  } catch (error) {
+    await Promise.allSettled(uploadedKeys.map((key) => adapter.removeObject(key)));
+    throw error;
+  }
 }
 
 export async function updateMaterial(
   id: string,
   input: {
     status?: 'DRAFT' | 'ACTIVE' | 'INACTIVE';
-    pageCount?: number;
-    previewStorageKey?: string;
   },
   actorId: string | null,
 ): Promise<MaterialDetail> {
   const existing = await repository.findById(id);
   if (!existing) {
     throw new AppError(3001, 'Material not found', 404);
+  }
+
+  if (
+    input.status === 'ACTIVE' &&
+    existing.mimeType === 'application/pdf' &&
+    !existing.previewStorageKey
+  ) {
+    throw new AppError(3003, 'PDF preview is not ready', 409);
   }
 
   const material = await repository.update(id, input);
@@ -271,26 +305,33 @@ export async function getDownloadUrl(
 
   const adapter = getStorageAdapter();
 
-  // 1. Download original PDF
-  const originalBuffer = await adapter.getObject(material.originalStorageKey);
+  let downloadKey = material.originalStorageKey;
+  let temporaryKey: string | null = null;
 
-  // 2. Add watermark with user email
-  const watermarkedBuffer = await addWatermark(originalBuffer, user.email);
+  if (material.mimeType === 'application/pdf') {
+    const originalBuffer = await adapter.getObject(material.originalStorageKey);
+    const watermarkedBuffer = await addWatermark(originalBuffer, user.email);
+    temporaryKey = `tmp/watermark-${materialId}-${user.userId}-${Date.now()}.pdf`;
+    await adapter.putObject({
+      storageKey: temporaryKey,
+      body: watermarkedBuffer,
+      contentType: 'application/pdf',
+    });
+    downloadKey = temporaryKey;
+  }
 
-  // 3. Upload watermarked PDF as temporary key
-  const tempKey = `tmp/watermark-${materialId}-${user.userId}-${Date.now()}.pdf`;
-  await adapter.putObject({
-    storageKey: tempKey,
-    body: watermarkedBuffer,
-    contentType: 'application/pdf',
-  });
-
-  // 4. Generate signed URL for download
   const url = await adapter.createSignedUrl({
-    storageKey: tempKey,
+    storageKey: downloadKey,
     expiresInSeconds: SIGNED_URL_EXPIRES,
     disposition: 'attachment',
   });
+
+  if (temporaryKey) {
+    const cleanupTimer = setTimeout(() => {
+      void adapter.removeObject(temporaryKey as string).catch(() => undefined);
+    }, SIGNED_URL_EXPIRES * 1000);
+    cleanupTimer.unref();
+  }
 
   // 5. Write AuditLog
   logFromContext({
@@ -307,7 +348,7 @@ export async function getDownloadUrl(
     if (lead) {
       await repository.createLeadEvent({
         leadId: lead.id,
-        eventType: 'download',
+        eventType: 'material_download',
         payload: { materialId, title: material.title },
       });
     }

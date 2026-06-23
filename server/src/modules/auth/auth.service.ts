@@ -8,7 +8,6 @@ import * as repository from './auth.repository';
 import type {
   RegisterInput,
   LoginInput,
-  AuthResponse,
   LoginResult,
   RefreshResult,
   UserInfo,
@@ -87,7 +86,7 @@ async function clearLockout(email: string): Promise<void> {
   await redis.del(lockoutKey(email));
 }
 
-export async function register(input: RegisterInput): Promise<AuthResponse> {
+export async function register(input: RegisterInput): Promise<LoginResult> {
   const existing = await repository.findByEmail(input.email);
   if (existing) {
     throw new AppError(2002, 'Email already registered', 409);
@@ -110,15 +109,28 @@ export async function register(input: RegisterInput): Promise<AuthResponse> {
     familyId,
   });
 
+  const refreshToken = generateRefreshToken();
+  await repository.createRefreshToken({
+    userId: user.id,
+    tokenHash: hashToken(refreshToken),
+    familyId,
+    expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
+  });
+
   return {
     user: toUserInfo(user),
     accessToken,
+    refreshToken,
   };
 }
 
 export async function login(input: LoginInput): Promise<LoginResult> {
   const user = await repository.findByEmail(input.email);
   if (!user) {
+    throw new AppError(2001, 'Invalid email or password', 401);
+  }
+
+  if (user.status !== 'ACTIVE') {
     throw new AppError(2001, 'Invalid email or password', 401);
   }
 
@@ -160,7 +172,6 @@ export async function refresh(
   refreshToken: string,
   csrfToken: string,
 ): Promise<RefreshResult> {
-  // ponytail: basic CSRF check, full double-submit middleware in T7
   if (!csrfToken) {
     throw new AppError(2001, 'Missing CSRF token', 401);
   }
@@ -188,6 +199,10 @@ export async function refresh(
   const user = await repository.findById(stored.userId);
   if (!user) {
     throw new AppError(2001, 'User not found', 401);
+  }
+  if (user.status !== 'ACTIVE') {
+    await repository.revokeRefreshTokenFamily(stored.familyId);
+    throw new AppError(2003, 'Account is inactive', 403);
   }
 
   const newRefreshToken = generateRefreshToken();
@@ -219,7 +234,7 @@ export async function logout(refreshToken: string): Promise<void> {
 
 export async function me(userId: string): Promise<UserInfo> {
   const user = await repository.findById(userId);
-  if (!user) {
+  if (!user || user.status !== 'ACTIVE') {
     throw new AppError(2001, 'User not found', 401);
   }
   return toUserInfo(user);

@@ -1,3 +1,7 @@
+-- Enable required extensions before using vector columns or trigram operators
+CREATE EXTENSION IF NOT EXISTS "vector";
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+
 -- CreateEnum
 CREATE TYPE "Role" AS ENUM ('USER', 'STAFF', 'AUDITOR', 'ADMIN');
 
@@ -372,10 +376,6 @@ ALTER TABLE "ChatMessage" ADD CONSTRAINT "ChatMessage_sessionId_fkey" FOREIGN KE
 
 -- AddForeignKey
 ALTER TABLE "AuditLog" ADD CONSTRAINT "AuditLog_actorId_fkey" FOREIGN KEY ("actorId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- Enable required extensions
-CREATE EXTENSION IF NOT EXISTS "vector";
-CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 
 -- Index 1: Product.model unique (already in Prisma schema as @unique, but ensure)
 -- Already created by Prisma migration above

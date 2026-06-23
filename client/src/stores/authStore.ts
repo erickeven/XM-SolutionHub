@@ -1,27 +1,26 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import type { AuthUser } from '../types/auth';
 
 interface AuthState {
   user: AuthUser | null;
   accessToken: string | null;
   isAuthenticated: boolean;
+  isInitialized: boolean;
   setAuth: (user: AuthUser, token: string) => void;
+  setAccessToken: (token: string) => void;
+  setInitialized: (initialized: boolean) => void;
   clearAuth: () => void;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      user: null,
-      accessToken: null,
-      isAuthenticated: false,
-      setAuth: (user, token) => set({ user, accessToken: token, isAuthenticated: true }),
-      clearAuth: () => set({ user: null, accessToken: null, isAuthenticated: false }),
-    }),
-    {
-      name: 'xm-auth',
-      partialize: (state) => ({ accessToken: state.accessToken }),
-    },
-  ),
-);
+export const useAuthStore = create<AuthState>((set) => ({
+  user: null,
+  accessToken: null,
+  isAuthenticated: false,
+  isInitialized: false,
+  setAuth: (user, token) =>
+    set({ user, accessToken: token, isAuthenticated: true }),
+  setAccessToken: (token) => set({ accessToken: token }),
+  setInitialized: (isInitialized) => set({ isInitialized }),
+  clearAuth: () =>
+    set({ user: null, accessToken: null, isAuthenticated: false }),
+}));

@@ -78,7 +78,7 @@ export function SolutionDetailPage() {
     );
   }
 
-  const products: ProductSolution[] = solution.productSolutions ?? [];
+  const products: ProductSolution[] = solution.products ?? [];
   const hasMaterials = materials && materials.length > 0;
 
   return (

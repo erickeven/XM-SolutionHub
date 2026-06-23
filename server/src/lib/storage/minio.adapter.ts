@@ -5,6 +5,7 @@ import {
   DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
 import type { PutObjectOptions, SignedUrlOptions, StorageAdapter } from './types';
+import { createStorageSignedUrl } from './signed-token';
 
 export interface MinioStorageAdapterOptions {
   endpoint: string;
@@ -22,8 +23,11 @@ export class MinioStorageAdapter implements StorageAdapter {
   constructor(options: MinioStorageAdapterOptions) {
     this.bucket = options.bucket;
     const protocol = options.useSSL ? 'https' : 'http';
+    const endpoint = /^https?:\/\//.test(options.endpoint)
+      ? options.endpoint
+      : `${protocol}://${options.endpoint}:${options.port}`;
     this.client = new S3Client({
-      endpoint: `${protocol}://${options.endpoint}:${options.port}`,
+      endpoint,
       region: 'us-east-1',
       credentials: {
         accessKeyId: options.accessKey,
@@ -59,11 +63,7 @@ export class MinioStorageAdapter implements StorageAdapter {
   }
 
   async createSignedUrl(options: SignedUrlOptions): Promise<string> {
-    // ponytail: @aws-sdk/s3-request-presigner not installed (locked deps),
-    // return proxy URL — real presigning added when presigner package available
-    const expiresAt = Math.floor(Date.now() / 1000) + options.expiresInSeconds;
-    const encodedKey = encodeURIComponent(options.storageKey);
-    return `http://localhost:3000/api/v1/files/${encodedKey}?expires=${expiresAt}`;
+    return createStorageSignedUrl(options);
   }
 
   async removeObject(storageKey: string): Promise<void> {

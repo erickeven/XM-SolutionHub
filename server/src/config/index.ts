@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { logger } from '../lib/logger';
 
+const DEVELOPMENT_STORAGE_SIGNING_SECRET =
+  'development-storage-signing-secret-change-me';
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().default(3000),
@@ -25,6 +28,10 @@ const envSchema = z.object({
   MINIO_SECRET_KEY: z.string().optional(),
   MINIO_USE_SSL: z.coerce.boolean().default(false),
   MINIO_BUCKET: z.string().default('xinmaowei'),
+  STORAGE_SIGNING_SECRET: z
+    .string()
+    .min(32)
+    .default(DEVELOPMENT_STORAGE_SIGNING_SECRET),
   JWT_ACCESS_SECRET: z.string(),
   JWT_REFRESH_SECRET: z.string(),
   CSRF_SECRET: z.string(),
@@ -50,6 +57,13 @@ const parsed = envSchema.safeParse(process.env);
 if (!parsed.success) {
   console.error('❌ Invalid environment variables:', parsed.error.flatten().fieldErrors);
   throw new Error('Invalid environment configuration');
+}
+
+if (
+  parsed.data.NODE_ENV === 'production' &&
+  parsed.data.STORAGE_SIGNING_SECRET === DEVELOPMENT_STORAGE_SIGNING_SECRET
+) {
+  throw new Error('STORAGE_SIGNING_SECRET must be configured in production');
 }
 
 export const env = parsed.data;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import * as authApi from '../api/auth';
 import type { AuthUser, LoginInput, RegisterInput } from '../types/auth';
@@ -12,38 +12,58 @@ interface UseAuthResult {
   logout: () => Promise<void>;
 }
 
+let bootstrapPromise: Promise<void> | null = null;
+
+function bootstrapSession(): Promise<void> {
+  if (!bootstrapPromise) {
+    bootstrapPromise = authApi
+      .getMe()
+      .then((user) => {
+        const token = useAuthStore.getState().accessToken;
+        if (token) useAuthStore.getState().setAuth(user, token);
+      })
+      .catch(() => useAuthStore.getState().clearAuth())
+      .finally(() => {
+        useAuthStore.getState().setInitialized(true);
+      });
+  }
+  return bootstrapPromise;
+}
+
 export function useAuth(): UseAuthResult {
-  const { user, accessToken, isAuthenticated, setAuth, clearAuth } = useAuthStore();
-  const [isLoading, setIsLoading] = useState(false);
+  const state = useAuthStore();
 
   useEffect(() => {
-    if (accessToken && !user) {
-      setIsLoading(true);
-      authApi
-        .getMe()
-        .then((me) => setAuth(me, accessToken))
-        .catch(() => clearAuth())
-        .finally(() => setIsLoading(false));
-    }
-  }, [accessToken, user, setAuth, clearAuth]);
+    if (!state.isInitialized) void bootstrapSession();
+  }, [state.isInitialized]);
 
   const login = async (data: LoginInput) => {
-    const res = await authApi.login(data);
-    setAuth(res.user, res.accessToken);
+    const result = await authApi.login(data);
+    state.setAuth(result.user, result.accessToken);
+    state.setInitialized(true);
   };
 
   const register = async (data: RegisterInput) => {
-    const res = await authApi.register(data);
-    setAuth(res.user, res.accessToken);
+    const result = await authApi.register(data);
+    state.setAuth(result.user, result.accessToken);
+    state.setInitialized(true);
   };
 
   const logout = async () => {
     try {
       await authApi.logout();
     } finally {
-      clearAuth();
+      state.clearAuth();
+      state.setInitialized(true);
     }
   };
 
-  return { user, isAuthenticated, isLoading, login, register, logout };
+  return {
+    user: state.user,
+    isAuthenticated: state.isAuthenticated,
+    isLoading: !state.isInitialized,
+    login,
+    register,
+    logout,
+  };
 }

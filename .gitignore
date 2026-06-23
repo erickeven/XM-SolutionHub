@@ -10,6 +10,10 @@
 # Build outputs
 client/dist/
 server/dist/
+*.tsbuildinfo
+client/e2e/test-results/
+client/playwright-report/
+client/screenshots/
 
 # OS
 Thumbs.db

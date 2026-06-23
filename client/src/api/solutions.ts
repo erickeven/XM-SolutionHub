@@ -1,6 +1,13 @@
 import { apiClient } from './client';
 import type { ApiResponse } from '../types/api';
-import type { Solution, Material } from '../types/solution';
+import type { Solution, Material, SolutionListResponse } from '../types/solution';
+
+export async function listSolutions(page = 1, limit = 20): Promise<SolutionListResponse> {
+  const { data: res } = await apiClient.get<ApiResponse<SolutionListResponse>>('/solutions', {
+    params: { page, limit },
+  });
+  return res.data;
+}
 
 export async function getSolutionById(id: string): Promise<Solution> {
   const { data: res } = await apiClient.get<ApiResponse<Solution>>(`/solutions/${id}`);
@@ -8,10 +15,10 @@ export async function getSolutionById(id: string): Promise<Solution> {
 }
 
 export async function getSolutionMaterials(solutionId: string): Promise<Material[]> {
-  const { data: res } = await apiClient.get<ApiResponse<Material[]>>(
+  const { data: res } = await apiClient.get<ApiResponse<{ items: Material[] }>>(
     `/solutions/${solutionId}/materials`,
   );
-  return res.data;
+  return res.data.items;
 }
 
 export async function getMaterialPreview(

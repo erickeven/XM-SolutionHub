@@ -16,6 +16,7 @@ adminRoutes.delete('/:id', controller.deleteHandler);
 // Public routes — mounted at /api/v1/solutions
 const publicRoutes: Router = Router();
 publicRoutes.use(apiLimiter);
+publicRoutes.get('/', controller.publicListHandler);
 publicRoutes.get('/:id', controller.publicGetByIdHandler);
 
 export { adminRoutes, publicRoutes };

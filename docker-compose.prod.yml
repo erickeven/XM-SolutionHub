@@ -7,7 +7,7 @@ services:
     container_name: xm-postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       POSTGRES_DB: ${POSTGRES_DB:-xinmaowei}
     volumes:
       - xm_pgdata:/var/lib/postgresql/data
@@ -34,8 +34,8 @@ services:
     image: minio/minio:latest
     container_name: xm-minio
     environment:
-      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minio}
-      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minio123}
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY is required}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}
     command: server /data --console-address ":9001"
     volumes:
       - xm_miniodata:/data
@@ -46,6 +46,20 @@ services:
       retries: 5
     restart: unless-stopped
 
+  migrate:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-xinmaowei}
+    command: ['pnpm', '--filter', '@xm-solutionhub/server', 'prisma:migrate']
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
   api:
     build:
       context: .
@@ -55,9 +69,9 @@ services:
     environment:
       NODE_ENV: production
       PORT: '3001'
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-xinmaowei}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-xinmaowei}
       REDIS_URL: redis://redis:6379
-      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ENDPOINT: minio
     ports:
       - '3001:3001'
     depends_on:
@@ -67,6 +81,8 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     restart: unless-stopped
     healthcheck:
       test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:3001/api/v1/health']
@@ -83,10 +99,10 @@ services:
     env_file: .env
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-xinmaowei}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-xinmaowei}
       REDIS_URL: redis://redis:6379
-      MINIO_ENDPOINT: http://minio:9000
-    command: ['node', 'dist/workers/knowledge-index.worker.js']
+      MINIO_ENDPOINT: minio
+    command: ['node', 'server/dist/workers/knowledge-index.worker.js']
     depends_on:
       postgres:
         condition: service_healthy
@@ -94,6 +110,8 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     restart: unless-stopped
 
   nginx:

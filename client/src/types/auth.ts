@@ -10,9 +10,10 @@ export interface LoginInput {
 }
 
 export interface AuthUser {
-  userId: string;
+  id: string;
   email: string;
-  role: string;
+  role: 'USER' | 'STAFF' | 'AUDITOR' | 'ADMIN';
+  status: 'DRAFT' | 'ACTIVE' | 'INACTIVE';
 }
 
 export interface AuthResponse {

@@ -142,19 +142,23 @@ async function processJob(jobId: string): Promise<void> {
         if (!entityEmbedding) continue;
 
         // Upsert entity — create if not exists, return id
-        const entityId = randomUUID();
-        await tx.$executeRaw`
+        const proposedEntityId = randomUUID();
+        const persistedEntities = await tx.$queryRaw<{ id: string }[]>`
           INSERT INTO "KnowledgeEntity" (id, name, "normalizedName", "entityType", embedding, "createdAt")
-          VALUES (${entityId}, ${entity.name}, ${normalizedName}, ${entity.entityType}, ${toVectorString(entityEmbedding)}::vector, NOW())
+          VALUES (${proposedEntityId}, ${entity.name}, ${normalizedName}, ${entity.entityType}, ${toVectorString(entityEmbedding)}::vector, NOW())
           ON CONFLICT ("normalizedName") DO UPDATE SET name = EXCLUDED.name
           RETURNING id
         `;
+        const persistedEntityId = persistedEntities[0]?.id;
+        if (!persistedEntityId) {
+          throw new Error(`Entity upsert returned no id: ${normalizedName}`);
+        }
 
         // Link event to entity (if event exists)
         if (eventId) {
           await tx.$executeRaw`
             INSERT INTO "KnowledgeEventEntity" (id, "eventId", "entityId", role)
-            VALUES (${randomUUID()}, ${eventId}, ${entityId}, ${entity.role})
+            VALUES (${randomUUID()}, ${eventId}, ${persistedEntityId}, ${entity.role})
             ON CONFLICT ("eventId", "entityId", role) DO NOTHING
           `;
         }
@@ -166,12 +170,15 @@ async function processJob(jobId: string): Promise<void> {
   const chunkCount = await prisma.knowledgeChunk.count({
     where: { docId, indexVersion },
   });
-  if (chunkCount !== chunks.length) {
+  const eventCount = await prisma.knowledgeEvent.count({
+    where: { chunk: { docId, indexVersion } },
+  });
+  if (chunkCount !== chunks.length || eventCount !== chunks.length) {
     throw new Error(
-      `Completeness check failed: expected ${chunks.length} chunks, found ${chunkCount}`,
+      `Completeness check failed: expected ${chunks.length} chunks/events, found ${chunkCount} chunks and ${eventCount} events`,
     );
   }
-  logger.info({ docId, chunkCount }, 'Completeness check passed');
+  logger.info({ docId, chunkCount, eventCount }, 'Completeness check passed');
 
   // 10. Atomic switch: update KnowledgeDoc status=READY, indexVersion, indexedAt
   await prisma.knowledgeDoc.update({

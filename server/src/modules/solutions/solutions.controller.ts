@@ -101,3 +101,17 @@ export async function publicGetByIdHandler(
     next(err);
   }
 }
+
+export async function publicListHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const query = solutionQuerySchema.parse(req.query);
+    const result = await service.listSolutions({ ...query, status: 'ACTIVE' });
+    res.status(200).json(successResponse(result));
+  } catch (err) {
+    next(err);
+  }
+}

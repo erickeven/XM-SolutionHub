@@ -71,9 +71,7 @@ test.describe('Error state — retry button visible', () => {
     await page.waitForTimeout(3000);
     // Error state shows "查询失败，请重试" with retry button
     const retryButton = page.getByRole('button', { name: /重试/ });
-    // May or may not appear depending on timing; just verify page is stable
-    const body = page.locator('body');
-    await expect(body).toBeVisible();
+    await expect(retryButton).toBeVisible();
   });
 
   test('admin/leads error state shows retry or redirects', async ({ page }) => {
@@ -114,42 +112,34 @@ test.describe('Unauthorized state — 403 or redirect to login', () => {
     await expect(page).toHaveURL(/\/login/, { timeout: 10_000 });
   });
 
-  test('admin/leads accessible without auth (no route guard)', async ({ page }) => {
-    // LeadsListPage doesn't have its own auth guard — it renders and
-    // the API call fails. The page should still render.
+  test('admin/leads redirects to login without auth', async ({ page }) => {
     await page.goto('/admin/leads');
     await settle(page);
-    const body = page.locator('body');
-    await expect(body).toBeVisible();
+    await expect(page).toHaveURL(/\/login\?redirect=/);
   });
 
-  test('admin/knowledge accessible without auth (no route guard)', async ({ page }) => {
+  test('admin/knowledge redirects to login without auth', async ({ page }) => {
     await page.goto('/admin/knowledge');
     await settle(page);
-    const body = page.locator('body');
-    await expect(body).toBeVisible();
+    await expect(page).toHaveURL(/\/login\?redirect=/);
   });
 });
 
-test.describe('Offline state — browser offline mode', () => {
-  test('pages handle offline gracefully', async ({ page, context }) => {
-    await context.setOffline(true);
+test.describe('Offline state — API unavailable', () => {
+  test('pages handle API outage gracefully', async ({ page }) => {
+    await page.route('**/api/v1/**', (route) => route.abort('internetdisconnected'));
     await page.goto('/');
     await settle(page);
-    // Page should still render (SPA shell) even with no network
     const body = page.locator('body');
     await expect(body).toBeVisible();
-    await context.setOffline(false);
   });
 
-  test('selection page offline shows error or empty', async ({ page, context }) => {
-    await context.setOffline(true);
+  test('selection page shows error when API is unavailable', async ({ page }) => {
+    await page.route('**/api/v1/**', (route) => route.abort('internetdisconnected'));
     await page.goto('/selection?inputVoltageMin=90&inputVoltageMax=264&outputVoltage=5&outputCurrent=2');
     await settle(page);
     await page.waitForTimeout(3000);
-    const body = page.locator('body');
-    await expect(body).toBeVisible();
-    await context.setOffline(false);
+    await expect(page.getByRole('button', { name: /重试/ })).toBeVisible();
   });
 });
 
@@ -171,11 +161,9 @@ test.describe('Missing content — non-existent resource', () => {
     await expect(body).toBeVisible();
   });
 
-  test('unknown route shows placeholder', async ({ page }) => {
+  test('unknown route shows 404', async ({ page }) => {
     await page.goto('/nonexistent-route-12345');
     await settle(page);
-    // React Router will show the MainLayout with no matching route
-    const body = page.locator('body');
-    await expect(body).toBeVisible();
+    await expect(page.getByText('页面不存在')).toBeVisible();
   });
 });

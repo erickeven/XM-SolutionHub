@@ -90,6 +90,8 @@ export async function create(
   data: CreateMaterialInput & {
     originalStorageKey: string;
     mimeType: string;
+    previewStorageKey?: string;
+    pageCount?: number;
   },
 ): Promise<Material> {
   return prisma.material.create({
@@ -99,7 +101,9 @@ export async function create(
       solutionId: data.solutionId ?? null,
       productId: data.productId ?? null,
       originalStorageKey: data.originalStorageKey,
+      previewStorageKey: data.previewStorageKey ?? null,
       mimeType: data.mimeType,
+      pageCount: data.pageCount ?? null,
       status: 'DRAFT',
     },
   });

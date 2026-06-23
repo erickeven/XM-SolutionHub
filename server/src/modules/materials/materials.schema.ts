@@ -26,8 +26,6 @@ export const materialQuerySchema = z.object({
 
 export const updateMaterialSchema = z.object({
   status: materialStatusEnum.optional(),
-  pageCount: z.number().int().min(0).optional(),
-  previewStorageKey: z.string().optional(),
 });
 
 export type CreateMaterialInput = z.infer<typeof createMaterialSchema>;

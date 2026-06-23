@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
+import { randomBytes } from 'node:crypto';
 import { config } from '../../config';
 import { successResponse } from '../../lib/response';
 import { AppError } from '../../lib/errors';
@@ -11,6 +12,7 @@ import {
 } from './auth.schema';
 
 const REFRESH_COOKIE = 'refreshToken';
+const CSRF_COOKIE = 'csrf-token';
 const REFRESH_COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 
 function cookieOptions() {
@@ -23,6 +25,21 @@ function cookieOptions() {
   };
 }
 
+function csrfCookieOptions() {
+  return {
+    httpOnly: false,
+    sameSite: 'lax' as const,
+    secure: config.NODE_ENV === 'production',
+    path: '/',
+    maxAge: REFRESH_COOKIE_MAX_AGE,
+  };
+}
+
+function setSessionCookies(res: Response, refreshToken: string): void {
+  res.cookie(REFRESH_COOKIE, refreshToken, cookieOptions());
+  res.cookie(CSRF_COOKIE, randomBytes(32).toString('hex'), csrfCookieOptions());
+}
+
 export async function registerHandler(
   req: Request,
   res: Response,
@@ -31,7 +48,11 @@ export async function registerHandler(
   try {
     const parsed = registerSchema.parse(req.body);
     const result = await authService.register(parsed);
-    res.status(201).json(successResponse(result));
+    setSessionCookies(res, result.refreshToken);
+    res.status(201).json(successResponse({
+      user: result.user,
+      accessToken: result.accessToken,
+    }));
   } catch (err) {
     next(err);
   }
@@ -45,7 +66,7 @@ export async function loginHandler(
   try {
     const parsed = loginSchema.parse(req.body);
     const result = await authService.login(parsed);
-    res.cookie(REFRESH_COOKIE, result.refreshToken, cookieOptions());
+    setSessionCookies(res, result.refreshToken);
     res.status(200).json(
       successResponse({
         user: result.user,
@@ -72,7 +93,7 @@ export async function refreshHandler(
       throw new AppError(2001, 'Missing CSRF token', 401);
     }
     const result = await authService.refresh(refreshToken, csrfToken);
-    res.cookie(REFRESH_COOKIE, result.refreshToken, cookieOptions());
+    setSessionCookies(res, result.refreshToken);
     res.status(200).json(successResponse({ accessToken: result.accessToken }));
   } catch (err) {
     next(err);
@@ -90,6 +111,7 @@ export async function logoutHandler(
       await authService.logout(refreshToken);
     }
     res.clearCookie(REFRESH_COOKIE, { ...cookieOptions(), maxAge: 0 });
+    res.clearCookie(CSRF_COOKIE, { ...csrfCookieOptions(), maxAge: 0 });
     res.status(200).json(successResponse(null));
   } catch (err) {
     next(err);

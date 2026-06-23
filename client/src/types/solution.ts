@@ -4,7 +4,7 @@ export interface Solution {
   description: string;
   status: string;
   materials?: Material[];
-  productSolutions?: ProductSolution[];
+  products?: ProductSolution[];
 }
 
 export interface ProductSolution {
@@ -21,4 +21,11 @@ export interface Material {
   pageCount?: number;
   mimeType?: string;
   status?: string;
+}
+
+export interface SolutionListResponse {
+  items: Solution[];
+  total: number;
+  page: number;
+  limit: number;
 }

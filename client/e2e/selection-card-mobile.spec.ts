@@ -18,7 +18,8 @@ async function assertNoHorizontalScroll(page: Page): Promise<void> {
 }
 
 test.describe('Selection card — mobile (390x844)', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'mobile', 'Mobile-only interaction suite');
     // Ensure we're at mobile viewport
     await page.setViewportSize({ width: MOBILE_WIDTH, height: 844 });
   });
@@ -45,11 +46,12 @@ test.describe('Selection card — mobile (390x844)', () => {
     // Click to open the drawer
     await filterButton.click();
     // Drawer title "筛选条件" should appear
-    const drawerTitle = page.getByText('筛选条件');
+    const drawer = page.getByRole('dialog', { name: '筛选条件' });
+    const drawerTitle = drawer.getByText('筛选条件', { exact: true });
     await expect(drawerTitle).toBeVisible({ timeout: 5_000 });
 
     // Verify filter panel content is visible inside drawer
-    const electricalParamsLabel = page.getByText('电气参数');
+    const electricalParamsLabel = drawer.getByText('电气参数', { exact: true });
     await expect(electricalParamsLabel).toBeVisible({ timeout: 5_000 });
 
     await page.screenshot({
@@ -82,7 +84,8 @@ test.describe('Selection card — mobile (390x844)', () => {
     await page.waitForTimeout(1000);
 
     // Application type section
-    const appTypeLabel = page.getByText('应用类型');
+    const drawer = page.getByRole('dialog', { name: '筛选条件' });
+    const appTypeLabel = drawer.getByText('应用类型', { exact: true });
     await expect(appTypeLabel).toBeVisible({ timeout: 5_000 });
   });
 

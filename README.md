@@ -96,7 +96,9 @@ cp .env.example .env
 - `DATABASE_URL` — 指向 Docker 内部 postgres 服务
 - `REDIS_URL` — 指向 Docker 内部 redis 服务
 - `MINIO_ENDPOINT` — 指向 Docker 内部 minio 服务
+- `POSTGRES_PASSWORD` / `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` — Compose 强制要求，不提供则拒绝启动
 - `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` / `CSRF_SECRET` — 生成强随机值
+- `STORAGE_SIGNING_SECRET` — 至少 32 位强随机值，用于文件短链签名
 - `LLM_API_KEY` / `EMBEDDING_API_KEY` — 填入真实 API Key
 - `SEED_ADMIN_PASSWORD` — 管理员初始密码
 
@@ -112,17 +114,13 @@ docker compose -f docker-compose.prod.yml up -d
 
 ### 3. 初始化数据库
 
-首次部署需执行迁移和种子：
+`docker-compose.prod.yml` 会先运行一次性 `migrate` 服务，迁移成功后才启动 API 和 Worker。首次部署如需演示种子数据，再执行：
 
 ```bash
-# 进入 api 容器执行迁移
-docker compose -f docker-compose.prod.yml exec api npx prisma migrate deploy
-
-# 执行种子数据
-docker compose -f docker-compose.prod.yml exec api npx tsx prisma/seed.ts
+docker compose -f docker-compose.prod.yml run --rm api pnpm --filter @xm-solutionhub/server prisma:seed
 ```
 
-> 注意：生产环境 `DATABASE_URL` 应使用容器内地址 `postgresql://...@postgres:5432/...`，`REDIS_URL` 使用 `redis://redis:6379`，`MINIO_ENDPOINT` 使用 `http://minio:9000`。`docker-compose.prod.yml` 已通过 environment 覆盖这些值。
+> 注意：生产环境容器使用 `postgres`、`redis`、`minio` 服务名互联，`docker-compose.prod.yml` 已覆盖这三项内部地址。不要在浏览器端暴露 MinIO 管理端口。
 
 ### 4. 验证服务
 

@@ -589,6 +589,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   What to do: 核验全部 48 个 todo 是否完成, 每个验收门是否通过, 证据文件是否存在于 `.omo/evidence/`; 检查是否有偏离 PRD/tech.md/design.md 的实现。
 - [ ] F2. Code quality review
   What to do: `pnpm lint && pnpm typecheck` 退出码 0; 检查无 `any`/`@ts-ignore`/`eslint-disable`; 检查无新增锁定列表外依赖。
+  Verification: 2026-06-23 — 静态检查通过，但 140 个 DB 集成测试跳过，E2E、Docker 构建和恢复演练未执行，不能标记完成。
 - [ ] F3. Real manual QA
   What to do: Playwright E2E 全路径: 匿名选型→注册解锁→AI 问答→后台分配; 3 视口截图; 移动端核心操作。
 - [ ] F4. Scope fidelity

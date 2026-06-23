@@ -1,21 +1,25 @@
+import { lazy, Suspense } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { ConfigProvider } from 'antd';
+import { ConfigProvider, Result, Spin } from 'antd';
 import { antdTheme } from './styles/theme';
 import { MainLayout } from './layouts/MainLayout';
 import { HomePage } from './features/selection/HomePage';
-import { SelectionPage } from './features/selection/SelectionPage';
-import { ProductDetailPage } from './features/products/ProductDetailPage';
-import { LoginPage } from './features/auth/LoginPage';
-import { RegisterPage } from './features/auth/RegisterPage';
-import { SolutionDetailPage } from './features/solutions/SolutionDetailPage';
-import { AiChatPage } from './features/ai-chat/AiChatPage';
-import { TraceDebugPage } from './features/admin/trace/TraceDebugPage';
-import { KnowledgeListPage } from './features/admin/knowledge/KnowledgeListPage';
-import { UserListPage } from './features/admin/users/UserListPage';
-import { AuditLogPage } from './features/admin/audit/AuditLogPage';
-import { LeadsListPage } from './features/admin/leads/LeadsListPage';
-import { ProfilePage } from './features/profile/ProfilePage';
+import { RouteGuard } from './components/RouteGuard';
+
+const SelectionPage = lazy(() => import('./features/selection/SelectionPage').then((module) => ({ default: module.SelectionPage })));
+const ProductDetailPage = lazy(() => import('./features/products/ProductDetailPage').then((module) => ({ default: module.ProductDetailPage })));
+const LoginPage = lazy(() => import('./features/auth/LoginPage').then((module) => ({ default: module.LoginPage })));
+const RegisterPage = lazy(() => import('./features/auth/RegisterPage').then((module) => ({ default: module.RegisterPage })));
+const SolutionDetailPage = lazy(() => import('./features/solutions/SolutionDetailPage').then((module) => ({ default: module.SolutionDetailPage })));
+const SolutionsPage = lazy(() => import('./features/solutions/SolutionsPage').then((module) => ({ default: module.SolutionsPage })));
+const AiChatPage = lazy(() => import('./features/ai-chat/AiChatPage').then((module) => ({ default: module.AiChatPage })));
+const TraceDebugPage = lazy(() => import('./features/admin/trace/TraceDebugPage').then((module) => ({ default: module.TraceDebugPage })));
+const KnowledgeListPage = lazy(() => import('./features/admin/knowledge/KnowledgeListPage').then((module) => ({ default: module.KnowledgeListPage })));
+const UserListPage = lazy(() => import('./features/admin/users/UserListPage').then((module) => ({ default: module.UserListPage })));
+const AuditLogPage = lazy(() => import('./features/admin/audit/AuditLogPage').then((module) => ({ default: module.AuditLogPage })));
+const LeadsListPage = lazy(() => import('./features/admin/leads/LeadsListPage').then((module) => ({ default: module.LeadsListPage })));
+const ProfilePage = lazy(() => import('./features/profile/ProfilePage').then((module) => ({ default: module.ProfilePage })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -32,7 +36,8 @@ export default function App() {
     <ConfigProvider theme={antdTheme}>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          <Routes>
+          <Suspense fallback={<div className="flex min-h-[50vh] items-center justify-center"><Spin size="large" /></div>}>
+            <Routes>
             {/* Auth pages — outside MainLayout, full page */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
@@ -43,18 +48,20 @@ export default function App() {
               <Route path="/selection" element={<SelectionPage />} />
               <Route path="/products/:id" element={<ProductDetailPage />} />
               <Route path="/solutions/:id" element={<SolutionDetailPage />} />
-              <Route path="/solutions" element={<PlaceholderPage title="方案资料" />} />
-              <Route path="/ai-chat" element={<AiChatPage />} />
-              <Route path="/ai-chat/:sessionId" element={<AiChatPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/admin/knowledge" element={<KnowledgeListPage />} />
-              <Route path="/admin/trace/:docId" element={<TraceDebugPage />} />
-              <Route path="/admin/users" element={<UserListPage />} />
-              <Route path="/admin/audit" element={<AuditLogPage />} />
-              <Route path="/admin/leads" element={<LeadsListPage />} />
-              <Route path="/admin/*" element={<PlaceholderPage title="后台管理" />} />
+              <Route path="/solutions" element={<SolutionsPage />} />
+              <Route path="/ai-chat" element={<RouteGuard><AiChatPage /></RouteGuard>} />
+              <Route path="/ai-chat/:sessionId" element={<RouteGuard><AiChatPage /></RouteGuard>} />
+              <Route path="/profile" element={<RouteGuard><ProfilePage /></RouteGuard>} />
+              <Route path="/admin/knowledge" element={<RouteGuard roles={['ADMIN']}><KnowledgeListPage /></RouteGuard>} />
+              <Route path="/admin/trace/:docId" element={<RouteGuard roles={['ADMIN']}><TraceDebugPage /></RouteGuard>} />
+              <Route path="/admin/users" element={<RouteGuard roles={['ADMIN']}><UserListPage /></RouteGuard>} />
+              <Route path="/admin/audit" element={<RouteGuard roles={['ADMIN']}><AuditLogPage /></RouteGuard>} />
+              <Route path="/admin/leads" element={<RouteGuard roles={['STAFF', 'AUDITOR', 'ADMIN']}><LeadsListPage /></RouteGuard>} />
+              <Route path="/admin/*" element={<RouteGuard roles={['STAFF', 'AUDITOR', 'ADMIN']}><PlaceholderPage title="后台管理" /></RouteGuard>} />
+              <Route path="*" element={<Result status="404" title="页面不存在" />} />
             </Route>
-          </Routes>
+            </Routes>
+          </Suspense>
         </BrowserRouter>
       </QueryClientProvider>
     </ConfigProvider>
