@@ -20,8 +20,10 @@ const envSchema = z.object({
   STORAGE_DRIVER: z.enum(['local', 'minio']).default('local'),
   STORAGE_LOCAL_DIR: z.string().default('./uploads'),
   MINIO_ENDPOINT: z.string().optional(),
+  MINIO_PORT: z.coerce.number().default(9000),
   MINIO_ACCESS_KEY: z.string().optional(),
   MINIO_SECRET_KEY: z.string().optional(),
+  MINIO_USE_SSL: z.coerce.boolean().default(false),
   MINIO_BUCKET: z.string().default('xinmaowei'),
   JWT_ACCESS_SECRET: z.string(),
   JWT_REFRESH_SECRET: z.string(),
@@ -58,6 +60,15 @@ export { default as redis } from '../lib/redis';
 export const config = {
   ...parsed.data,
   logger,
+  // camelCase aliases for storage config
+  storageDriver: parsed.data.STORAGE_DRIVER,
+  storageLocalDir: parsed.data.STORAGE_LOCAL_DIR,
+  storageBucket: parsed.data.MINIO_BUCKET,
+  minioEndpoint: parsed.data.MINIO_ENDPOINT,
+  minioPort: parsed.data.MINIO_PORT,
+  minioAccessKey: parsed.data.MINIO_ACCESS_KEY,
+  minioSecretKey: parsed.data.MINIO_SECRET_KEY,
+  minioUseSSL: parsed.data.MINIO_USE_SSL,
 } as const;
 
 export type AppConfig = typeof config;

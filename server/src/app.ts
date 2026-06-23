@@ -10,6 +10,8 @@ import auditRoutes from './modules/audit/audit.routes';
 import productsRoutes from './modules/products/products.routes';
 import productsPublicRoutes from './modules/products/products.public.routes';
 import selectionRoutes from './modules/selection/selection.routes';
+import { adminRoutes as solutionAdminRoutes, publicRoutes as solutionPublicRoutes } from './modules/solutions/solutions.routes';
+import { adminRoutes as materialAdminRoutes, publicRoutes as materialPublicRoutes } from './modules/materials/materials.routes';
 import { errorHandler } from './middleware/errorHandler';
 
 const app: Express = express();
@@ -65,7 +67,19 @@ app.use('/api/v1/admin/products', productsRoutes);
 // 12. Products public routes (no auth required)
 app.use('/api/v1/products', productsPublicRoutes);
 
-// 13. Error handler (last)
+// 13. Solutions admin routes (admin only)
+app.use('/api/v1/admin/solutions', solutionAdminRoutes);
+
+// 14. Solutions public routes (no auth required)
+app.use('/api/v1/solutions', solutionPublicRoutes);
+
+// 15. Materials admin routes (admin only)
+app.use('/api/v1/admin/materials', materialAdminRoutes);
+
+// 16. Public materials by solution (no auth required)
+app.use('/api/v1/solutions/:id/materials', materialPublicRoutes);
+
+// 17. Error handler (last)
 app.use(errorHandler);
 
 export default app;

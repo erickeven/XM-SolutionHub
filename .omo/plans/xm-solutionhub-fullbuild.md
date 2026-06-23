@@ -310,7 +310,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
 
 ### Wave 3 — Phase 3: 资料闭环 (T19-T25)
 
-- [ ] 19. 存储适配器 — StorageAdapter 抽象 (MinIO + 本地双实现)
+- [x] 19. 存储适配器 — StorageAdapter 抽象 (MinIO + 本地双实现)
   What to do: 在 `server/src/lib/storage/` 创建 `StorageAdapter` 接口 (tech.md §6.1 L301-305: `createSignedUrl`, `putObject`, `removeObject`); 实现 `MinioStorageAdapter` (用 `@aws-sdk/client-s3`); 实现 `LocalStorageAdapter` (写入 `STORAGE_LOCAL_DIR` 目录); 通过 `STORAGE_DRIVER` 环境变量切换 (local/minio); signed URL 有效期可配置 (默认下载 10 分钟); `Content-Disposition` 可设 inline 或 attachment。
   Must NOT do: 业务代码不直接依赖具体 SDK (只依赖 StorageAdapter, tech.md §6.1 L291); 对象默认存入私有桶; 文件名由服务端安全生成, 不接受路径片段 (tech.md §6.2 L317)。
   Parallelization: Wave W3 | Blocked by: T1 | Blocks: T20, T21
@@ -319,7 +319,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) Vitest: putObject → createSignedUrl → URL 存在 → Evidence `.omo/evidence/task-19-storage.json`; (failure) removeObject 后 createSignedUrl → 报错。
   Commit: Y | feat(server/storage): StorageAdapter 抽象 + MinIO/本地双实现 + 签名URL
 
-- [ ] 20. 方案 + 资料 Admin CRUD + 公开只读 API + multer 上传
+- [x] 20. 方案 + 资料 Admin CRUD + 公开只读 API + multer 上传
   What to do: 创建 `server/src/modules/solutions/` 和 `server/src/modules/materials/`; 方案 Admin CRUD: `/api/v1/admin/solutions[/{id}]` GET/POST/PATCH/DELETE; 资料 Admin CRUD: `/api/v1/admin/materials[/{id}]` (POST multipart, multer 流式); **公开只读**: GET `/api/v1/solutions/{id}` (方案详情), GET `/api/v1/solutions/{id}/materials` (按权限裁剪: 匿名返回 title+摘要, 登录返回完整字段, INACTIVE 不返回, PRD §9 L306-307); 上传校验: 文件大小白名单 + 扩展名 + MIME + 文件签名字节 (tech.md §6.2 L316); Material 字段: type/title/originalStorageKey/previewStorageKey/pageCount/previewPages(=3)/status(=DRAFT); `solutionId` 可空。
   Must NOT do: 默认 DRAFT 不自动上架 (tech.md §13 item 7); 不同步 PDF 解析 (tech.md §13 item 10); 非预览 `Content-Disposition: attachment` + `nosniff` (tech.md §6.2 L317); 公开 API 不返回非 ACTIVE 资料; 公开 materials 不返回 storageKey。
   Parallelization: Wave W3 | Blocked by: T8, T19 | Blocks: T22 | Can parallelize with: T21
@@ -328,7 +328,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) Supertest: ADMIN 上传 PDF → Material 存在; 匿名 GET materials → 字段裁剪正确 → Evidence `.omo/evidence/task-20-upload.json`; (failure) .exe → 400; USER→admin 403; 匿名访问 INACTIVE material → 不返回。
   Commit: Y | feat(server/materials): Admin CRUD + 公开只读 API (权限裁剪) + multer 流式上传
 
-- [ ] 21. PDF 派生预览件生成 — Worker 拆前 3 页 + pageCount
+- [x] 21. PDF 派生预览件生成 — Worker 拆前 3 页 + pageCount
   What to do: 异步用 `pdf-lib` 拆出前 3 页存独立 PDF → `previewStorageKey`; `pdfjs-dist` 计算 `pageCount` 写入; 源/预览/水印三套 storageKey 不同 (PRD §7.3 L181); 派生失败 → status 不可变 ACTIVE。
   Must NOT do: 不同步拆页 (tech.md §13 item 10); 不向前端签发原始 PDF (PRD §7.3 L180); 前端遮罩不是安全边界 (design.md §5.4 L273)。
   Parallelization: Wave W3 | Blocked by: T19 | Blocks: T22 | Can parallelize with: T20
