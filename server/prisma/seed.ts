@@ -135,8 +135,24 @@ async function main() {
     data: { datasheetMaterialId: material.id },
   });
 
-  // ── 2 KnowledgeDocs (both linked to same Material) ───
-  // Doc1: upsert by materialId (unique)
+  let applicationMaterial = await prisma.material.findFirst({
+    where: { title: 'LP3524 Application Note' },
+  });
+  if (!applicationMaterial) {
+    applicationMaterial = await prisma.material.create({
+      data: {
+        type: 'application-note',
+        title: 'LP3524 Application Note',
+        originalStorageKey: 'seed/lp3524-application-note.pdf',
+        mimeType: 'application/pdf',
+        pageCount: 8,
+        status: 'ACTIVE',
+        productId: products['LP3524'].id,
+      },
+    });
+  }
+
+  // ── 2 KnowledgeDocs ──────────────────────────────────
   const doc1 = await prisma.knowledgeDoc.upsert({
     where: { materialId: material.id },
     update: { title: 'LP3524 Datasheet Knowledge Doc' },
@@ -150,22 +166,18 @@ async function main() {
     },
   });
 
-  // Doc2: findFirst+create by title, still passes materialId=material.id
-  let doc2 = await prisma.knowledgeDoc.findFirst({
-    where: { title: 'LP3524 Application Notes' },
+  const doc2 = await prisma.knowledgeDoc.upsert({
+    where: { materialId: applicationMaterial.id },
+    update: { title: 'LP3524 Application Notes' },
+    create: {
+      materialId: applicationMaterial.id,
+      title: 'LP3524 Application Notes',
+      sourceType: 'application-note',
+      status: 'READY',
+      indexVersion: 'v1',
+      indexedAt: new Date(),
+    },
   });
-  if (!doc2) {
-    doc2 = await prisma.knowledgeDoc.create({
-      data: {
-        materialId: material.id,
-        title: 'LP3524 Application Notes',
-        sourceType: 'application-note',
-        status: 'READY',
-        indexVersion: 'v1',
-        indexedAt: new Date(),
-      },
-    });
-  }
 
   // ── 10 KnowledgeChunks (5 per doc) ───────────────────
   const docChunks: [typeof doc1, string[]][] = [
@@ -286,7 +298,7 @@ async function main() {
     });
   }
 
-  console.log('Seed complete: 1 admin, 5 products, 2 solutions, 1 material, 2 docs, 10 chunks, 10 events, 5 entities');
+  console.log('Seed complete: 1 admin, 5 products, 2 solutions, 2 materials, 2 docs, 10 chunks, 10 events, 5 entities');
 }
 
 main()
