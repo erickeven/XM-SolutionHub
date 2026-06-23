@@ -9,6 +9,8 @@ import { ProductDetailPage } from './features/products/ProductDetailPage';
 import { LoginPage } from './features/auth/LoginPage';
 import { RegisterPage } from './features/auth/RegisterPage';
 import { SolutionDetailPage } from './features/solutions/SolutionDetailPage';
+import { TraceDebugPage } from './features/admin/trace/TraceDebugPage';
+import { KnowledgeListPage } from './features/admin/knowledge/KnowledgeListPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,6 +41,8 @@ export default function App() {
               <Route path="/solutions" element={<PlaceholderPage title="方案资料" />} />
               <Route path="/ai-chat" element={<PlaceholderPage title="AI 问答" />} />
               <Route path="/profile" element={<PlaceholderPage title="个人中心" />} />
+              <Route path="/admin/knowledge" element={<KnowledgeListPage />} />
+              <Route path="/admin/trace/:docId" element={<TraceDebugPage />} />
               <Route path="/admin/*" element={<PlaceholderPage title="后台管理" />} />
             </Route>
           </Routes>

@@ -374,7 +374,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
 
 ### Wave 4 — Phase 4: AI 问答 (T26-T35)
 
-- [ ] 26. 知识库 Admin CRUD API + 索引任务管理
+- [x] 26. 知识库 Admin CRUD API + 索引任务管理
   What to do: `server/src/modules/knowledge/`; KnowledgeDoc CRUD (`/api/v1/admin/knowledge/{id}/reindex` POST 幂等, `/api/v1/admin/knowledge/{id}/trace` GET 查看状态+trace); 创建索引任务时 `docId + indexVersion` 唯一约束 (tech.md §4.2 item 12), 已存在则返回当前任务状态不重复创建 (PRD §7.4 L216, design.md §5.7 L352); 文档状态 UPLOADED→PROCESSING→READY, 失败 FAILED+可读错误 (PRD §7.4 rule 9); 重建索引生成新版本, 成功后原子切换, 半成品不参与检索。
   Must NOT do: 不让处理中/失败版本参与检索; 幂等: 同 doc+version 不重复创建任务; 重试与重建防重复点击 (design.md §5.7 L352)。
   Parallelization: Wave W4 | Blocked by: T8 | Blocks: T27
@@ -383,7 +383,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) Supertest: reindex → PENDING; 重复 → 200 + 已有任务 → Evidence `.omo/evidence/task-26-reindex.json`; (failure) 不存在的 docId → 404。
   Commit: Y | feat(server/knowledge): CRUD + 幂等reindex + trace查询 + 状态流转
 
-- [ ] 27. 知识库索引 Worker — Redis Streams + 文本提取 + 分块 + event/entity + embedding + 原子切换
+- [x] 27. 知识库索引 Worker — Redis Streams + 文本提取 + 分块 + event/entity + embedding + 原子切换
   What to do: `server/src/workers/knowledge-index.worker.ts`; Redis Streams consumer group 消费索引任务 (tech.md §7.1 L338); 流程: 文本提取 (pdfjs-dist) → 清洗 → 分块 (500-800中文字符, overlap 80-120, tech.md §7.1 L346) → 每 chunk 提取 1 event (summary+eventType) → 每 chunk 提取多 entities (name+normalizedName+entityType) → chunk/event/entity 向量化 (调用 EMBEDDING_API, 1536维) → 事务写入 PG+pgvector → 建 event↔entity 关联 → 完整性检查 → 原子切换 KnowledgeDoc.indexVersion 并标 READY; 幂等: `docId + indexVersion + contentHash` 唯一 (tech.md §4.2 item 10); 有限重试 (INDEX_JOB_MAX_RETRIES=3); 失败原因落库; 超时恢复。
   Must NOT do: 不在 API 进程内同步执行 (tech.md §13 item 10); LLM 不可用时不生成自由文本 (tech.md §7.2 L381); 不把半成品参与检索 (PRD §7.4 rule 9)。
   Parallelization: Wave W4 | Blocked by: T26, T19 | Blocks: T28
@@ -392,7 +392,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) reindex → 等 Worker → DB 查 KnowledgeChunk ≥10, Event/Entity 存在 → Evidence `.omo/evidence/task-27-worker.json`; (failure) 模拟 embedding API 不可用 → → 该 chunk 不参与高置信 → FAILED 或降级。
   Commit: Y | feat(server/knowledge-worker): Redis Streams索引+分块+event/entity+embedding+原子切换
 
-- [ ] 28. SAG fast 模式检索 — entity/fulltext/vector + SQL多跳扩展 + rerank
+- [x] 28. SAG fast 模式检索 — entity/fulltext/vector + SQL多跳扩展 + rerank
   What to do: `server/src/modules/knowledge/knowledge.search.ts`; 实现 KnowledgeSearchAdapter (tech.md §7.3 L413-424); fast 模式 (默认, PRD §7.4 rule 6): entity 精确/前缀/pg_trgm 检索 → chunk 全文排名 (ts_rank_cd, 不是 BM25) → chunk/event 向量召回 (pgvector HNSW, cosine) → SQL join 扩展共享 entity 的 event (最大 2 跳, tech.md §7.1 L348) → 合并去重 → rerank (调用 RERANK_API) → 选最终 5 条证据 (topK=30 候选); 返回 ChatSource[] (docId/eventId/title/page/snippet/entities/score) + SearchTrace[] (stage/durationMs/candidateCount/selectedIds); 每次检索先按资料状态+调用者权限构造候选集 (tech.md §7.2 L382)。
   Must NOT do: 不在 recall 后仅在前端隐藏无权限来源 (tech.md §7.2 L382); 不用 ts_rank 描述为 BM25 (tech.md §13 item 9); 向量 TopK 仅作兜底不作默认 (PRD §7.4 rule 8)。
   Parallelization: Wave W4 | Blocked by: T27 | Blocks: T29, T30
@@ -401,7 +401,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) Vitest: seed 知识库 + 查询 "LP3798 的待机功耗是多少" → 返回 ≥1 source + trace → Evidence `.omo/evidence/task-28-fast-search.json`; (failure) 查询无相关知识 → sources=[] 且 trace 仍记录步骤。
   Commit: Y | feat(server/knowledge): SAG fast 模式检索+SQL多跳+rerank+权限过滤
 
-- [ ] 29. SAG standard 模式 + 降级策略
+- [x] 29. SAG standard 模式 + 降级策略
   What to do: standard 模式 (KNOWLEDGE_SEARCH_MODE=standard, tech.md §7.2 L366): LLM 抽取 query entities → 多路召回 → SQL 多跳 → LLM/rerank 精排 → 生成; 降级 (tech.md §7.2 L376-381): pgvector 不可用→全文+SQL扩展; event/entity 抽取失败→低置信候选; 向量 TopK 兜底; LLM 不可用→返回结构化来源列表+"生成服务暂不可用", 不伪装检索片段为完整回答。
   Must NOT do: LLM 不可用时不输出自由编造文本 (tech.md §7.2 L381); 检索片段不伪装为完整回答。
   Parallelization: Wave W4 | Blocked by: T28 | Blocks: T30
@@ -437,7 +437,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) Playwright: 登录 → 输入问题 → 逐字显示 → 来源卡片 → Evidence `.omo/evidence/task-32-ai-chat.png`; (failure) 无匹配 → 中性提示非红色 → Evidence `.omo/evidence/task-32-low-confidence.png`。
   Commit: Y | feat(client/ai-chat): AI问答页 SSE流+来源卡片+反馈+多跳+输入控制
 
-- [ ] 33. 前端 — 知识库管理页 (状态/版本/重建/防重复)
+- [x] 33. 前端 — 知识库管理页 (状态/版本/重建/防重复)
   What to do: `client/src/features/admin/knowledge/`; 展示 KnowledgeDoc 列表: 状态(UPLOADED/PROCESSING/READY/FAILED, design.md §5.7 L352), 索引版本, 更新时间, 失败原因; 重建索引按钮: 幂等, 已存在任务→展示任务状态不重复创建; 防重复点击; 重建期间保留当前可用版本。
   Must NOT do: 不允许重复创建同版本任务; 重建期间不暴露半成品。
   Parallelization: Wave W4 | Blocked by: T26, T28 | Blocks: T35 | Can parallelize with: T32, T34
@@ -446,7 +446,7 @@ Your next move: 批准计划并选择是否在执行前运行双 Momus 高精度
   QA scenarios: (happy) Playwright: ADMIN → 知识库 → 上传 → 状态从 UPLOADED→PROCESSING→READY → Evidence `.omo/evidence/task-33-knowledge-admin.png`; (failure) 对 READY doc 重复点重建 → 显示已有任务不创建。
   Commit: Y | feat(client/admin/knowledge): 状态/版本/重建/防重复/失败原因
 
-- [ ] 34. 前端 — 检索 trace 调试视图 (管理员)
+- [x] 34. 前端 — 检索 trace 调试视图 (管理员)
   What to do: ADMIN 可展开 AI 回答的检索 trace: 展示召回模式 (fast/standard), 各步骤耗时, 命中 event/entity, 候选数, 重排结果; 可查看 chunk/event/entity 内容和 embedding 状态; 来源卡片可跳转对应资料。
   Must NOT do: 非管理员不可见 trace; 不暴露给外部用户。
   Parallelization: Wave W4 | Blocked by: T28 | Blocks: T35 | Can parallelize with: T32, T33
