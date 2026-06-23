@@ -15,6 +15,14 @@ interface UseAuthResult {
 let bootstrapPromise: Promise<void> | null = null;
 
 function bootstrapSession(): Promise<void> {
+  const hasCsrfCookie = document.cookie
+    .split(';')
+    .some((part) => part.trim().startsWith('csrf-token='));
+  if (!hasCsrfCookie) {
+    useAuthStore.getState().setInitialized(true);
+    return Promise.resolve();
+  }
+
   if (!bootstrapPromise) {
     bootstrapPromise = authApi
       .getMe()

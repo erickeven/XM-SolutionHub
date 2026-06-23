@@ -9,6 +9,6 @@ export async function matchProducts(input: SelectionInput): Promise<MatchResult[
 }
 
 export async function getPopularProducts(): Promise<Product[]> {
-  const { data } = await apiClient.get<ApiResponse<Product[]>>('/products/popular');
+  const { data } = await apiClient.get<ApiResponse<Product[]>>('/selection/popular');
   return data.data;
 }
