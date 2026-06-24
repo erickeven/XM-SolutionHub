@@ -28,12 +28,14 @@ export interface SolutionProductSummary {
 export interface CreateSolutionInput {
   name: string;
   description: string;
+  productIds?: string[];
   status?: 'DRAFT' | 'ACTIVE' | 'INACTIVE';
 }
 
 export interface UpdateSolutionInput {
   name?: string;
   description?: string;
+  productIds?: string[];
   status?: 'DRAFT' | 'ACTIVE' | 'INACTIVE';
 }
 

@@ -18,6 +18,7 @@ import eventsRoutes from './modules/leads/events.routes';
 import leadsAdminRoutes from './modules/leads/leads.routes';
 import usersRoutes from './modules/users/users.routes';
 import filesRoutes from './modules/files/files.routes';
+import dashboardRoutes from './modules/dashboard/dashboard.routes';
 import { errorHandler } from './middleware/errorHandler';
 
 const app: Express = express();
@@ -104,6 +105,9 @@ app.use('/api/v1/admin/users', usersRoutes);
 
 // 22. Leads admin routes (STAFF+ with dataScope)
 app.use('/api/v1/admin/leads', leadsAdminRoutes);
+
+// 24. Dashboard snapshot (STAFF+)
+app.use('/api/v1/admin/dashboard', dashboardRoutes);
 
 // 23. Error handler (last)
 app.use(errorHandler);

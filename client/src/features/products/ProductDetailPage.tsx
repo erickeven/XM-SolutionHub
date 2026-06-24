@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Button, Result, Skeleton, Tag } from 'antd';
+import { ArrowLeftOutlined } from '@ant-design/icons';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { getProductById } from '../../api/products';
 import { ProductParamsMatrix } from './ProductParamsMatrix';
@@ -20,7 +21,7 @@ export function ProductDetailPage() {
 
   if (!id) {
     return (
-      <div className="max-w-[1280px] mx-auto px-6 py-8">
+      <div className="container-page py-8">
         <Result
           status="404"
           title="产品未找到"
@@ -37,7 +38,7 @@ export function ProductDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-[1280px] mx-auto px-6 py-8">
+      <div className="container-page py-8">
         <Skeleton active paragraph={{ rows: 8 }} />
       </div>
     );
@@ -45,7 +46,7 @@ export function ProductDetailPage() {
 
   if (isError || !product) {
     return (
-      <div className="max-w-[1280px] mx-auto px-6 py-8">
+      <div className="container-page py-8">
         <Result
           status="error"
           title="加载失败"
@@ -65,12 +66,12 @@ export function ProductDetailPage() {
     typeof product.params.applicationType === 'string' ? product.params.applicationType : '';
 
   return (
-    <div className="max-w-[1280px] mx-auto px-6 py-8">
+    <div className="container-page py-6 pb-20 md:py-10 md:pb-10">
       <Link
         to={backToSelection}
-        className="text-blue-600 hover:text-blue-700 text-sm mb-4 inline-block"
+        className="mb-4 inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
       >
-        ← 返回选型
+        <ArrowLeftOutlined /> 返回选型
       </Link>
 
       {isInactive && (

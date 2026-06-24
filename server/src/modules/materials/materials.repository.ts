@@ -112,12 +112,20 @@ export async function create(
 export async function update(
   id: string,
   data: {
+    title?: string;
+    type?: string;
+    solutionId?: string | null;
+    productId?: string | null;
     status?: 'DRAFT' | 'ACTIVE' | 'INACTIVE';
     pageCount?: number;
     previewStorageKey?: string;
   },
 ): Promise<Material> {
   const updateData: Record<string, unknown> = {};
+  if (data.title !== undefined) updateData.title = data.title;
+  if (data.type !== undefined) updateData.type = data.type;
+  if (data.solutionId !== undefined) updateData.solutionId = data.solutionId ?? null;
+  if (data.productId !== undefined) updateData.productId = data.productId ?? null;
   if (data.status !== undefined) updateData.status = data.status;
   if (data.pageCount !== undefined) updateData.pageCount = data.pageCount;
   if (data.previewStorageKey !== undefined)

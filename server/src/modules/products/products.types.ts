@@ -37,6 +37,7 @@ export interface CreateProductInput {
 }
 
 export interface UpdateProductInput {
+  model?: string;
   series?: string;
   params?: ProductParams;
   advantages?: string[];

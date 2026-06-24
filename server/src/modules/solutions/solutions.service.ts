@@ -89,6 +89,10 @@ export async function createSolution(
 ): Promise<SolutionDetail> {
   const solution = await repository.create(input);
 
+  if (input.productIds && input.productIds.length > 0) {
+    await repository.linkProducts(solution.id, input.productIds);
+  }
+
   logFromContext({
     actorId,
     action: 'solution.create',
@@ -97,16 +101,8 @@ export async function createSolution(
     payload: { name: input.name, description: input.description },
   });
 
-  return {
-    id: solution.id,
-    name: solution.name,
-    description: solution.description,
-    status: solution.status,
-    createdAt: solution.createdAt,
-    updatedAt: solution.updatedAt,
-    materials: [],
-    products: [],
-  };
+  // Re-fetch with products
+  return getSolution(solution.id);
 }
 
 export async function updateSolution(
@@ -119,7 +115,15 @@ export async function updateSolution(
     throw new AppError(3001, 'Solution not found', 404);
   }
 
-  const solution = await repository.update(id, input);
+  const { productIds, ...updateData } = input;
+  const solution = await repository.update(id, updateData);
+
+  if (productIds !== undefined) {
+    await repository.unlinkAllProducts(id);
+    if (productIds.length > 0) {
+      await repository.linkProducts(id, productIds);
+    }
+  }
 
   logFromContext({
     actorId,
@@ -129,25 +133,8 @@ export async function updateSolution(
     payload: input as Record<string, unknown>,
   });
 
-  return {
-    id: solution.id,
-    name: solution.name,
-    description: solution.description,
-    status: solution.status,
-    createdAt: solution.createdAt,
-    updatedAt: solution.updatedAt,
-    materials: existing.materials.map((m) => ({
-      id: m.id,
-      type: m.type,
-      title: m.title,
-      status: m.status,
-    })),
-    products: existing.productSolutions.map((ps) => ({
-      id: ps.product.id,
-      model: ps.product.model,
-      series: ps.product.series,
-    })),
-  };
+  // Re-fetch with products
+  return getSolution(id);
 }
 
 export async function deleteSolution(

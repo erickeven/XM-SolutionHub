@@ -27,6 +27,7 @@ export const createProductSchema = z.object({
 });
 
 export const updateProductSchema = z.object({
+  model: z.string().min(1).optional(),
   series: z.string().min(1).optional(),
   params: productParamsSchema.optional(),
   advantages: z.array(z.string()).optional(),

@@ -55,6 +55,7 @@ export async function update(
   data: UpdateProductInput,
 ): Promise<Product> {
   const updateData: Record<string, unknown> = {};
+  if (data.model !== undefined) updateData.model = data.model;
   if (data.series !== undefined) updateData.series = data.series;
   if (data.params !== undefined) updateData.params = data.params as never;
   if (data.advantages !== undefined) updateData.advantages = data.advantages;

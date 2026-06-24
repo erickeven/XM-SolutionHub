@@ -36,13 +36,14 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-      <div className="w-full max-w-[400px]">
-        <div className="mb-8 text-center">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 pb-20 md:pb-0">
+      <div className="w-full max-w-[420px] rounded-lg border border-slate-200 bg-white p-8 shadow-card">
+        <div className="mb-6 text-center">
           <Link to="/" className="text-2xl font-bold text-navy-950">
-            芯茂微 SolutionHub
+            芯茂微
           </Link>
-          <p className="mt-2 text-sm text-slate-500">登录您的账户</p>
+          <h1 className="mt-4 text-2xl font-bold text-slate-900">登录</h1>
+          <p className="mt-1 text-sm text-slate-500">使用您的账户继续</p>
         </div>
 
         <Form layout="vertical" onFinish={handleSubmit(onSubmit)} autoComplete="off">

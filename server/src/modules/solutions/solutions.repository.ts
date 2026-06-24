@@ -110,3 +110,17 @@ export async function softDelete(id: string): Promise<Solution> {
     data: { status: 'INACTIVE' },
   });
 }
+
+export async function linkProducts(
+  solutionId: string,
+  productIds: string[],
+): Promise<void> {
+  await prisma.productSolution.createMany({
+    data: productIds.map((pid) => ({ solutionId, productId: pid })),
+    skipDuplicates: true,
+  });
+}
+
+export async function unlinkAllProducts(solutionId: string): Promise<void> {
+  await prisma.productSolution.deleteMany({ where: { solutionId } });
+}

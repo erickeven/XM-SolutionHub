@@ -163,9 +163,9 @@ export function SelectionPage() {
   const comparingIds = new Set(compareItems.map((item) => item.productId));
 
   return (
-    <div className="flex min-h-[calc(100vh-64px)] bg-slate-50">
+    <div className="flex min-h-[calc(100vh-4rem-3.5rem)] flex-col bg-slate-50 md:flex-row md:min-h-[calc(100vh-4rem)]">
       {/* PC: left sidebar filter */}
-      <aside className="hidden w-80 shrink-0 border-r border-slate-200 bg-white p-4 md:block">
+      <aside className="hidden w-80 shrink-0 border-r border-slate-200 bg-white p-4 md:block md:overflow-y-auto">
         <div className="mb-3 flex items-center gap-2 text-base font-semibold text-slate-900">
           <FilterOutlined />
           筛选条件
@@ -254,7 +254,7 @@ export function SelectionPage() {
               </div>
             )}
             {popularProducts && popularProducts.length > 0 && (
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 {popularProducts.map((product) => (
                   <SelectionCard key={product.id} product={product} mode="popular" />
                 ))}
@@ -313,7 +313,7 @@ export function SelectionPage() {
                 <div className="mb-3 text-sm text-slate-500">
                   共 <span className="font-medium text-slate-900">{sortedResults.length}</span> 个匹配结果
                 </div>
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                   {sortedResults.map((result) => (
                     <SelectionCard
                       key={result.productId}

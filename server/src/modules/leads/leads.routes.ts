@@ -6,6 +6,7 @@ import {
   assignLeadHandler,
   updateLeadStatusHandler,
   exportLeadsHandler,
+  getLeadHandler,
 } from './leads.controller';
 
 const router: Router = Router();
@@ -15,6 +16,9 @@ router.get('/', authMiddleware, listLeadsHandler);
 
 // POST /export — export CSV (AUDITOR+ only, defined before /:id routes to avoid shadowing)
 router.post('/export', authMiddleware, roleGuard('AUDITOR'), exportLeadsHandler);
+
+// GET /:id — lead detail (STAFF+ with dataScope in controller)
+router.get('/:id', authMiddleware, getLeadHandler);
 
 // POST /:id/assign — assign lead to staff (AUDITOR+)
 router.post('/:id/assign', authMiddleware, roleGuard('AUDITOR'), assignLeadHandler);
