@@ -10,6 +10,7 @@ export interface SolutionListItem {
 export interface SolutionDetail extends SolutionListItem {
   materials: SolutionMaterialSummary[];
   products: SolutionProductSummary[];
+  productIds: string[];
 }
 
 export interface SolutionMaterialSummary {

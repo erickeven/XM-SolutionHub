@@ -51,6 +51,7 @@ export async function getSolution(id: string): Promise<SolutionDetail> {
       model: ps.product.model,
       series: ps.product.series,
     })),
+    productIds: solution.productSolutions.map((ps) => ps.productId),
   };
 }
 

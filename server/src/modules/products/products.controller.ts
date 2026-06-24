@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { AppError } from '../../lib/errors';
 import { successResponse } from '../../lib/response';
-import { productQuerySchema, createProductSchema, updateProductSchema } from './products.schema';
+import { productQuerySchema, getCreateProductSchema, getUpdateProductSchema } from './products.schema';
 import * as service from './products.service';
 
 function requireId(req: Request): string {
@@ -44,7 +44,8 @@ export async function createHandler(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const input = createProductSchema.parse(req.body);
+    const schema = await getCreateProductSchema();
+    const input = schema.parse(req.body);
     const actorId = req.user?.userId ?? null;
     const product = await service.createProduct(input, actorId);
     res.status(201).json(successResponse(product));
@@ -60,7 +61,8 @@ export async function updateHandler(
 ): Promise<void> {
   try {
     const id = requireId(req);
-    const input = updateProductSchema.parse(req.body);
+    const schema = await getUpdateProductSchema();
+    const input = schema.parse(req.body);
     const actorId = req.user?.userId ?? null;
     const product = await service.updateProduct(id, input, actorId);
     res.status(200).json(successResponse(product));
