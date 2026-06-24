@@ -76,7 +76,7 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm e2e
 
 | 项目 | 值 |
 |---|---|
-| IP | `172.16.12.85` |
+| IP | `172.16.172.85` |
 | SSH 端口 | `22` |
 | 系统 | Ubuntu 22.04.5 LTS |
 | 环境 | 宝塔面板 / Docker / Node.js / Nginx |

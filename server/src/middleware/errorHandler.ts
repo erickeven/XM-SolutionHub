@@ -25,6 +25,11 @@ export function errorHandler(
     return;
   }
 
+  if (err instanceof SyntaxError && 'status' in err && err.status === 400) {
+    res.status(400).json({ code: 1001, message: 'Invalid JSON body', data: null });
+    return;
+  }
+
   config.logger.error({ err: { name: err instanceof Error ? err.name : 'Unknown', message: err instanceof Error ? err.message : String(err) } }, 'Unhandled error');
   res.status(500).json({ code: 5000, message: 'Internal Server Error', data: null });
 }
