@@ -160,7 +160,7 @@ export async function previewHandler(
     await optionalAuth(req, res, async () => {
       const isAuthenticated = req.user !== null;
       const result = await service.getPreviewUrl(id, isAuthenticated);
-      res.status(200).json(successResponse(result));
+      res.redirect(302, result.url);
     });
   } catch (err) {
     next(err);
@@ -178,6 +178,32 @@ export async function downloadHandler(
     const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ?? req.ip ?? undefined;
     const result = await service.getDownloadUrl(id, user, ip);
     res.status(200).json(successResponse(result));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function solutionsOptionsHandler(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const options = await service.getSolutionOptions();
+    res.status(200).json(successResponse(options));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function productsOptionsHandler(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const options = await service.getProductOptions();
+    res.status(200).json(successResponse(options));
   } catch (err) {
     next(err);
   }

@@ -7,6 +7,7 @@ import {
 } from '../../lib/pdf/derive';
 import { logFromContext } from '../audit/audit.service';
 import type { AuthUser } from '../../middleware/auth';
+import prisma from '../../lib/prisma';
 import * as repository from './materials.repository';
 import type {
   CreateMaterialInput,
@@ -357,4 +358,22 @@ export async function getDownloadUrl(
   }
 
   return { url, expiresInSeconds: SIGNED_URL_EXPIRES };
+}
+
+export async function getSolutionOptions(): Promise<{ id: string; name: string }[]> {
+  const solutions = await prisma.solution.findMany({
+    where: { status: 'ACTIVE' },
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' },
+  });
+  return solutions;
+}
+
+export async function getProductOptions(): Promise<{ id: string; model: string; series: string }[]> {
+  const products = await prisma.product.findMany({
+    where: { status: 'ACTIVE' },
+    select: { id: true, model: true, series: true },
+    orderBy: { model: 'asc' },
+  });
+  return products;
 }
