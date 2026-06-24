@@ -10,8 +10,10 @@ import auditRoutes from './modules/audit/audit.routes';
 import productsRoutes from './modules/products/products.routes';
 import productsPublicRoutes from './modules/products/products.public.routes';
 import selectionRoutes from './modules/selection/selection.routes';
+import { fieldConfigRouter } from './modules/products/field-config.routes';
 import { adminRoutes as solutionAdminRoutes, publicRoutes as solutionPublicRoutes } from './modules/solutions/solutions.routes';
 import { adminRoutes as materialAdminRoutes, publicRoutes as materialPublicRoutes, materialPublicRoutes as materialPreviewRoutes } from './modules/materials/materials.routes';
+import { materialFieldConfigRouter } from './modules/materials/field-config.routes';
 import knowledgeRoutes from './modules/knowledge/knowledge.routes';
 import aiChatRoutes from './modules/ai-chat/ai-chat.routes';
 import eventsRoutes from './modules/leads/events.routes';
@@ -19,6 +21,7 @@ import leadsAdminRoutes from './modules/leads/leads.routes';
 import usersRoutes from './modules/users/users.routes';
 import filesRoutes from './modules/files/files.routes';
 import dashboardRoutes from './modules/dashboard/dashboard.routes';
+import rbacRoutes from './modules/rbac/rbac.routes';
 import { errorHandler } from './middleware/errorHandler';
 
 const app: Express = express();
@@ -73,7 +76,10 @@ app.use('/api/v1/selection', selectionRoutes);
 // 11. Products admin routes (admin only)
 app.use('/api/v1/admin/products', productsRoutes);
 
-// 12. Products public routes (no auth required)
+// 12. Product field config admin routes (admin only)
+app.use('/api/v1/admin/product-fields', fieldConfigRouter);
+
+// 13. Products public routes (no auth required)
 app.use('/api/v1/products', productsPublicRoutes);
 
 // 13. Solutions admin routes (admin only)
@@ -84,6 +90,9 @@ app.use('/api/v1/solutions', solutionPublicRoutes);
 
 // 15. Materials admin routes (admin only)
 app.use('/api/v1/admin/materials', materialAdminRoutes);
+
+// 15b. Material field-config routes (admin only)
+app.use('/api/v1/admin/material-fields', materialFieldConfigRouter);
 
 // 16. Public materials by solution (no auth required)
 app.use('/api/v1/solutions/:id/materials', materialPublicRoutes);
@@ -106,10 +115,13 @@ app.use('/api/v1/admin/users', usersRoutes);
 // 22. Leads admin routes (STAFF+ with dataScope)
 app.use('/api/v1/admin/leads', leadsAdminRoutes);
 
-// 24. Dashboard snapshot (STAFF+)
+// 23. Dashboard snapshot (STAFF+)
 app.use('/api/v1/admin/dashboard', dashboardRoutes);
 
-// 23. Error handler (last)
+// 24. RBAC role & permission management (ADMIN)
+app.use('/api/v1/admin/roles', rbacRoutes);
+
+// 25. Error handler (last)
 app.use(errorHandler);
 
 export default app;

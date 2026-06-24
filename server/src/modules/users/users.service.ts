@@ -11,6 +11,13 @@ import type {
   UserDetail,
 } from './users.types';
 
+function extractRoles(u: {
+  userRoles?: { role: { id: string; name: string } }[];
+}): { id: string; name: string }[] {
+  if (!u.userRoles) return [];
+  return u.userRoles.map((ur) => ({ id: ur.role.id, name: ur.role.name }));
+}
+
 function toListItem(u: {
   id: string;
   email: string;
@@ -18,12 +25,14 @@ function toListItem(u: {
   status: string;
   createdAt: Date;
   updatedAt: Date;
+  userRoles?: { role: { id: string; name: string } }[];
 }): UserListItem {
   return {
     id: u.id,
     email: u.email,
     role: u.role as UserListItem['role'],
     status: u.status as UserListItem['status'],
+    roles: extractRoles(u),
     createdAt: u.createdAt,
     updatedAt: u.updatedAt,
   };
@@ -36,12 +45,14 @@ function toDetail(u: {
   status: string;
   createdAt: Date;
   updatedAt: Date;
+  userRoles?: { role: { id: string; name: string } }[];
 }): UserDetail {
   return {
     id: u.id,
     email: u.email,
     role: u.role as UserDetail['role'],
     status: u.status as UserDetail['status'],
+    roles: extractRoles(u),
     createdAt: u.createdAt,
     updatedAt: u.updatedAt,
   };
@@ -83,15 +94,19 @@ export async function createUser(
     passwordHash,
   });
 
+  if (data.roleIds && data.roleIds.length > 0) {
+    await repository.syncUserRoles(user.id, data.roleIds);
+  }
+
   logFromContext({
     actorId: adminActorId,
     action: 'user.create',
     targetType: 'User',
     targetId: user.id,
-    payload: { email: data.email, role: data.role },
+    payload: { email: data.email, role: data.role, roleIds: data.roleIds },
   });
 
-  return toDetail(user);
+  return toDetail({ ...user, userRoles: [] });
 }
 
 export async function updateUser(
@@ -109,6 +124,10 @@ export async function updateUser(
     if (emailTaken) {
       throw new AppError(4002, 'Email already registered', 409);
     }
+  }
+
+  if (data.roleIds !== undefined) {
+    await repository.syncUserRoles(id, data.roleIds);
   }
 
   const user = await repository.update(id, data);
