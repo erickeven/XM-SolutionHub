@@ -1,19 +1,23 @@
 import { Router } from 'express';
 import { authMiddleware } from '../../middleware/auth';
-import { roleGuard } from '../../middleware/roleGuard';
+import { permissionGuard } from '../../middleware/permissionGuard';
 import * as controller from './knowledge.controller';
 
 const router: Router = Router();
 
-// AUDITOR can GET (view); ADMIN can mutate
-router.get('/', authMiddleware, roleGuard(['ADMIN', 'AUDITOR']), controller.listHandler);
-router.get('/:id', authMiddleware, roleGuard(['ADMIN', 'AUDITOR']), controller.detailHandler);
+router.get('/', authMiddleware, permissionGuard('knowledge.read'), controller.listHandler);
+router.get('/:id', authMiddleware, permissionGuard('knowledge.read'), controller.detailHandler);
 
-// Mutations — ADMIN only
-router.post('/', authMiddleware, roleGuard('ADMIN'), controller.createHandler);
-router.patch('/:id', authMiddleware, roleGuard('ADMIN'), controller.updateHandler);
-router.delete('/:id', authMiddleware, roleGuard('ADMIN'), controller.deleteHandler);
-router.post('/:id/reindex', authMiddleware, roleGuard('ADMIN'), controller.reindexHandler);
-router.get('/:id/trace', authMiddleware, roleGuard(['ADMIN', 'AUDITOR']), controller.traceHandler);
+router.post(
+  '/',
+  authMiddleware,
+  permissionGuard('knowledge.write'),
+  controller.uploadMiddleware,
+  controller.createHandler,
+);
+router.patch('/:id', authMiddleware, permissionGuard('knowledge.write'), controller.updateHandler);
+router.delete('/:id', authMiddleware, permissionGuard('knowledge.write'), controller.deleteHandler);
+router.post('/:id/reindex', authMiddleware, permissionGuard('knowledge.write'), controller.reindexHandler);
+router.get('/:id/trace', authMiddleware, permissionGuard('knowledge.read'), controller.traceHandler);
 
 export default router;
