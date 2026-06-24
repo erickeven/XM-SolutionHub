@@ -14,6 +14,8 @@ server/dist/
 client/e2e/test-results/
 client/playwright-report/
 client/screenshots/
+client/e2e/screenshots/
+client/e2e/admin-auth.json
 
 # OS
 Thumbs.db
