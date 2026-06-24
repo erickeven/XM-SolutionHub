@@ -8,8 +8,26 @@ async function main() {
   const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? 'Admin123456';
   const passwordHash = await bcrypt.hash(adminPassword, 10);
 
+  // ── Clear existing data in dependency order ──────────
+  await prisma.knowledgeEventEntity.deleteMany();
+  await prisma.knowledgeEvent.deleteMany();
+  await prisma.knowledgeEntity.deleteMany();
+  await prisma.knowledgeChunk.deleteMany();
+  await prisma.knowledgeIndexJob.deleteMany();
+  await prisma.knowledgeDoc.deleteMany();
+  await prisma.material.deleteMany();
+  await prisma.productSolution.deleteMany();
+  await prisma.solution.deleteMany();
+  await prisma.product.deleteMany();
+  await prisma.userRole.deleteMany();
+  await prisma.rolePermission.deleteMany();
+  await prisma.permission.deleteMany();
+  await prisma.roleModel.deleteMany();
+  await prisma.productFieldConfig.deleteMany();
+  await prisma.materialFieldConfig.deleteMany();
+
   // ── 1 ADMIN user ─────────────────────────────────────
-  await prisma.user.upsert({
+  const adminUser = await prisma.user.upsert({
     where: { email: 'admin@xinmaowei.com' },
     update: { passwordHash },
     create: {
@@ -20,6 +38,104 @@ async function main() {
       privacyVersion: 'v1',
       privacyAcceptedAt: new Date(),
     },
+  });
+
+  // ── ProductFieldConfig ──────────────────────────────
+  const productFieldConfigs = [
+    { fieldKey: 'model', label: '型号', fieldType: 'text', required: true, sortOrder: 1 },
+    { fieldKey: 'series', label: '系列', fieldType: 'text', required: true, sortOrder: 2 },
+    { fieldKey: 'type', label: '类型', fieldType: 'single_select', required: true, sortOrder: 3, optionsJson: ['PFC控制器', 'LLC控制器', '同步整流', '快充协议', 'DC-DC转换器', 'GaN驱动器'] },
+    { fieldKey: 'inputVoltageMin', label: '最小输入电压(V)', fieldType: 'number', required: true, sortOrder: 4 },
+    { fieldKey: 'inputVoltageMax', label: '最大输入电压(V)', fieldType: 'number', required: true, sortOrder: 5 },
+    { fieldKey: 'outputVoltage', label: '输出电压(V)', fieldType: 'number', required: true, sortOrder: 6 },
+    { fieldKey: 'outputCurrent', label: '输出电流(A)', fieldType: 'number', required: true, sortOrder: 7 },
+    { fieldKey: 'applicationType', label: '应用类型', fieldType: 'single_select', required: true, sortOrder: 8, optionsJson: ['适配器', 'LED驱动', '充电器', '工业电源', '服务器电源', '家电', '电机驱动', '其他'] },
+    { fieldKey: 'efficiencyLevel', label: '能效等级', fieldType: 'single_select', required: true, sortOrder: 9, optionsJson: ['六级能效', 'CoC Tier 2', '80PLUS金牌', '80PLUS白金'] },
+    { fieldKey: 'standbyPowerMax', label: '最大待机功耗(mW)', fieldType: 'number', sortOrder: 10 },
+    { fieldKey: 'maxAmbientTemp', label: '最高环境温度(°C)', fieldType: 'number', sortOrder: 11 },
+    { fieldKey: 'certifications', label: '认证', fieldType: 'multi_select', sortOrder: 12, optionsJson: ['CCC', 'UL', 'CE', 'FCC', 'PSE', 'KC', 'RoHS'] },
+    { fieldKey: 'requiresPfc', label: '需要PFC', fieldType: 'boolean', sortOrder: 13 },
+    { fieldKey: 'advantages', label: '优势', fieldType: 'text', sortOrder: 14 },
+  ];
+
+  for (const cfg of productFieldConfigs) {
+    await prisma.productFieldConfig.upsert({
+      where: { resourceType_fieldKey: { resourceType: 'product', fieldKey: cfg.fieldKey } },
+      update: {},
+      create: {
+        resourceType: 'product',
+        fieldKey: cfg.fieldKey,
+        label: cfg.label,
+        fieldType: cfg.fieldType,
+        required: cfg.required ?? false,
+        optionsJson: cfg.optionsJson ? cfg.optionsJson as Prisma.InputJsonValue : Prisma.DbNull,
+        sortOrder: cfg.sortOrder,
+        enabled: true,
+      },
+    });
+  }
+
+  // ── Permissions (14 codes) ──────────────────────────
+  const permissionDefs = [
+    { code: 'admin.dashboard.read', description: '查看仪表盘', resourceGroup: 'admin', action: 'read' },
+    { code: 'products.read', description: '查看产品', resourceGroup: 'products', action: 'read' },
+    { code: 'products.write', description: '管理产品', resourceGroup: 'products', action: 'write' },
+    { code: 'solutions.read', description: '查看方案', resourceGroup: 'solutions', action: 'read' },
+    { code: 'solutions.write', description: '管理方案', resourceGroup: 'solutions', action: 'write' },
+    { code: 'materials.read', description: '查看资料', resourceGroup: 'materials', action: 'read' },
+    { code: 'materials.write', description: '管理资料', resourceGroup: 'materials', action: 'write' },
+    { code: 'knowledge.read', description: '查看知识库', resourceGroup: 'knowledge', action: 'read' },
+    { code: 'knowledge.write', description: '管理知识库', resourceGroup: 'knowledge', action: 'write' },
+    { code: 'users.read', description: '查看用户', resourceGroup: 'users', action: 'read' },
+    { code: 'users.write', description: '管理用户', resourceGroup: 'users', action: 'write' },
+    { code: 'audit.read', description: '查看审计日志', resourceGroup: 'audit', action: 'read' },
+    { code: 'leads.read', description: '查看线索', resourceGroup: 'leads', action: 'read' },
+    { code: 'leads.write', description: '管理线索', resourceGroup: 'leads', action: 'write' },
+  ];
+
+  const permissions: Record<string, Awaited<ReturnType<typeof prisma.permission.upsert>>> = {};
+  for (const p of permissionDefs) {
+    permissions[p.code] = await prisma.permission.upsert({
+      where: { code: p.code },
+      update: { description: p.description },
+      create: { code: p.code, description: p.description, resourceGroup: p.resourceGroup, action: p.action },
+    });
+  }
+
+  // ── Roles (4) ───────────────────────────────────────
+  const roleDefs = [
+    { name: '管理员', description: '系统管理员，拥有全部权限', isSystem: true, perms: permissionDefs.map(p => p.code) },
+    { name: '审核员', description: '内容审核员，仅读权限+审计', isSystem: true, perms: ['admin.dashboard.read', 'products.read', 'solutions.read', 'materials.read', 'knowledge.read', 'audit.read', 'leads.read'] },
+    { name: '员工', description: '内部员工，读权限+线索管理', isSystem: true, perms: ['admin.dashboard.read', 'products.read', 'solutions.read', 'materials.read', 'leads.read', 'leads.write'] },
+    { name: '普通用户', description: '注册用户，无权限', isSystem: true, perms: [] as string[] },
+  ];
+
+  const roles: Record<string, Awaited<ReturnType<typeof prisma.roleModel.upsert>>> = {};
+  for (const r of roleDefs) {
+    const role = await prisma.roleModel.upsert({
+      where: { name: r.name },
+      update: { description: r.description },
+      create: { name: r.name, description: r.description, isSystem: r.isSystem },
+    });
+    roles[r.name] = role;
+  }
+
+  // ── RolePermission associations ─────────────────────
+  for (const r of roleDefs) {
+    for (const permCode of r.perms) {
+      await prisma.rolePermission.upsert({
+        where: { roleId_permissionId: { roleId: roles[r.name].id, permissionId: permissions[permCode].id } },
+        update: {},
+        create: { roleId: roles[r.name].id, permissionId: permissions[permCode].id },
+      });
+    }
+  }
+
+  // ── Assign "管理员" role to admin user ──────────────
+  await prisma.userRole.upsert({
+    where: { userId_roleId: { userId: adminUser.id, roleId: roles['管理员'].id } },
+    update: {},
+    create: { userId: adminUser.id, roleId: roles['管理员'].id },
   });
 
   // ── 5 Products ───────────────────────────────────────
@@ -113,7 +229,7 @@ async function main() {
     });
   }
 
-  // ── 1 Material (LP3524 datasheet) ────────────────────
+  // ── Materials ────────────────────────────────────────
   let material = await prisma.material.findFirst({ where: { title: 'LP3524 Datasheet' } });
   if (!material) {
     material = await prisma.material.create({
@@ -298,7 +414,11 @@ async function main() {
     });
   }
 
-  console.log('Seed complete: 1 admin, 5 products, 2 solutions, 2 materials, 2 docs, 10 chunks, 10 events, 5 entities');
+  // ── Summary ─────────────────────────────────────────
+  const totalRoles = await prisma.roleModel.count();
+  const totalPerms = await prisma.permission.count();
+  const totalFieldConfigs = await prisma.productFieldConfig.count();
+  console.log(`Seed complete: 1 admin, ${totalRoles} roles, ${totalPerms} permissions, ${totalFieldConfigs} field configs, 5 products, 2 solutions, 2 materials, 2 docs, 10 chunks, 10 events, 5 entities`);
 }
 
 main()

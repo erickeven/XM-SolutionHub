@@ -71,6 +71,7 @@ model User {
   assignedLeads       Lead[]               @relation("AssignedLeads")
   auditLogs           AuditLog[]           @relation("AuditLogActor")
   searchTraces        SearchTrace[]
+  userRoles           UserRole[]
 }
 
 model RefreshToken {
@@ -319,4 +320,99 @@ model AuditLog {
   createdAt  DateTime @default(now())
 
   actor User? @relation("AuditLogActor", fields: [actorId], references: [id], onDelete: SetNull)
+}
+
+// ── Field Configs ────────────────────────────────────────
+
+model ProductFieldConfig {
+  id             String   @id @default(uuid())
+  resourceType   String   @default("product")
+  fieldKey       String
+  label          String
+  fieldType      String
+  required       Boolean  @default(false)
+  optionsJson    Json?
+  sortOrder      Int      @default(0)
+  enabled        Boolean  @default(true)
+  validationJson Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([resourceType, fieldKey])
+  @@map("product_field_configs")
+}
+
+model MaterialFieldConfig {
+  id             String   @id @default(uuid())
+  resourceType   String   @default("material")
+  fieldKey       String
+  label          String
+  fieldType      String
+  required       Boolean  @default(false)
+  optionsJson    Json?
+  sortOrder      Int      @default(0)
+  enabled        Boolean  @default(true)
+  validationJson Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([resourceType, fieldKey])
+  @@map("material_field_configs")
+}
+
+// ── RBAC ──────────────────────────────────────────────────
+
+model Permission {
+  id            String   @id @default(uuid())
+  code          String   @unique
+  description   String
+  resourceGroup String
+  action        String
+  createdAt     DateTime @default(now())
+
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model RoleModel {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  @@map("roles")
+}
+
+model RolePermission {
+  id           String @id @default(uuid())
+  roleId       String
+  permissionId String
+
+  role       RoleModel   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission  @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  id     String @id @default(uuid())
+  userId String
+  roleId String
+
+  user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role RoleModel @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+  @@map("user_roles")
 }
