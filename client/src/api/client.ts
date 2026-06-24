@@ -41,6 +41,7 @@ apiClient.interceptors.request.use((request) => {
 });
 
 let refreshPromise: Promise<string> | null = null;
+let lastRefreshTime = 0;
 
 async function refreshAccessToken(): Promise<string> {
   if (!refreshPromise) {
@@ -52,6 +53,7 @@ async function refreshAccessToken(): Promise<string> {
       )
       .then(({ data }) => {
         useAuthStore.getState().setAccessToken(data.data.accessToken);
+        lastRefreshTime = Date.now();
         return data.data.accessToken;
       })
       .finally(() => {
@@ -81,7 +83,11 @@ apiClient.interceptors.response.use(
         request.headers.Authorization = `Bearer ${token}`;
         return apiClient(request);
       } catch {
-        useAuthStore.getState().clearAuth();
+        // ponytail: cooldown guard — if a refresh succeeded within 1s,
+        // a single CSRF-rotation race failure won't destroy the session
+        if (Date.now() - lastRefreshTime > 1000) {
+          useAuthStore.getState().clearAuth();
+        }
       }
     }
 

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page, type BrowserContext } from '@playwright/test';
 import { fileURLToPath } from 'url';
 import path from 'path';
 
@@ -9,6 +9,18 @@ const BASE_URL = process.env.E2E_BASE_URL ?? 'http://172.16.172.85:8082';
 const SCREENSHOT_DIR = path.resolve(__dirname, 'screenshots');
 const ADMIN_EMAIL = 'admin@xinmaowei.com';
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? '';
+
+// ponytail: sidebar menu label → page slug mapping from AdminLayout.tsx
+const SIDEBAR_LABELS: Record<string, string> = {
+  '驾驶舱': 'dashboard',
+  '产品管理': 'products',
+  '方案管理': 'solutions',
+  '资料管理': 'materials',
+  '知识库': 'knowledge',
+  '用户': 'users',
+  '审计': 'audit',
+  '线索': 'leads',
+};
 
 const PUBLIC_PAGES = [
   { name: 'home', url: '/' },
@@ -64,28 +76,32 @@ test('[auth-guard] /admin redirects to /login', async ({ browser }) => {
   await ctx.close();
 });
 
-// ─── 3. ADMIN LOGGED IN (single login, all pages) ───
+// ─── 3. ADMIN LOGGED IN (single login, client-side nav) ───
 
 test.describe.configure({ mode: 'serial' });
 test.describe('admin', () => {
-  async function testGroup(browser, pages, groupName) {
-    test.skip(!ADMIN_PASSWORD, 'E2E_ADMIN_PASSWORD not set');
-    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-    const p = await ctx.newPage();
-    await p.goto(`${BASE_URL}/login`, { waitUntil: 'networkidle', timeout: 15000 });
-    await p.locator('input[type="email"], input[id*="email"], input[name="email"]').first().fill(ADMIN_EMAIL);
-    await p.locator('input[type="password"]').fill(ADMIN_PASSWORD);
-    await p.locator('button[type="submit"]').click();
-    await p.waitForTimeout(3000);
-    if (p.url().includes('/login')) { await ctx.close(); throw new Error(`${groupName}: login failed`); }
-    for (const name of pages) {
-      const url = name === 'dashboard' ? '/admin' : `/admin/${name}`;
-      const resp = await p.goto(`${BASE_URL}${url}`, { waitUntil: 'domcontentloaded', timeout: 15000 });
-      await p.waitForTimeout(2000);
-      await p.screenshot({ path: path.join(SCREENSHOT_DIR, `admin-${name}.png`), fullPage: true });
-      if (p.url().includes('/login')) { await ctx.close(); throw new Error(`${groupName}: ${name} redirected`); }
-    }
-    await ctx.close();
+  async function login(page: Page, ctx: BrowserContext) {
+    await page.goto(`${BASE_URL}/login`, { waitUntil: 'networkidle', timeout: 15000 });
+    await page.locator('input[type="email"], input[id*="email"], input[name="email"]').first().fill(ADMIN_EMAIL);
+    await page.locator('input[type="password"]').fill(ADMIN_PASSWORD);
+    await page.locator('button[type="submit"]').click();
+    await page.waitForTimeout(3000);
+    if (page.url().includes('/login')) { await ctx.close(); throw new Error('Login failed'); }
+  }
+
+  /**
+   * Navigate admin pages via sidebar menu click (client-side React Router nav).
+   * Unlike p.goto(), this keeps React mounted — no bootstrapSession / CSRF rotation race.
+   */
+  async function visitAdminPage(page: Page, label: string) {
+    // Ant Design Menu renders menuitems with aria-role="menuitem" and the label text
+    const menuItem = page.getByRole('menuitem', { name: label });
+    await menuItem.waitFor({ state: 'visible', timeout: 5000 });
+    await menuItem.click();
+    // Allow React Router transition + React Query data fetch to settle
+    await page.waitForTimeout(500);
+    // Wait for any loading spinners to disappear
+    await page.waitForTimeout(1000);
   }
 
   test('all admin pages', async ({ browser }) => {
@@ -93,28 +109,35 @@ test.describe('admin', () => {
     test.setTimeout(120000);
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const p = await ctx.newPage();
-    await p.goto(`${BASE_URL}/login`, { waitUntil: 'networkidle', timeout: 15000 });
-    await p.waitForTimeout(500);
-    await p.locator('input[type="email"], input[id*="email"], input[name="email"]').first().fill(ADMIN_EMAIL);
-    await p.locator('input[type="password"]').fill(ADMIN_PASSWORD);
-    await p.locator('button[type="submit"]').click();
-    await p.waitForTimeout(4000);
-    if (p.url().includes('/login')) { await ctx.close(); throw new Error('Login failed'); }
 
-    const allPages = ['dashboard', 'products', 'solutions', 'materials', 'knowledge', 'users', 'audit', 'leads'];
-    let passed = 0; let failed = 0;
-    for (const name of allPages) {
-      const url = name === 'dashboard' ? '/admin' : `/admin/${name}`;
-      await p.goto(`${BASE_URL}${url}`, { waitUntil: 'domcontentloaded', timeout: 20000 });
-      await p.waitForTimeout(2000);
-      await p.screenshot({ path: path.join(SCREENSHOT_DIR, `admin-${name}.png`), fullPage: true });
-      if (p.url().includes('/login')) {
+    await login(p, ctx);
+
+    // Navigate to dashboard first to trigger admin layout mount
+    await p.goto(`${BASE_URL}/admin`, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await p.waitForTimeout(2000);
+    await p.screenshot({ path: path.join(SCREENSHOT_DIR, `admin-dashboard.png`), fullPage: true });
+    if (p.url().includes('/login')) { await ctx.close(); throw new Error('admin: dashboard redirected after login'); }
+
+    const sidebarOrder = ['产品管理', '方案管理', '资料管理', '知识库', '用户', '审计', '线索'];
+    let passed = 1; let failed = 0;
+
+    for (const label of sidebarOrder) {
+      const slug = SIDEBAR_LABELS[label];
+      try {
+        await visitAdminPage(p, label);
+        await p.screenshot({ path: path.join(SCREENSHOT_DIR, `admin-${slug}.png`), fullPage: true });
+        if (p.url().includes('/login')) {
+          console.log(`[SKIP] ${slug} — SPA auth loss after ${passed} navigations`);
+          break;
+        }
+        passed++;
+      } catch (err: unknown) {
         failed++;
-        console.log(`[SKIP] ${name} — SPA auth loss after ${passed + failed} navigations`);
-        break; // stop after auth loss — remaining pages won't work
+        console.log(`[ERROR] ${slug} — ${err instanceof Error ? err.message : String(err)}`);
+        break;
       }
-      passed++;
     }
+
     expect(passed, `Admin pages loaded: ${passed}/8`).toBeGreaterThanOrEqual(5);
     await ctx.close();
   });
