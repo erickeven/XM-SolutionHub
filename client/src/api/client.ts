@@ -37,6 +37,11 @@ apiClient.interceptors.request.use((request) => {
   if (csrfToken && request.method && request.method.toUpperCase() !== 'GET') {
     request.headers['x-csrf-token'] = csrfToken;
   }
+
+  // Let browser auto-set multipart/form-data; boundary= for FormData payloads
+  if (request.data instanceof FormData) {
+    delete request.headers['Content-Type'];
+  }
   return request;
 });
 

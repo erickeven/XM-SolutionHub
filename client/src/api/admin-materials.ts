@@ -85,11 +85,10 @@ export async function createMaterial(
   form.append('title', input.title);
   if (input.solutionId) form.append('solutionId', input.solutionId);
   if (input.productId) form.append('productId', input.productId);
-  // Let browser set multipart boundary — do NOT set Content-Type header
+  // multipart/form-data; boundary is auto-set by request interceptor for FormData
   const { data: res } = await apiClient.post<ApiResponse<AdminMaterialDetail>>(
     '/admin/materials',
     form,
-    { headers: { 'Content-Type': undefined as unknown as string } },
   );
   return res.data;
 }
