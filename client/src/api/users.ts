@@ -5,6 +5,7 @@ export interface UserListItem {
   id: string;
   email: string;
   role: 'USER' | 'STAFF' | 'AUDITOR' | 'ADMIN';
+  roles?: Array<{ id: string; name: string }>;
   status: 'DRAFT' | 'ACTIVE' | 'INACTIVE';
   createdAt: string;
   updatedAt: string;
@@ -29,11 +30,13 @@ export interface CreateUserInput {
   email: string;
   password: string;
   role: 'USER' | 'STAFF' | 'AUDITOR' | 'ADMIN';
+  roleIds?: string[];
 }
 
 export interface UpdateUserInput {
   email?: string;
   role?: 'USER' | 'STAFF' | 'AUDITOR' | 'ADMIN';
+  roleIds?: string[];
   status?: 'DRAFT' | 'ACTIVE' | 'INACTIVE';
 }
 

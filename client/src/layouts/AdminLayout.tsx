@@ -22,6 +22,7 @@ import {
   UserSwitchOutlined,
   TeamOutlined,
   AuditOutlined,
+  SafetyCertificateOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   MenuOutlined,
@@ -33,6 +34,7 @@ import {
   UnorderedListOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../hooks/useAuth';
+import { usePermissions } from '../hooks/usePermissions';
 
 const { Header, Sider, Content } = Layout;
 const { useBreakpoint } = Grid;
@@ -56,6 +58,7 @@ const ADMIN_ROUTES: AdminRouteDef[] = [
   { path: '/admin/knowledge', label: '知识库', icon: <BookOutlined />, roles: ['ADMIN', 'AUDITOR'] },
   { path: '/admin/leads', label: '线索', icon: <UserSwitchOutlined />, roles: ['STAFF', 'AUDITOR', 'ADMIN'] },
   { path: '/admin/users', label: '用户', icon: <TeamOutlined />, roles: ['ADMIN'] },
+  { path: '/admin/roles', label: '角色管理', icon: <SafetyCertificateOutlined />, roles: ['ADMIN'] },
   { path: '/admin/audit', label: '审计', icon: <AuditOutlined />, roles: ['ADMIN', 'AUDITOR'] },
 ];
 
@@ -71,6 +74,7 @@ export function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isLoading, logout } = useAuth();
+  const { hasPermission } = usePermissions();
   const screens = useBreakpoint();
   const isTablet = !screens.lg; // < 1200px roughly (lg=992; xl=1200)
   const isMobile = !screens.md;
@@ -78,17 +82,38 @@ export function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
+  // Permission code mapping for each admin route
+  const ROUTE_PERMISSION: Record<string, string> = {
+    '/admin': 'admin.dashboard.read',
+    '/admin/products': 'products.read',
+    '/admin/product-fields': 'products.write',
+    '/admin/solutions': 'solutions.read',
+    '/admin/materials': 'materials.read',
+    '/admin/material-fields': 'materials.write',
+    '/admin/knowledge': 'knowledge.read',
+    '/admin/leads': 'leads.read',
+    '/admin/users': 'users.read',
+    '/admin/roles': 'users.write',
+    '/admin/audit': 'audit.read',
+  };
+
   const allowedMenu: MenuItem[] = useMemo(() => {
     if (!user) return [];
-    const userRole = user.role as 'STAFF' | 'AUDITOR' | 'ADMIN' | 'USER';
-    return ADMIN_ROUTES.filter((r) => (r.roles as string[]).includes(userRole)).map(
-      (r) => ({
+    return ADMIN_ROUTES
+      .filter((r) => {
+        // Check permission first, fall back to role-based check
+        const perm = ROUTE_PERMISSION[r.path];
+        if (perm) return hasPermission(perm);
+        // Fallback: legacy role check
+        const userRole = user.role as string;
+        return (r.roles as string[]).includes(userRole);
+      })
+      .map((r) => ({
         key: r.path,
         icon: r.icon,
         label: r.label,
-      }),
-    );
-  }, [user]);
+      }));
+  }, [user, hasPermission]);
 
   const selectedKey = useMemo(() => {
     // Find the best-matching route (longest prefix match)

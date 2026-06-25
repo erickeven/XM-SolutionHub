@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import { Modal, Form, Input, Select, Switch, message } from 'antd';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createUser, updateUser } from '../../../api/users';
+import { listRoles } from '../../../api/admin-roles';
 import type {
   UserListItem,
   CreateUserInput,
@@ -15,27 +16,30 @@ interface UserFormModalProps {
   onClose: () => void;
 }
 
-const ROLE_OPTIONS = [
-  { label: '普通用户', value: 'USER' },
-  { label: '员工', value: 'STAFF' },
-  { label: '审核员', value: 'AUDITOR' },
-  { label: '管理员', value: 'ADMIN' },
-];
-
 export function UserFormModal({ open, mode, user, onClose }: UserFormModalProps) {
-  const [form] = Form.useForm<CreateUserInput & { status?: boolean }>();
+  const [form] = Form.useForm<CreateUserInput & { status?: boolean; roleIds?: string[] }>();
   const queryClient = useQueryClient();
+
+  // Fetch roles for multi-select
+  const { data: roles = [] } = useQuery({
+    queryKey: ['admin-roles-options'],
+    queryFn: listRoles,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const roleOptions = roles.map((r) => ({ label: r.name, value: r.id }));
 
   useEffect(() => {
     if (open && mode === 'edit' && user) {
       form.setFieldsValue({
         email: user.email,
         role: user.role,
+        roleIds: user.roles ? user.roles.map((r) => r.id) : [],
         status: user.status === 'ACTIVE',
       });
     } else if (open && mode === 'create') {
       form.resetFields();
-      form.setFieldsValue({ role: 'USER', status: true });
+      form.setFieldsValue({ role: 'USER', roleIds: [], status: true });
     }
   }, [open, mode, user, form]);
 
@@ -76,11 +80,13 @@ export function UserFormModal({ open, mode, user, onClose }: UserFormModalProps)
           email: values.email,
           password: values.password,
           role: values.role,
+          roleIds: values.roleIds,
         });
       } else {
         const updateData: UpdateUserInput = {
           email: values.email,
           role: values.role,
+          roleIds: values.roleIds,
           status: values.status ? 'ACTIVE' : 'INACTIVE',
         };
         updateMutation.mutate(updateData);
@@ -128,11 +134,27 @@ export function UserFormModal({ open, mode, user, onClose }: UserFormModalProps)
         )}
 
         <Form.Item
-          label="角色"
+          label="系统角色"
           name="role"
           rules={[{ required: true, message: '请选择角色' }]}
         >
-          <Select options={ROLE_OPTIONS} />
+          <Select
+            options={[
+              { label: '普通用户', value: 'USER' },
+              { label: '员工', value: 'STAFF' },
+              { label: '审核员', value: 'AUDITOR' },
+              { label: '管理员', value: 'ADMIN' },
+            ]}
+          />
+        </Form.Item>
+
+        <Form.Item label="RBAC 角色" name="roleIds">
+          <Select
+            mode="multiple"
+            placeholder="选择角色（可多选）"
+            options={roleOptions}
+            allowClear
+          />
         </Form.Item>
 
         {mode === 'edit' && (

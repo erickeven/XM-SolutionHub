@@ -165,12 +165,24 @@ export function UserListPage() {
       title: '角色',
       dataIndex: 'role',
       key: 'role',
-      width: 100,
-      render: (role: string) => (
-        <Tag color={ROLE_TAG_COLOR[role] ?? 'default'}>
-          {ROLE_LABEL[role] ?? role}
-        </Tag>
-      ),
+      width: 120,
+      render: (_role: string, record: UserListItem) => {
+        const roleBadges = [
+          <Tag key={record.role} color={ROLE_TAG_COLOR[record.role] ?? 'default'}>
+            {ROLE_LABEL[record.role] ?? record.role}
+          </Tag>,
+        ];
+        if (record.roles && record.roles.length > 0) {
+          record.roles.forEach((r) => {
+            if (r.name !== ROLE_LABEL[record.role]) {
+              roleBadges.push(
+                <Tag key={r.id} color="blue">{r.name}</Tag>,
+              );
+            }
+          });
+        }
+        return <>{roleBadges}</>;
+      },
     },
     {
       title: '状态',
