@@ -14,12 +14,15 @@ const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? '';
 const SIDEBAR_LABELS: Record<string, string> = {
   '驾驶舱': 'dashboard',
   '产品管理': 'products',
+  '产品字段': 'product-fields',
   '方案管理': 'solutions',
   '资料管理': 'materials',
+  '资料字段': 'material-fields',
   '知识库': 'knowledge',
-  '用户': 'users',
-  '审计': 'audit',
   '线索': 'leads',
+  '用户': 'users',
+  '角色管理': 'roles',
+  '审计': 'audit',
 };
 
 const PUBLIC_PAGES = [
@@ -94,51 +97,52 @@ test.describe('admin', () => {
    * Unlike p.goto(), this keeps React mounted — no bootstrapSession / CSRF rotation race.
    */
   async function visitAdminPage(page: Page, label: string) {
-    // Ant Design Menu renders menuitems with aria-role="menuitem" and the label text
     const menuItem = page.getByRole('menuitem', { name: label });
     await menuItem.waitFor({ state: 'visible', timeout: 5000 });
     await menuItem.click();
-    // Allow React Router transition + React Query data fetch to settle
-    await page.waitForTimeout(500);
-    // Wait for any loading spinners to disappear
     await page.waitForTimeout(1000);
   }
 
-  test('all admin pages', async ({ browser }) => {
+  test('all admin pages (11/11)', async ({ browser }) => {
     test.skip(!ADMIN_PASSWORD, 'E2E_ADMIN_PASSWORD not set');
-    test.setTimeout(120000);
+    test.setTimeout(180000);
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const p = await ctx.newPage();
+    const consoleErrors: string[] = [];
+    p.on('console', (msg) => {
+      if (msg.type() === 'error') consoleErrors.push(msg.text());
+    });
 
     await login(p, ctx);
 
     // Navigate to dashboard first to trigger admin layout mount
     await p.goto(`${BASE_URL}/admin`, { waitUntil: 'domcontentloaded', timeout: 15000 });
     await p.waitForTimeout(2000);
-    await p.screenshot({ path: path.join(SCREENSHOT_DIR, `admin-dashboard.png`), fullPage: true });
-    if (p.url().includes('/login')) { await ctx.close(); throw new Error('admin: dashboard redirected after login'); }
+    await p.screenshot({ path: path.join(SCREENSHOT_DIR, 'admin-dashboard.png'), fullPage: true });
+    expect(p.url(), 'Dashboard must not redirect to /login after login').not.toContain('/login');
 
-    const sidebarOrder = ['产品管理', '方案管理', '资料管理', '知识库', '用户', '审计', '线索'];
-    let passed = 1; let failed = 0;
+    // All 11 admin pages in sidebar order
+    const sidebarOrder = [
+      '产品管理', '产品字段', '方案管理',
+      '资料管理', '资料字段', '知识库',
+      '线索', '用户', '角色管理', '审计',
+    ];
+    let passed = 1;
 
     for (const label of sidebarOrder) {
       const slug = SIDEBAR_LABELS[label];
-      try {
-        await visitAdminPage(p, label);
-        await p.screenshot({ path: path.join(SCREENSHOT_DIR, `admin-${slug}.png`), fullPage: true });
-        if (p.url().includes('/login')) {
-          console.log(`[SKIP] ${slug} — SPA auth loss after ${passed} navigations`);
-          break;
-        }
-        passed++;
-      } catch (err: unknown) {
-        failed++;
-        console.log(`[ERROR] ${slug} — ${err instanceof Error ? err.message : String(err)}`);
-        break;
-      }
+      await visitAdminPage(p, label);
+      await p.screenshot({ path: path.join(SCREENSHOT_DIR, `admin-${slug}.png`), fullPage: true });
+      expect(
+        p.url(),
+        `${label} (${slug}) must not redirect to /login (passed=${passed}/11)`,
+      ).not.toContain('/login');
+      passed++;
     }
 
-    expect(passed, `Admin pages loaded: ${passed}/8`).toBeGreaterThanOrEqual(5);
+    // All 11 pages must pass
+    expect(passed, `Admin pages loaded: ${passed}/11`).toBe(11);
+    expect(consoleErrors, 'No unexpected console errors').toEqual([]);
     await ctx.close();
   });
 });
