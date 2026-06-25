@@ -260,19 +260,18 @@ describe.skipIf(!process.env.DATABASE_URL)('Materials Admin API', () => {
   }
 
   describe('GET /api/v1/materials/:id/preview', () => {
-    it('should return 200 with preview URL for anonymous', async () => {
+    it('should return 302 redirect for anonymous', async () => {
       const token = await loginAdmin();
       const materialId = await createActiveMaterial(token);
 
       const res = await request.get(`/api/v1/materials/${materialId}/preview`);
 
-      expect(res.status).toBe(200);
-      expect(res.body.code).toBe(0);
-      expect(res.body.data).toHaveProperty('url');
-      expect(res.body.data).toHaveProperty('previewPages');
+      expect(res.status).toBe(302);
+      expect(res.headers.location).toBeDefined();
+      expect(res.headers.location).toMatch(/^https?:\/\//);
     });
 
-    it('should return 200 with full PDF URL for authenticated user', async () => {
+    it('should return 302 redirect for authenticated user', async () => {
       const token = await loginAdmin();
       const materialId = await createActiveMaterial(token);
 
@@ -280,10 +279,9 @@ describe.skipIf(!process.env.DATABASE_URL)('Materials Admin API', () => {
         .get(`/api/v1/materials/${materialId}/preview`)
         .set('Authorization', `Bearer ${token}`);
 
-      expect(res.status).toBe(200);
-      expect(res.body.code).toBe(0);
-      expect(res.body.data).toHaveProperty('url');
-      expect(res.body.data).toHaveProperty('previewPages');
+      expect(res.status).toBe(302);
+      expect(res.headers.location).toBeDefined();
+      expect(res.headers.location).toMatch(/^https?:\/\//);
     });
 
     it('should return 404 for INACTIVE material', async () => {

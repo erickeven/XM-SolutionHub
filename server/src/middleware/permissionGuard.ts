@@ -83,13 +83,29 @@ export function permissionGuard(...requiredPermissions: string[]) {
       if (cached && cached.expires > Date.now()) {
         userPerms = cached.permissions;
       } else {
-        // ponytail: hardcoded fallback ensures backward compat during RBAC migration.
-        // Users with legacy Role enum get mapped permissions without needing UserRole records.
-        const legacyPerms = ALL_PERMISSIONS[req.user.role];
-        if (legacyPerms) {
-          userPerms = new Set(legacyPerms);
-        } else {
-          userPerms = await fetchUserPermissions(req.user.userId);
+        // DB-first: query UserRole records for every user. If the user has
+        // custom roles assigned, those permissions take priority. Fall back
+        // to the hardcoded ALL_PERMISSIONS map only when DB returns empty
+        // (no UserRole records for legacy users) or throws an error.
+        try {
+          const dbPerms = await fetchUserPermissions(req.user.userId);
+          if (dbPerms.size > 0) {
+            userPerms = dbPerms;
+          } else {
+            // Legacy user with no UserRole records — fall back to role-based map
+            userPerms = new Set(ALL_PERMISSIONS[req.user.role]);
+          }
+        } catch {
+          // DB query failed — fall back to role-based map
+          userPerms = new Set(ALL_PERMISSIONS[req.user.role]);
+        }
+
+        // Still cache even the fallback result to avoid repeated DB failures
+        if (!cached || cached.expires <= Date.now()) {
+          cache.set(getCacheKey(req.user.userId), {
+            expires: Date.now() + CACHE_TTL_MS,
+            permissions: userPerms,
+          });
         }
       }
 

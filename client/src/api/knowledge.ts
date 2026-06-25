@@ -125,14 +125,9 @@ export interface CreateKnowledgeFormDataParams {
 export async function createKnowledge(
   data: CreateKnowledgeJsonParams | FormData,
 ): Promise<CreateKnowledgeResponse> {
-  const isFormData = data instanceof FormData;
-  const config = isFormData
-    ? { headers: { 'Content-Type': undefined as unknown as string } }
-    : undefined;
   const { data: res } = await apiClient.post<ApiResponse<CreateKnowledgeResponse>>(
     '/admin/knowledge',
     data,
-    config,
   );
   return res.data;
 }

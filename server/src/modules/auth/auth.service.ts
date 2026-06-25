@@ -35,17 +35,50 @@ function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
 
-function toUserInfo(user: {
-  id: string;
-  email: string;
-  role: string;
-  status: string;
-}): UserInfo {
+function extractPermissions(userWithRoles: {
+  userRoles?: Array<{
+    role?: {
+      id: string;
+      name: string;
+      rolePermissions?: Array<{
+        permission?: { code: string };
+      }>;
+    };
+  }>;
+}): { permissions: string[]; roles: Array<{ id: string; name: string }> } {
+  const permSet = new Set<string>();
+  const roles: Array<{ id: string; name: string }> = [];
+
+  for (const ur of userWithRoles.userRoles ?? []) {
+    if (ur.role) {
+      roles.push({ id: ur.role.id, name: ur.role.name });
+      for (const rp of ur.role.rolePermissions ?? []) {
+        if (rp.permission?.code) {
+          permSet.add(rp.permission.code);
+        }
+      }
+    }
+  }
+
+  return { permissions: Array.from(permSet).sort(), roles };
+}
+
+function toUserInfo(
+  user: {
+    id: string;
+    email: string;
+    role: string;
+    status: string;
+  },
+  opts?: { permissions?: string[]; roles?: Array<{ id: string; name: string }> },
+): UserInfo {
   return {
     id: user.id,
     email: user.email,
     role: user.role as UserRole,
     status: user.status as UserStatus,
+    permissions: opts?.permissions ?? [],
+    roles: opts?.roles,
   };
 }
 
@@ -125,7 +158,7 @@ export async function register(input: RegisterInput): Promise<LoginResult> {
 }
 
 export async function login(input: LoginInput): Promise<LoginResult> {
-  const user = await repository.findByEmail(input.email);
+  const user = await repository.findByEmailWithPermissions(input.email);
   if (!user) {
     throw new AppError(2001, 'Invalid email or password', 401);
   }
@@ -161,8 +194,10 @@ export async function login(input: LoginInput): Promise<LoginResult> {
     expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
   });
 
+  const { permissions, roles } = extractPermissions(user);
+
   return {
-    user: toUserInfo(user),
+    user: toUserInfo(user, { permissions, roles }),
     accessToken,
     refreshToken,
   };
@@ -233,11 +268,12 @@ export async function logout(refreshToken: string): Promise<void> {
 }
 
 export async function me(userId: string): Promise<UserInfo> {
-  const user = await repository.findById(userId);
+  const user = await repository.findByIdWithPermissions(userId);
   if (!user || user.status !== 'ACTIVE') {
     throw new AppError(2001, 'User not found', 401);
   }
-  return toUserInfo(user);
+  const { permissions, roles } = extractPermissions(user);
+  return toUserInfo(user, { permissions, roles });
 }
 
 export async function passwordReset(email: string): Promise<PasswordResetResult> {

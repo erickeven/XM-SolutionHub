@@ -1,6 +1,18 @@
 import prisma from '../../lib/prisma';
 import type { User, RefreshToken, PasswordResetToken } from '@prisma/client';
 
+interface UserWithPermissions extends User {
+  userRoles: Array<{
+    role: {
+      id: string;
+      name: string;
+      rolePermissions: Array<{
+        permission: { code: string };
+      }>;
+    };
+  }>;
+}
+
 export async function findByEmail(email: string): Promise<User | null> {
   return prisma.user.findUnique({ where: { email } });
 }
@@ -116,4 +128,42 @@ export async function updateUserStatus(
     where: { id: userId },
     data: { status: status as 'DRAFT' | 'ACTIVE' | 'INACTIVE' },
   });
+}
+
+export async function findByEmailWithPermissions(email: string): Promise<UserWithPermissions | null> {
+  return prisma.user.findUnique({
+    where: { email },
+    include: {
+      userRoles: {
+        include: {
+          role: {
+            include: {
+              rolePermissions: {
+                include: { permission: true },
+              },
+            },
+          },
+        },
+      },
+    },
+  }) as unknown as UserWithPermissions | null;
+}
+
+export async function findByIdWithPermissions(userId: string): Promise<UserWithPermissions | null> {
+  return prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      userRoles: {
+        include: {
+          role: {
+            include: {
+              rolePermissions: {
+                include: { permission: true },
+              },
+            },
+          },
+        },
+      },
+    },
+  }) as unknown as UserWithPermissions | null;
 }

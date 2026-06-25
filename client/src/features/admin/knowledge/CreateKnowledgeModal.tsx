@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Form, Input, Select, Modal, Tabs, Upload, message } from 'antd';
-import type { UploadProps } from 'antd';
+import type { UploadProps, UploadFile } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createKnowledge, createKnowledgeFormData } from '../../../api/knowledge';
@@ -15,7 +15,7 @@ interface CreateFormValues {
   selectedMaterialId?: string;
   title?: string;
   sourceType: string;
-  file?: File;
+  file?: UploadFile[];
 }
 
 const { Dragger } = Upload;
@@ -31,7 +31,6 @@ export function CreateKnowledgeModal({ open, onClose }: CreateKnowledgeModalProp
   const [form] = Form.useForm<CreateFormValues>();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'select' | 'upload'>('select');
-  const [fileList, setFileList] = useState<File[]>([]);
 
   const { data: materialsData, isLoading: materialsLoading } = useQuery({
     queryKey: ['materialsList', 'all'],
@@ -51,11 +50,13 @@ export function CreateKnowledgeModal({ open, onClose }: CreateKnowledgeModalProp
           sourceType: values.sourceType,
         });
       } else {
-        if (!fileList[0]) {
+        const files = form.getFieldValue('file') as UploadFile[];
+        const originFile = files?.[0]?.originFileObj;
+        if (!originFile) {
           throw new Error('请上传文件');
         }
         const formData = createKnowledgeFormData({
-          file: fileList[0],
+          file: originFile,
           title: values.title!,
           sourceType: values.sourceType,
         });
@@ -66,7 +67,6 @@ export function CreateKnowledgeModal({ open, onClose }: CreateKnowledgeModalProp
       message.success('索引任务已创建');
       queryClient.invalidateQueries({ queryKey: ['knowledgeList'] });
       form.resetFields();
-      setFileList([]);
       onClose();
     },
     onError: (err: unknown) => {
@@ -78,7 +78,6 @@ export function CreateKnowledgeModal({ open, onClose }: CreateKnowledgeModalProp
   useEffect(() => {
     if (!open) {
       form.resetFields();
-      setFileList([]);
       setActiveTab('select');
     }
   }, [open, form]);
@@ -97,15 +96,8 @@ export function CreateKnowledgeModal({ open, onClose }: CreateKnowledgeModalProp
   const uploadProps: UploadProps = {
     name: 'file',
     multiple: false,
-    accept: '.pdf,.docx,.txt,.md',
-    fileList: fileList as unknown as UploadProps['fileList'],
-    beforeUpload: (file) => {
-      setFileList([file]);
-      return false;
-    },
-    onRemove: () => {
-      setFileList([]);
-    },
+    accept: '.pdf,.docx',
+    beforeUpload: () => false,
   };
 
   const materialOptions = (materialsData?.items ?? []).map((m) => ({
@@ -143,6 +135,8 @@ export function CreateKnowledgeModal({ open, onClose }: CreateKnowledgeModalProp
         <Form.Item
           name="file"
           label="文件上传"
+          valuePropName="fileList"
+          getValueFromEvent={(e) => e?.fileList ?? []}
           rules={[{ required: activeTab === 'upload', message: '请上传文件' }]}
         >
           <Dragger {...uploadProps}>
@@ -151,7 +145,7 @@ export function CreateKnowledgeModal({ open, onClose }: CreateKnowledgeModalProp
             </p>
             <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
             <p className="ant-upload-hint">
-              支持 PDF、Word、TXT、Markdown 格式，单文件不超过 100MB
+              支持 PDF、Word 格式，单文件不超过 50MB
             </p>
           </Dragger>
         </Form.Item>
