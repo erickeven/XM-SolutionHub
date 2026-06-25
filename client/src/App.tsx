@@ -63,6 +63,19 @@ const AuditLogPage = lazy(() =>
 const LeadsListPage = lazy(() =>
   import('./features/admin/leads/LeadsListPage').then((m) => ({ default: m.LeadsListPage })),
 );
+const ProductFieldSettingsPage = lazy(() =>
+  import('./features/admin/product-fields/ProductFieldSettingsPage').then((m) => ({
+    default: m.ProductFieldSettingsPage,
+  })),
+);
+const RoleListPage = lazy(() =>
+  import('./features/admin/roles/RoleListPage').then((m) => ({ default: m.RoleListPage })),
+);
+const MaterialFieldSettingsPage = lazy(() =>
+  import('./features/admin/material-fields/MaterialFieldSettingsPage').then((m) => ({
+    default: m.MaterialFieldSettingsPage,
+  })),
+);
 
 function AdminNotFoundPage() {
   return (
@@ -163,6 +176,14 @@ export default function App() {
                   }
                 />
                 <Route
+                  path="product-fields"
+                  element={
+                    <RouteGuard roles={['ADMIN']}>
+                      <ProductFieldSettingsPage />
+                    </RouteGuard>
+                  }
+                />
+                <Route
                   path="solutions"
                   element={
                     <RouteGuard roles={['ADMIN']}>
@@ -175,6 +196,14 @@ export default function App() {
                   element={
                     <RouteGuard roles={['ADMIN']}>
                       <MaterialListPage />
+                    </RouteGuard>
+                  }
+                />
+                <Route
+                  path="material-fields"
+                  element={
+                    <RouteGuard roles={['ADMIN']}>
+                      <MaterialFieldSettingsPage />
                     </RouteGuard>
                   }
                 />
@@ -208,6 +237,14 @@ export default function App() {
                   element={
                     <RouteGuard roles={['ADMIN']}>
                       <UserListPage />
+                    </RouteGuard>
+                  }
+                />
+                <Route
+                  path="roles"
+                  element={
+                    <RouteGuard roles={['ADMIN']}>
+                      <RoleListPage />
                     </RouteGuard>
                   }
                 />

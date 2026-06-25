@@ -34,15 +34,22 @@ export function SolutionFormModal({
   });
 
   const { data: productData, isLoading: productsLoading } = useQuery({
-    queryKey: ['admin-products-options'],
-    queryFn: () => listProducts({ page: 1, pageSize: 200 }),
+    queryKey: ['admin-products', 'options'],
+    queryFn: () => listProducts({ page: 1, pageSize: 500, status: 'ACTIVE' }),
     enabled: open,
+    staleTime: 5 * 60 * 1000,
   });
 
   const productOptions = (productData?.items ?? []).map((p) => ({
     label: `${p.model} — ${p.series}`,
     value: p.id,
   }));
+
+  const filterOption = (input: string, option?: { label?: unknown; value?: unknown }) => {
+    if (!option || option.label === undefined || option.label === null) return false;
+    const text = String(option.label).toLowerCase();
+    return text.includes(input.toLowerCase());
+  };
 
   useEffect(() => {
     if (open) {
@@ -146,9 +153,10 @@ export function SolutionFormModal({
             mode="multiple"
             options={productOptions}
             loading={productsLoading}
-            placeholder="选择本方案关联的芯片型号"
-            optionFilterProp="label"
+            placeholder="选择本方案关联的芯片型号（可搜索型号或系列）"
             showSearch
+            filterOption={filterOption}
+            optionFilterProp="label"
           />
         </Form.Item>
         {detailLoading && (

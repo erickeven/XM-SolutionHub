@@ -3,6 +3,7 @@ import { Modal, Form, Input, Select, message } from 'antd';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { updateMaterial, getMaterial } from '../../../api/admin-materials';
 import { listSolutions } from '../../../api/admin-solutions';
+import { listProducts } from '../../../api/admin-products';
 import type { MaterialType, MaterialStatus } from '../../../api/admin-materials';
 
 interface MaterialEditModalProps {
@@ -40,7 +41,7 @@ export function MaterialEditModal({
 
   const { data: solutionData } = useQuery({
     queryKey: ['admin-solutions-options-edit'],
-    queryFn: () => listSolutions({ page: 1, pageSize: 200 }),
+    queryFn: () => listSolutions({ page: 1, pageSize: 200, status: 'ACTIVE' }),
     enabled: open,
   });
 
@@ -53,6 +54,23 @@ export function MaterialEditModal({
       })),
     ],
     [solutionData],
+  );
+
+  const { data: productData } = useQuery({
+    queryKey: ['admin-products-options-edit'],
+    queryFn: () => listProducts({ page: 1, pageSize: 500, status: 'ACTIVE' }),
+    enabled: open,
+  });
+
+  const productOptions = useMemo(
+    () => [
+      { label: '（无）', value: '' },
+      ...(productData?.items ?? []).map((p) => ({
+        label: `${p.model} — ${p.series}`,
+        value: p.id,
+      })),
+    ],
+    [productData],
   );
 
   useEffect(() => {
@@ -131,8 +149,15 @@ export function MaterialEditModal({
         <Form.Item label="所属方案" name="solutionId">
           <Select options={solutionOptions} allowClear showSearch optionFilterProp="label" />
         </Form.Item>
-        <Form.Item label="关联产品 ID" name="productId">
-          <Input allowClear placeholder="留空则不关联产品" />
+        <Form.Item label="关联产品" name="productId">
+          <Select
+            options={productOptions}
+            allowClear
+            showSearch
+            optionFilterProp="label"
+            loading={!productData}
+            placeholder="选择产品（可选）"
+          />
         </Form.Item>
         <div className="text-xs text-slate-400">
           提示：文件本身不可替换，如需更换请删除后重新上传。

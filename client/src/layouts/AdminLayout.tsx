@@ -30,6 +30,7 @@ import {
   HomeOutlined,
   ArrowLeftOutlined,
   SettingOutlined,
+  UnorderedListOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../hooks/useAuth';
 
@@ -48,8 +49,10 @@ interface AdminRouteDef {
 const ADMIN_ROUTES: AdminRouteDef[] = [
   { path: '/admin', label: '驾驶舱', icon: <DashboardOutlined />, roles: ['STAFF', 'AUDITOR', 'ADMIN'] },
   { path: '/admin/products', label: '产品管理', icon: <AppstoreOutlined />, roles: ['ADMIN'] },
+  { path: '/admin/product-fields', label: '产品字段', icon: <UnorderedListOutlined />, roles: ['ADMIN'] },
   { path: '/admin/solutions', label: '方案管理', icon: <BulbOutlined />, roles: ['ADMIN'] },
   { path: '/admin/materials', label: '资料管理', icon: <FileTextOutlined />, roles: ['ADMIN'] },
+  { path: '/admin/material-fields', label: '资料字段', icon: <UnorderedListOutlined />, roles: ['ADMIN'] },
   { path: '/admin/knowledge', label: '知识库', icon: <BookOutlined />, roles: ['ADMIN', 'AUDITOR'] },
   { path: '/admin/leads', label: '线索', icon: <UserSwitchOutlined />, roles: ['STAFF', 'AUDITOR', 'ADMIN'] },
   { path: '/admin/users', label: '用户', icon: <TeamOutlined />, roles: ['ADMIN'] },

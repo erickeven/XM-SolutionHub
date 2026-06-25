@@ -14,8 +14,15 @@ export interface AdminSolutionListItem {
   materialCount?: number;
 }
 
+export interface AdminSolutionProduct {
+  id: string;
+  model: string;
+  series: string;
+}
+
 export interface AdminSolutionDetail extends AdminSolutionListItem {
   productIds: string[];
+  products: AdminSolutionProduct[];
 }
 
 export interface AdminSolutionListResult {

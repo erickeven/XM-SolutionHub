@@ -14,6 +14,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createMaterial } from '../../../api/admin-materials';
 import type { MaterialType } from '../../../api/admin-materials';
 import { listSolutions } from '../../../api/admin-solutions';
+import { listProducts } from '../../../api/admin-products';
 
 interface MaterialUploadModalProps {
   open: boolean;
@@ -35,17 +36,36 @@ export function MaterialUploadModal({ open, onClose }: MaterialUploadModalProps)
 
   const { data: solutionData } = useQuery({
     queryKey: ['admin-solutions-options'],
-    queryFn: () => listSolutions({ page: 1, pageSize: 200 }),
+    queryFn: () => listSolutions({ page: 1, pageSize: 200, status: 'ACTIVE' }),
     enabled: open,
   });
 
   const solutionOptions = useMemo(
-    () =>
-      (solutionData?.items ?? []).map((s) => ({
+    () => [
+      { label: '（无）', value: '' },
+      ...(solutionData?.items ?? []).map((s) => ({
         label: s.name,
         value: s.id,
       })),
+    ],
     [solutionData],
+  );
+
+  const { data: productData } = useQuery({
+    queryKey: ['admin-products-options'],
+    queryFn: () => listProducts({ page: 1, pageSize: 500, status: 'ACTIVE' }),
+    enabled: open,
+  });
+
+  const productOptions = useMemo(
+    () => [
+      { label: '（无）', value: '' },
+      ...(productData?.items ?? []).map((p) => ({
+        label: `${p.model} — ${p.series}`,
+        value: p.id,
+      })),
+    ],
+    [productData],
   );
 
   useEffect(() => {
@@ -156,7 +176,14 @@ export function MaterialUploadModal({ open, onClose }: MaterialUploadModalProps)
         </Form.Item>
 
         <Form.Item label="关联产品" name="productId">
-          <Input placeholder="产品 ID（可选）" allowClear />
+          <Select
+            options={productOptions}
+            placeholder="选择产品（可选）"
+            allowClear
+            showSearch
+            optionFilterProp="label"
+            loading={!productData}
+          />
         </Form.Item>
       </Form>
     </Modal>

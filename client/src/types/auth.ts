@@ -14,6 +14,8 @@ export interface AuthUser {
   email: string;
   role: 'USER' | 'STAFF' | 'AUDITOR' | 'ADMIN';
   status: 'DRAFT' | 'ACTIVE' | 'INACTIVE';
+  roles?: Array<{ id: string; name: string }>;
+  permissions?: string[];
 }
 
 export interface AuthResponse {
