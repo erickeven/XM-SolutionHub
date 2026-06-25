@@ -93,7 +93,6 @@ export function RoleFormModal({ open, mode, role, onClose }: RoleFormModalProps)
         setCheckedPermissions(roleDetail.data.permissions.map((p) => p.id));
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, mode, role, roleDetail.data?.id]);
 
   const handleSubmit = async () => {

@@ -24,7 +24,6 @@ const KNOWLEDGE_STATUSES: KnowledgeStatusBreakdown['status'][] = [
  */
 export async function getSnapshot(role: string, userId: string): Promise<DashboardSnapshot> {
   const isAdmin = role === 'ADMIN';
-  const isAuditor = role === 'AUDITOR';
   const isStaff = role === 'STAFF';
 
   const [

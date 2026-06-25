@@ -117,7 +117,7 @@ export async function updateSolution(
   }
 
   const { productIds, ...updateData } = input;
-  const solution = await repository.update(id, updateData);
+  await repository.update(id, updateData);
 
   if (productIds !== undefined) {
     await repository.unlinkAllProducts(id);
