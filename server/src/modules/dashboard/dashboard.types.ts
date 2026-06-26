@@ -27,8 +27,10 @@ export interface PendingItem {
 export interface RecentActivity {
   id: string;
   action: string;
+  actionLabel: string;
   actorEmail?: string;
   targetType: string;
+  targetLabel: string;
   createdAt: string;
 }
 

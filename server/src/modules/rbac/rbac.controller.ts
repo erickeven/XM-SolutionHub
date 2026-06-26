@@ -11,7 +11,7 @@ export async function listPermissionsHandler(
 ): Promise<void> {
   try {
     const groups = await service.listPermissions();
-    res.status(200).json(successResponse(groups));
+    res.status(200).json(successResponse({ items: groups }));
   } catch (err) {
     next(err);
   }
@@ -24,7 +24,7 @@ export async function listRolesHandler(
 ): Promise<void> {
   try {
     const roles = await service.listRoles();
-    res.status(200).json(successResponse(roles));
+    res.status(200).json(successResponse({ items: roles, total: roles.length }));
   } catch (err) {
     next(err);
   }

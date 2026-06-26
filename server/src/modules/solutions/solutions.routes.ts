@@ -8,6 +8,7 @@ import * as controller from './solutions.controller';
 const adminRoutes: Router = Router();
 adminRoutes.use(authMiddleware, permissionGuard('solutions.write'), apiLimiter);
 adminRoutes.get('/', controller.listHandler);
+adminRoutes.get('/product-options', controller.productOptionsHandler);
 adminRoutes.get('/:id', controller.getByIdHandler);
 adminRoutes.post('/', controller.createHandler);
 adminRoutes.patch('/:id', controller.updateHandler);

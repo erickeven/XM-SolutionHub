@@ -45,7 +45,7 @@ export function MainLayout() {
   };
 
   const isAdminRole =
-    user?.role === 'ADMIN' || user?.role === 'AUDITOR' || user?.role === 'STAFF';
+    user?.permissions?.includes('admin.dashboard.read') ?? false;
 
   const handleLogout = async () => {
     await logout();

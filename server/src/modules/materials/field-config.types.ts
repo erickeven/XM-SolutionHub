@@ -1,3 +1,8 @@
+export interface FieldOption {
+  label: string;
+  value: string;
+}
+
 export interface FieldConfigListItem {
   id: string;
   resourceType: string;
@@ -5,7 +10,7 @@ export interface FieldConfigListItem {
   label: string;
   fieldType: string;
   required: boolean;
-  optionsJson: unknown | null;
+  optionsJson: FieldOption[] | null;
   sortOrder: number;
   enabled: boolean;
   validationJson: unknown | null;
@@ -19,7 +24,7 @@ export interface CreateFieldConfigInput {
   label: string;
   fieldType: 'text' | 'number' | 'single_select' | 'multi_select' | 'boolean';
   required?: boolean;
-  optionsJson?: unknown;
+  optionsJson?: FieldOption[] | null;
   sortOrder?: number;
   enabled?: boolean;
   validationJson?: unknown;
@@ -29,7 +34,7 @@ export interface UpdateFieldConfigInput {
   label?: string;
   fieldType?: 'text' | 'number' | 'single_select' | 'multi_select' | 'boolean';
   required?: boolean;
-  optionsJson?: unknown;
+  optionsJson?: FieldOption[] | null;
   sortOrder?: number;
   enabled?: boolean;
   validationJson?: unknown;

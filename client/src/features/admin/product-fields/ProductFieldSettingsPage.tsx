@@ -92,6 +92,14 @@ export function ProductFieldSettingsPage() {
       dataIndex: 'label',
       key: 'label',
       width: 160,
+      render: (v: string, record: FieldConfigItem) => (
+        <span>
+          {v}
+          {CORE_FIELDS.has(record.fieldKey) && (
+            <Tag color="blue" className="!ml-2">系统字段</Tag>
+          )}
+        </span>
+      ),
     },
     {
       title: '类型',

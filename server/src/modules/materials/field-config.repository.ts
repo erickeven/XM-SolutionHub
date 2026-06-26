@@ -31,7 +31,7 @@ export async function create(data: CreateFieldConfigInput): Promise<MaterialFiel
       label: data.label,
       fieldType: data.fieldType,
       required: data.required ?? false,
-      optionsJson: data.optionsJson ?? undefined,
+      optionsJson: (data.optionsJson ?? undefined) as never,
       sortOrder: data.sortOrder ?? 0,
       enabled: data.enabled ?? true,
       validationJson: data.validationJson ?? undefined,

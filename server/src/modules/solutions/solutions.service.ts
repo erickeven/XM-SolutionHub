@@ -1,5 +1,6 @@
 import { AppError } from '../../lib/errors';
 import { logFromContext } from '../audit/audit.service';
+import prisma from '../../lib/prisma';
 import * as repository from './solutions.repository';
 import type {
   CreateSolutionInput,
@@ -21,6 +22,7 @@ export async function listSolutions(
       status: s.status,
       createdAt: s.createdAt,
       updatedAt: s.updatedAt,
+      productCount: (s as never as { _count: { productSolutions: number } })._count.productSolutions,
     })),
     total,
     page: query.page,
@@ -136,6 +138,15 @@ export async function updateSolution(
 
   // Re-fetch with products
   return getSolution(id);
+}
+
+export async function getAllProductOptions(): Promise<
+  { id: string; model: string; series: string; status: string }[]
+> {
+  return prisma.product.findMany({
+    select: { id: true, model: true, series: true, status: true },
+    orderBy: { model: 'asc' },
+  });
 }
 
 export async function deleteSolution(

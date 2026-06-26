@@ -115,3 +115,16 @@ export async function publicListHandler(
     next(err);
   }
 }
+
+export async function productOptionsHandler(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const options = await service.getAllProductOptions();
+    res.status(200).json(successResponse(options));
+  } catch (err) {
+    next(err);
+  }
+}

@@ -2,11 +2,20 @@ import { AppError } from '../../lib/errors';
 import * as repository from './field-config.repository';
 import type {
   FieldConfigListItem,
+  FieldOption,
   CreateFieldConfigInput,
   UpdateFieldConfigInput,
 } from './field-config.types';
 
 const CORE_FIELDS = ['title', 'type', 'status'];
+
+function normalizeOptions(raw: unknown): FieldOption[] | null {
+  if (!raw) return null;
+  if (Array.isArray(raw) && raw.length > 0 && typeof raw[0] === 'string') {
+    return (raw as string[]).map((s) => ({ label: s, value: s }));
+  }
+  return raw as FieldOption[] | null;
+}
 
 function toListItem(raw: {
   id: string;
@@ -29,7 +38,7 @@ function toListItem(raw: {
     label: raw.label,
     fieldType: raw.fieldType,
     required: raw.required,
-    optionsJson: raw.optionsJson,
+    optionsJson: normalizeOptions(raw.optionsJson),
     sortOrder: raw.sortOrder,
     enabled: raw.enabled,
     validationJson: raw.validationJson,

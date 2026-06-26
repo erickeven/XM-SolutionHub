@@ -3,6 +3,13 @@ import type { ApiResponse } from '../types/api';
 
 export type SolutionStatus = 'DRAFT' | 'ACTIVE' | 'INACTIVE';
 
+export interface AdminSolutionProductOption {
+  id: string;
+  model: string;
+  series: string;
+  status: string;
+}
+
 export interface AdminSolutionListItem {
   id: string;
   name: string;
@@ -96,5 +103,14 @@ export async function deleteSolution(id: string): Promise<{ id: string }> {
   const { data: res } = await apiClient.delete<ApiResponse<{ id: string }>>(
     `/admin/solutions/${id}`,
   );
+  return res.data;
+}
+
+export async function getSolutionProductOptions(): Promise<
+  AdminSolutionProductOption[]
+> {
+  const { data: res } = await apiClient.get<
+    ApiResponse<AdminSolutionProductOption[]>
+  >('/admin/solutions/product-options');
   return res.data;
 }

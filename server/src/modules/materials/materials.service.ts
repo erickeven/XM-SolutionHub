@@ -35,6 +35,9 @@ export async function listMaterials(
       status: m.status,
       createdAt: m.createdAt,
       updatedAt: m.updatedAt,
+      solutionName: (m as never as { solution: { name: string } | null }).solution?.name ?? null,
+      productModel: (m as never as { product: { model: string; series: string } | null }).product?.model ?? null,
+      productSeries: (m as never as { product: { model: string; series: string } | null }).product?.series ?? null,
     })),
     total,
     page: query.page,
@@ -61,6 +64,9 @@ export async function getMaterial(id: string): Promise<MaterialDetail> {
     status: material.status,
     createdAt: material.createdAt,
     updatedAt: material.updatedAt,
+    solutionName: null,
+    productModel: null,
+    productSeries: null,
   };
 }
 
@@ -121,21 +127,24 @@ export async function createMaterial(
       payload: { type: input.type, title: input.title, storageKey },
     });
 
-    return {
-      id: material.id,
-      solutionId: material.solutionId,
-      productId: material.productId,
-      type: material.type,
-      title: material.title,
-      originalStorageKey: material.originalStorageKey,
-      previewStorageKey: material.previewStorageKey,
-      mimeType: material.mimeType,
-      pageCount: material.pageCount,
-      previewPages: material.previewPages,
-      status: material.status,
-      createdAt: material.createdAt,
-      updatedAt: material.updatedAt,
-    };
+  return {
+    id: material.id,
+    solutionId: material.solutionId,
+    productId: material.productId,
+    type: material.type,
+    title: material.title,
+    originalStorageKey: material.originalStorageKey,
+    previewStorageKey: material.previewStorageKey,
+    mimeType: material.mimeType,
+    pageCount: material.pageCount,
+    previewPages: material.previewPages,
+    status: material.status,
+    createdAt: material.createdAt,
+    updatedAt: material.updatedAt,
+    solutionName: null,
+    productModel: null,
+    productSeries: null,
+  };
   } catch (error) {
     await Promise.allSettled(uploadedKeys.map((key) => adapter.removeObject(key)));
     throw error;
@@ -186,6 +195,9 @@ export async function updateMaterial(
     status: material.status,
     createdAt: material.createdAt,
     updatedAt: material.updatedAt,
+    solutionName: null,
+    productModel: null,
+    productSeries: null,
   };
 }
 

@@ -5,8 +5,8 @@ import {
   createSolution,
   updateSolution,
   getSolution,
+  getSolutionProductOptions,
 } from '../../../api/admin-solutions';
-import { listProducts } from '../../../api/admin-products';
 import type { SolutionStatus } from '../../../api/admin-solutions';
 
 interface SolutionFormModalProps {
@@ -33,14 +33,14 @@ export function SolutionFormModal({
     enabled: open && mode === 'edit' && !!solutionId,
   });
 
-  const { data: productData, isLoading: productsLoading } = useQuery({
-    queryKey: ['admin-products', 'options'],
-    queryFn: () => listProducts({ page: 1, pageSize: 500, status: 'ACTIVE' }),
+  const { data: productOptions, isLoading: productsLoading } = useQuery({
+    queryKey: ['admin-solutions', 'product-options'],
+    queryFn: () => getSolutionProductOptions(),
     enabled: open,
     staleTime: 5 * 60 * 1000,
   });
 
-  const productOptions = (productData?.items ?? []).map((p) => ({
+  const productSelectOptions = (productOptions ?? []).map((p) => ({
     label: `${p.model} — ${p.series}`,
     value: p.id,
   }));
@@ -151,7 +151,7 @@ export function SolutionFormModal({
         <Form.Item label="关联产品" name="productIds">
           <Select
             mode="multiple"
-            options={productOptions}
+            options={productSelectOptions}
             loading={productsLoading}
             placeholder="选择本方案关联的芯片型号（可搜索型号或系列）"
             showSearch

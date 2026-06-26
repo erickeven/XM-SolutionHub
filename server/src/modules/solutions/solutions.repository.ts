@@ -27,6 +27,9 @@ export async function findMany(
       skip,
       take: limit,
       orderBy: { createdAt: 'desc' },
+      include: {
+        _count: { select: { productSolutions: true } },
+      },
     }),
     prisma.solution.count({ where }),
   ]);

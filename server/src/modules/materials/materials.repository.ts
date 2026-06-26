@@ -27,6 +27,10 @@ export async function findMany(
       skip,
       take: limit,
       orderBy: { createdAt: 'desc' },
+      include: {
+        solution: { select: { name: true } },
+        product: { select: { model: true, series: true } },
+      },
     }),
     prisma.material.count({ where }),
   ]);

@@ -12,6 +12,9 @@ export interface MaterialListItem {
   status: string;
   createdAt: Date;
   updatedAt: Date;
+  solutionName: string | null;
+  productModel: string | null;
+  productSeries: string | null;
 }
 
 export interface MaterialDetail extends MaterialListItem {

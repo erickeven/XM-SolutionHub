@@ -313,9 +313,9 @@ export function DashboardPage() {
                     <List.Item.Meta
                       title={
                         <Space size={8}>
-                          <Text>{item.action}</Text>
-                          {item.targetType && (
-                            <Tag color="blue">{item.targetType}</Tag>
+                          <Text>{item.actionLabel}</Text>
+                          {item.targetLabel && (
+                            <Tag color="blue">{item.targetLabel}</Tag>
                           )}
                         </Space>
                       }

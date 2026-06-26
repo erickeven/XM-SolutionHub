@@ -161,7 +161,7 @@ export default function App() {
               <Route
                 path="/admin"
                 element={
-                  <RouteGuard roles={['STAFF', 'AUDITOR', 'ADMIN']}>
+                  <RouteGuard permissions={['admin.dashboard.read']}>
                     <AdminLayout />
                   </RouteGuard>
                 }
@@ -170,55 +170,55 @@ export default function App() {
                 <Route
                   path="products"
                   element={
-                    <RouteGuard roles={['ADMIN']}>
-                      <ProductListPage />
-                    </RouteGuard>
+<RouteGuard permissions={['products.read']}>
+                    <ProductListPage />
+                  </RouteGuard>
                   }
                 />
                 <Route
                   path="product-fields"
                   element={
-                    <RouteGuard roles={['ADMIN']}>
-                      <ProductFieldSettingsPage />
-                    </RouteGuard>
+<RouteGuard permissions={['products.write']}>
+                    <ProductFieldSettingsPage />
+                  </RouteGuard>
                   }
                 />
                 <Route
                   path="solutions"
                   element={
-                    <RouteGuard roles={['ADMIN']}>
-                      <SolutionListPage />
-                    </RouteGuard>
+<RouteGuard permissions={['solutions.read']}>
+                    <SolutionListPage />
+                  </RouteGuard>
                   }
                 />
                 <Route
                   path="materials"
                   element={
-                    <RouteGuard roles={['ADMIN']}>
-                      <MaterialListPage />
-                    </RouteGuard>
+<RouteGuard permissions={['materials.read']}>
+                    <MaterialListPage />
+                  </RouteGuard>
                   }
                 />
                 <Route
                   path="material-fields"
                   element={
-                    <RouteGuard roles={['ADMIN']}>
-                      <MaterialFieldSettingsPage />
-                    </RouteGuard>
+<RouteGuard permissions={['materials.write']}>
+                    <MaterialFieldSettingsPage />
+                  </RouteGuard>
                   }
                 />
                 <Route
                   path="knowledge"
                   element={
-                    <RouteGuard roles={['ADMIN', 'AUDITOR']}>
-                      <KnowledgeListPage />
-                    </RouteGuard>
+<RouteGuard permissions={['knowledge.read']}>
+                    <KnowledgeListPage />
+                  </RouteGuard>
                   }
                 />
                 <Route
                   path="knowledge/:docId/trace"
                   element={
-                    <RouteGuard roles={['ADMIN']}>
+                    <RouteGuard permissions={['knowledge.write']}>
                       <TraceDebugPage />
                     </RouteGuard>
                   }
@@ -226,16 +226,18 @@ export default function App() {
                 <Route
                   path="trace/:docId"
                   element={
-                    <RouteGuard roles={['ADMIN']}>
+                    <RouteGuard permissions={['knowledge.write']}>
                       <TraceDebugPage />
                     </RouteGuard>
                   }
                 />
-                <Route path="leads" element={<LeadsListPage />} />
+                <Route path="leads" element={<RouteGuard permissions={['leads.read']}>
+                      <LeadsListPage />
+                    </RouteGuard>} />
                 <Route
                   path="users"
                   element={
-                    <RouteGuard roles={['ADMIN']}>
+                                    <RouteGuard permissions={['users.read']}>
                       <UserListPage />
                     </RouteGuard>
                   }
@@ -243,7 +245,7 @@ export default function App() {
                 <Route
                   path="roles"
                   element={
-                    <RouteGuard roles={['ADMIN']}>
+                    <RouteGuard permissions={['users.write']}>
                       <RoleListPage />
                     </RouteGuard>
                   }
@@ -251,7 +253,7 @@ export default function App() {
                 <Route
                   path="audit"
                   element={
-                    <RouteGuard roles={['ADMIN', 'AUDITOR']}>
+                    <RouteGuard permissions={['audit.read']}>
                       <AuditLogPage />
                     </RouteGuard>
                   }

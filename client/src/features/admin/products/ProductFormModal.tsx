@@ -97,9 +97,13 @@ export function ProductFormModal({
   });
 
   const { data: fieldConfigsRaw, isLoading: fieldsLoading } = useFieldConfigs(true);
-  // Sort by sortOrder
+  // Sort by sortOrder; exclude fixed fields (model/series/status/advantages) rendered as dedicated form items
+  const FIXED_FIELD_KEYS = new Set(['model', 'series', 'status', 'advantages']);
   const fieldConfigs = useMemo(
-    () => [...(fieldConfigsRaw ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
+    () =>
+      [...(fieldConfigsRaw ?? [])]
+        .filter((f) => !FIXED_FIELD_KEYS.has(f.fieldKey))
+        .sort((a, b) => a.sortOrder - b.sortOrder),
     [fieldConfigsRaw],
   );
 
