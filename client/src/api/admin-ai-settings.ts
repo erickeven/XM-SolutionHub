@@ -26,7 +26,7 @@ export interface AiPromptItem {
 export interface UpdateProviderInput {
   name?: string;
   baseUrl?: string | null;
-  apiKeyEncrypted?: string | null;
+  apiKeyPlaintext?: string;
   model?: string | null;
   dimensions?: number | null;
   enabled?: boolean;

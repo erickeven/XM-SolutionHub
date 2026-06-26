@@ -29,14 +29,20 @@ function ProviderEditModal({
 
   const handleTest = async () => {
     const values = form.getFieldsValue();
-    const result = await testMutation.mutateAsync({
-      providerType: record.providerType as 'llm' | 'embedding' | 'rerank',
-      baseUrl: values.baseUrl ?? undefined,
-      apiKey: values.apiKeyEncrypted ?? undefined,
-      model: values.model ?? undefined,
-    });
-    if (result.success) {
-      message.success(`连接成功, 延迟 ${result.latencyMs}ms`);
+    try {
+      const result = await testMutation.mutateAsync({
+        providerType: record.providerType as 'llm' | 'embedding' | 'rerank',
+        baseUrl: values.baseUrl ?? undefined,
+        apiKey: values.apiKeyPlaintext ?? undefined,
+        model: values.model ?? undefined,
+      });
+      if (result.success) {
+        message.success(`连接成功, 延迟 ${result.latencyMs}ms`);
+      } else {
+        message.error((result as { error?: string }).error ?? '连接失败');
+      }
+    } catch {
+      message.error('连接测试失败，请检查接口地址和 API Key');
     }
   };
 
@@ -64,7 +70,7 @@ function ProviderEditModal({
         <Form.Item label="接口地址" name="baseUrl">
           <Input placeholder="https://api.example.com/v1" />
         </Form.Item>
-        <Form.Item label="API Key" name="apiKeyEncrypted">
+        <Form.Item label="API Key" name="apiKeyPlaintext">
           <Input.Password placeholder={record.apiKeyMasked ?? '留空不修改'} />
         </Form.Item>
         <Form.Item label="模型" name="model">

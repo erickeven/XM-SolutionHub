@@ -180,7 +180,13 @@ export async function testConnection(input: {
  * Used by llm.ts and embedding.ts to get runtime API config.
  */
 export async function getEffectiveProvider(type: string): Promise<AiProviderConfig | null> {
-  const providers = await repository.findEnabledProvidersByType(type);
+  let providers: AiProviderRaw[];
+  try {
+    providers = await repository.findEnabledProvidersByType(type);
+  } catch {
+    // DB unreachable — fallback to env vars silently
+    providers = [];
+  }
   for (const p of providers) {
     if (!p.apiKeyEncrypted) continue;
     if (!p.baseUrl) continue;

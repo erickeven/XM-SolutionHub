@@ -1,6 +1,5 @@
-import { env } from '../../config';
 import { logger } from '../logger';
-import { loadPrompt } from '../../modules/ai-settings/ai-settings.service';
+import { loadPrompt, getEffectiveProvider } from '../../modules/ai-settings/ai-settings.service';
 
 export interface ExtractedEvent {
   summary: string;
@@ -51,13 +50,13 @@ const HARDCODED_SYSTEM_PROMPT = `你是一个技术文档分析助手。请从�
 export async function extractEventAndEntities(
   chunkContent: string,
 ): Promise<ExtractionResult> {
-  const baseUrl = env.LLM_BASE_URL;
-  if (!baseUrl) {
-    logger.warn('LLM_BASE_URL not configured, skipping event/entity extraction');
+  const provider = await getEffectiveProvider('llm');
+  if (!provider || !provider.baseUrl) {
+    logger.warn('No LLM provider configured, skipping event/entity extraction');
     return { event: null, entities: [] };
   }
 
-  const url = `${baseUrl.replace(/\/$/, '')}/v1/chat/completions`;
+  const url = `${provider.baseUrl.replace(/\/$/, '')}/v1/chat/completions`;
 
   try {
     const dbPrompt = await loadPrompt('extraction').catch(() => null);
@@ -66,10 +65,10 @@ export async function extractEventAndEntities(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${env.LLM_API_KEY ?? ''}`,
+        Authorization: `Bearer ${provider.apiKey}`,
       },
       body: JSON.stringify({
-        model: env.LLM_MODEL,
+        model: provider.model,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: chunkContent },
@@ -135,13 +134,13 @@ Rules:
  * If LLM unavailable: returns [] (caller falls back to trigram matching).
  */
 export async function extractQueryEntities(query: string): Promise<string[]> {
-  const baseUrl = env.LLM_BASE_URL;
-  if (!baseUrl || !env.LLM_API_KEY) {
-    logger.warn('LLM not configured, skipping query entity extraction');
+  const provider = await getEffectiveProvider('llm');
+  if (!provider || !provider.baseUrl) {
+    logger.warn('No LLM provider configured, skipping query entity extraction');
     return [];
   }
 
-  const url = `${baseUrl.replace(/\/$/, '')}/v1/chat/completions`;
+  const url = `${provider.baseUrl.replace(/\/$/, '')}/v1/chat/completions`;
 
   try {
     const dbPrompt = await loadPrompt('entity_query').catch(() => null);
@@ -151,10 +150,10 @@ export async function extractQueryEntities(query: string): Promise<string[]> {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${env.LLM_API_KEY}`,
+        Authorization: `Bearer ${provider.apiKey}`,
       },
       body: JSON.stringify({
-        model: env.LLM_MODEL,
+        model: provider.model,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: query },
@@ -227,15 +226,15 @@ export async function llmRankCandidates(
   query: string,
   candidates: { id: string; content: string }[],
 ): Promise<{ id: string; score: number }[] | null> {
-  const baseUrl = env.LLM_BASE_URL;
-  if (!baseUrl || !env.LLM_API_KEY) {
-    logger.warn('LLM not configured, skipping LLM precision ranking');
+  const provider = await getEffectiveProvider('llm');
+  if (!provider || !provider.baseUrl) {
+    logger.warn('No LLM provider configured, skipping LLM precision ranking');
     return null;
   }
 
   if (candidates.length === 0) return [];
 
-  const url = `${baseUrl.replace(/\/$/, '')}/v1/chat/completions`;
+  const url = `${provider.baseUrl.replace(/\/$/, '')}/v1/chat/completions`;
 
   const snippets = candidates.map((c, i) => `[${i}] ${c.content.slice(0, 300)}`).join('\n');
   const userMsg = `Question: ${query}\n\nSnippets:\n${snippets}`;
@@ -248,10 +247,10 @@ export async function llmRankCandidates(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${env.LLM_API_KEY}`,
+        Authorization: `Bearer ${provider.apiKey}`,
       },
       body: JSON.stringify({
-        model: env.LLM_MODEL,
+        model: provider.model,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userMsg },
