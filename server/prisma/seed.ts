@@ -23,6 +23,8 @@ async function main() {
   await prisma.rolePermission.deleteMany();
   await prisma.permission.deleteMany();
   await prisma.roleModel.deleteMany();
+  await prisma.aiPromptSetting.deleteMany();
+  await prisma.aiProviderSetting.deleteMany();
   await prisma.productFieldConfig.deleteMany();
   await prisma.materialFieldConfig.deleteMany();
 
@@ -75,7 +77,7 @@ async function main() {
     });
   }
 
-  // ── Permissions (14 codes) ──────────────────────────
+  // ── Permissions (16 codes) ──────────────────────────
   const permissionDefs = [
     { code: 'admin.dashboard.read', description: '查看仪表盘', resourceGroup: 'admin', action: 'read' },
     { code: 'products.read', description: '查看产品', resourceGroup: 'products', action: 'read' },
@@ -91,6 +93,8 @@ async function main() {
     { code: 'audit.read', description: '查看审计日志', resourceGroup: 'audit', action: 'read' },
     { code: 'leads.read', description: '查看线索', resourceGroup: 'leads', action: 'read' },
     { code: 'leads.write', description: '管理线索', resourceGroup: 'leads', action: 'write' },
+    { code: 'settings.ai.read', description: '查看AI设置', resourceGroup: 'settings', action: 'read' },
+    { code: 'settings.ai.write', description: '管理AI设置', resourceGroup: 'settings', action: 'write' },
   ];
 
   const permissions: Record<string, Awaited<ReturnType<typeof prisma.permission.upsert>>> = {};
@@ -414,11 +418,87 @@ async function main() {
     });
   }
 
+  // ── AiProviderSettings (3 default providers) ──────────
+  const providerDefaults = [
+    {
+      providerType: 'llm',
+      name: 'Default LLM',
+      baseUrl: process.env.LLM_BASE_URL ?? null,
+      apiKeyEncrypted: process.env.LLM_API_KEY ?? null,
+      model: process.env.LLM_MODEL ?? 'your-model-name',
+      dimensions: null,
+      enabled: true,
+      isDefault: true,
+    },
+    {
+      providerType: 'embedding',
+      name: 'Default Embedding',
+      baseUrl: process.env.EMBEDDING_BASE_URL ?? null,
+      apiKeyEncrypted: process.env.EMBEDDING_API_KEY ?? null,
+      model: process.env.EMBEDDING_MODEL ?? 'your-model-name',
+      dimensions: process.env.EMBEDDING_DIMENSIONS ? Number(process.env.EMBEDDING_DIMENSIONS) : 1536,
+      enabled: true,
+      isDefault: true,
+    },
+    {
+      providerType: 'rerank',
+      name: 'Default Rerank',
+      baseUrl: process.env.RERANK_BASE_URL ?? null,
+      apiKeyEncrypted: process.env.RERANK_API_KEY ?? null,
+      model: process.env.RERANK_MODEL ?? 'your-model-name',
+      dimensions: null,
+      enabled: true,
+      isDefault: true,
+    },
+  ];
+
+  for (const data of providerDefaults) {
+    await prisma.aiProviderSetting.create({ data });
+  }
+
+  // ── AiPromptSettings (4 default prompts) ──────────────
+  const promptDefaults = [
+    {
+      key: 'extraction',
+      title: '文档内容抽取提示词',
+      content: '请从以下文档内容中提取关键信息，包括技术参数、功能特性、应用场景等。保持客观准确，使用中文输出。',
+      enabled: true,
+      version: 1,
+    },
+    {
+      key: 'entity_query',
+      title: '实体查询提示词',
+      content: '根据用户的问题，从知识库中查找相关的实体信息。返回最匹配的实体名称、类型和关联关系。',
+      enabled: true,
+      version: 1,
+    },
+    {
+      key: 'rerank',
+      title: '重排序提示词',
+      content: '对以下搜索结果进行相关性重排序。请判断每条结果与用户问题的相关程度，并给出评分（0-1）。',
+      enabled: true,
+      version: 1,
+    },
+    {
+      key: 'chat_system',
+      title: '聊天系统提示词',
+      content: 'You are a helpful assistant specialized in power electronics and semiconductor products. Answer questions based on the provided knowledge base context. If you don\'t know the answer, say so honestly. Always cite your sources when possible.',
+      enabled: true,
+      version: 1,
+    },
+  ];
+
+  for (const data of promptDefaults) {
+    await prisma.aiPromptSetting.create({ data });
+  }
+
   // ── Summary ─────────────────────────────────────────
   const totalRoles = await prisma.roleModel.count();
   const totalPerms = await prisma.permission.count();
   const totalFieldConfigs = await prisma.productFieldConfig.count();
-  console.log(`Seed complete: 1 admin, ${totalRoles} roles, ${totalPerms} permissions, ${totalFieldConfigs} field configs, 5 products, 2 solutions, 2 materials, 2 docs, 10 chunks, 10 events, 5 entities`);
+  const totalProviders = await prisma.aiProviderSetting.count();
+  const totalPrompts = await prisma.aiPromptSetting.count();
+  console.log(`Seed complete: 1 admin, ${totalRoles} roles, ${totalPerms} permissions, ${totalFieldConfigs} field configs, 5 products, 2 solutions, 2 materials, 2 docs, 10 chunks, 10 events, 5 entities, ${totalProviders} providers, ${totalPrompts} prompts`);
 }
 
 main()

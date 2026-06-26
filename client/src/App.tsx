@@ -76,6 +76,11 @@ const MaterialFieldSettingsPage = lazy(() =>
     default: m.MaterialFieldSettingsPage,
   })),
 );
+const AiSettingsPage = lazy(() =>
+  import('./features/admin/ai-settings/AiSettingsPage').then((m) => ({
+    default: m.AiSettingsPage,
+  })),
+);
 
 function AdminNotFoundPage() {
   return (
@@ -255,6 +260,14 @@ export default function App() {
                   element={
                     <RouteGuard permissions={['audit.read']}>
                       <AuditLogPage />
+                    </RouteGuard>
+                  }
+                />
+                <Route
+                  path="ai-settings"
+                  element={
+                    <RouteGuard permissions={['settings.ai.read']}>
+                      <AiSettingsPage />
                     </RouteGuard>
                   }
                 />

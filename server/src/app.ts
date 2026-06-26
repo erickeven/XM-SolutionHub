@@ -22,6 +22,7 @@ import usersRoutes from './modules/users/users.routes';
 import filesRoutes from './modules/files/files.routes';
 import dashboardRoutes from './modules/dashboard/dashboard.routes';
 import rbacRoutes from './modules/rbac/rbac.routes';
+import aiSettingsRoutes, { promptRouter as aiPromptRoutes } from './modules/ai-settings/ai-settings.routes';
 import { errorHandler } from './middleware/errorHandler';
 
 const app: Express = express();
@@ -121,7 +122,13 @@ app.use('/api/v1/admin/dashboard', dashboardRoutes);
 // 24. RBAC role & permission management (ADMIN)
 app.use('/api/v1/admin/roles', rbacRoutes);
 
-// 25. Error handler (last)
+// 25. AI Settings providers (ADMIN)
+app.use('/api/v1/admin/ai-settings', aiSettingsRoutes);
+
+// 26. AI Prompts (ADMIN)
+app.use('/api/v1/admin/ai-prompts', aiPromptRoutes);
+
+// 27. Error handler (last)
 app.use(errorHandler);
 
 export default app;

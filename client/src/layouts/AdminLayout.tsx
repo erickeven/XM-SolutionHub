@@ -103,12 +103,6 @@ const flatten = (items: typeof ADMIN_MENU_GROUPS) => {
 flatten(ADMIN_MENU_GROUPS);
 
 const ROUTE_LABEL_MAP: Record<string, string> = {};
-// Include group labels too for breadcrumb
-const GROUP_LABELS: Record<string, string> = {
-  'content': '内容管理',
-  'ops': '运营管理',
-  'settings': '系统设置',
-};
 for (const item of ADMIN_MENU_GROUPS) {
   if ('children' in item) {
     for (const child of item.children) {
