@@ -1,5 +1,6 @@
 import { env } from '../../config';
 import { logger } from '../logger';
+import { loadPrompt } from '../../modules/ai-settings/ai-settings.service';
 
 export interface ExtractedEvent {
   summary: string;
@@ -21,7 +22,7 @@ interface LLMResponse {
   choices: Array<{ message: { content: string } }>;
 }
 
-const SYSTEM_PROMPT = `你是一个技术文档分析助手。请从给定的文本片段中提取一个关键事件和相关的实体。
+const HARDCODED_SYSTEM_PROMPT = `你是一个技术文档分析助手。请从给定的文本片段中提取一个关键事件和相关的实体。
 
 输出格式为严格的 JSON：
 {
@@ -59,6 +60,8 @@ export async function extractEventAndEntities(
   const url = `${baseUrl.replace(/\/$/, '')}/v1/chat/completions`;
 
   try {
+    const dbPrompt = await loadPrompt('extraction').catch(() => null);
+    const systemPrompt = dbPrompt ?? HARDCODED_SYSTEM_PROMPT;
     const res = await fetch(url, {
       method: 'POST',
       headers: {
@@ -68,7 +71,7 @@ export async function extractEventAndEntities(
       body: JSON.stringify({
         model: env.LLM_MODEL,
         messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'system', content: systemPrompt },
           { role: 'user', content: chunkContent },
         ],
         temperature: 0.1,
@@ -116,7 +119,7 @@ export async function extractEventAndEntities(
 
 // ── Query entity extraction (for standard search mode) ──────────
 
-const ENTITY_EXTRACTION_PROMPT = `Extract all entity names (product models, parameters, technical terms) from the user's question. Return as JSON array of strings.
+const HARDCODED_ENTITY_EXTRACTION_PROMPT = `Extract all entity names (product models, parameters, technical terms) from the user's question. Return as JSON array of strings.
 
 Example:
 Question: "LP9961的LLC谐振频率是多少？"
@@ -141,6 +144,9 @@ export async function extractQueryEntities(query: string): Promise<string[]> {
   const url = `${baseUrl.replace(/\/$/, '')}/v1/chat/completions`;
 
   try {
+    const dbPrompt = await loadPrompt('entity_query').catch(() => null);
+    const systemPrompt = dbPrompt ?? HARDCODED_ENTITY_EXTRACTION_PROMPT;
+
     const res = await fetch(url, {
       method: 'POST',
       headers: {
@@ -150,7 +156,7 @@ export async function extractQueryEntities(query: string): Promise<string[]> {
       body: JSON.stringify({
         model: env.LLM_MODEL,
         messages: [
-          { role: 'system', content: ENTITY_EXTRACTION_PROMPT },
+          { role: 'system', content: systemPrompt },
           { role: 'user', content: query },
         ],
         temperature: 0.1,
@@ -206,7 +212,7 @@ interface LLMRankResponse {
   choices: Array<{ message: { content: string } }>;
 }
 
-const RANK_PROMPT = `Rank these document snippets by relevance to the question. Return JSON array of { "index": number, "relevance_score": number } pairs. relevance_score is 0.0 to 1.0.
+const HARDCODED_RANK_PROMPT = `Rank these document snippets by relevance to the question. Return JSON array of { "index": number, "relevance_score": number } pairs. relevance_score is 0.0 to 1.0.
 
 Rules:
 1. Only output the JSON array, nothing else
@@ -235,6 +241,9 @@ export async function llmRankCandidates(
   const userMsg = `Question: ${query}\n\nSnippets:\n${snippets}`;
 
   try {
+    const dbPrompt = await loadPrompt('rerank').catch(() => null);
+    const systemPrompt = dbPrompt ?? HARDCODED_RANK_PROMPT;
+
     const res = await fetch(url, {
       method: 'POST',
       headers: {
@@ -244,7 +253,7 @@ export async function llmRankCandidates(
       body: JSON.stringify({
         model: env.LLM_MODEL,
         messages: [
-          { role: 'system', content: RANK_PROMPT },
+          { role: 'system', content: systemPrompt },
           { role: 'user', content: userMsg },
         ],
         temperature: 0.1,

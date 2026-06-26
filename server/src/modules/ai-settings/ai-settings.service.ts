@@ -79,6 +79,28 @@ export async function updateProvider(
   return toProviderItem(updated);
 }
 
+function buildTestUrl(baseUrl: string, providerType: string): string {
+  const cleanUrl = baseUrl.replace(/\/$/, '');
+  if (providerType === 'llm') return `${cleanUrl}/v1/chat/completions`;
+  if (providerType === 'embedding') return `${cleanUrl}/v1/embeddings`;
+  return `${cleanUrl}/v1/chat/completions`; // fallback
+}
+
+function buildTestBody(model: string, providerType: string): Record<string, unknown> {
+  if (providerType === 'llm') {
+    return {
+      model,
+      messages: [{ role: 'user', content: 'hi' }],
+      max_tokens: 1,
+      stream: false,
+    };
+  }
+  if (providerType === 'embedding') {
+    return { model, input: 'test' };
+  }
+  return { model, input: 'test' }; // fallback
+}
+
 export async function testConnection(input: {
   providerId?: string;
   providerType?: string;
@@ -89,6 +111,7 @@ export async function testConnection(input: {
   let baseUrl: string;
   let apiKey: string;
   let model: string;
+  let providerType: string;
 
   if (input.providerId) {
     const provider = await repository.findProviderById(input.providerId);
@@ -103,6 +126,7 @@ export async function testConnection(input: {
       return { success: false, latencyMs: 0, error: 'Failed to decrypt stored API key' };
     }
     model = provider.model ?? 'default';
+    providerType = provider.providerType;
   } else {
     if (!input.baseUrl || !input.apiKey) {
       return { success: false, latencyMs: 0, error: 'baseUrl and apiKey are required for ad-hoc test' };
@@ -110,10 +134,15 @@ export async function testConnection(input: {
     baseUrl = input.baseUrl;
     apiKey = input.apiKey;
     model = input.model ?? 'default';
+    providerType = input.providerType ?? 'llm';
   }
 
-  const cleanUrl = baseUrl.replace(/\/$/, '');
-  const url = `${cleanUrl}/v1/chat/completions`;
+  if (providerType === 'rerank') {
+    return { success: false, latencyMs: 0, error: 'Rerank endpoint not yet supported' };
+  }
+
+  const url = buildTestUrl(baseUrl, providerType);
+  const body = buildTestBody(model, providerType);
   const start = Date.now();
 
   try {
@@ -126,12 +155,7 @@ export async function testConnection(input: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: 'user', content: 'hi' }],
-        max_tokens: 1,
-        stream: false,
-      }),
+      body: JSON.stringify(body),
       signal: controller.signal,
     });
 
@@ -139,8 +163,8 @@ export async function testConnection(input: {
     const latencyMs = Date.now() - start;
 
     if (!response.ok) {
-      const body = await response.text().catch(() => '');
-      return { success: false, latencyMs, error: `HTTP ${response.status}: ${body.slice(0, 200)}` };
+      const bodyText = await response.text().catch(() => '');
+      return { success: false, latencyMs, error: `HTTP ${response.status}: ${bodyText.slice(0, 200)}` };
     }
 
     return { success: true, latencyMs };
@@ -157,20 +181,21 @@ export async function testConnection(input: {
  */
 export async function getEffectiveProvider(type: string): Promise<AiProviderConfig | null> {
   const providers = await repository.findEnabledProvidersByType(type);
-  if (providers.length > 0) {
-    const p = providers[0]!;
-    if (!p.apiKeyEncrypted) return null;
+  for (const p of providers) {
+    if (!p.apiKeyEncrypted) continue;
+    if (!p.baseUrl) continue;
+    if (!p.model) continue;
     let apiKey: string;
     try {
       apiKey = decryptApiKey(p.apiKeyEncrypted);
     } catch {
-      return null;
+      continue;
     }
     return {
       providerType: p.providerType,
-      baseUrl: p.baseUrl ?? '',
+      baseUrl: p.baseUrl,
       apiKey,
-      model: p.model ?? '',
+      model: p.model,
       dimensions: p.dimensions,
     };
   }
@@ -239,4 +264,17 @@ export async function updatePrompt(
     enabled: updated.enabled,
     version: updated.version,
   };
+}
+
+/**
+ * Load an enabled prompt from DB by key. Returns null if not found or DB unavailable.
+ * Used by llm.ts and extract.ts for runtime prompt resolution with hardcoded fallback.
+ */
+export async function loadPrompt(key: string): Promise<string | null> {
+  try {
+    const prompt = await repository.findPromptByKey(key);
+    return prompt?.content ?? null;
+  } catch {
+    return null; // silent fallback — DB may not be available
+  }
 }

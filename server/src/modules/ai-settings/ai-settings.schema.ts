@@ -3,7 +3,6 @@ import { z } from 'zod';
 export const updateProviderSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   baseUrl: z.string().max(500).nullable().optional(),
-  apiKeyEncrypted: z.string().max(2000).nullable().optional(),
   /** Plaintext API key — encrypted to apiKeyEncrypted before storage */
   apiKeyPlaintext: z.string().max(2000).optional(),
   model: z.string().max(100).nullable().optional(),

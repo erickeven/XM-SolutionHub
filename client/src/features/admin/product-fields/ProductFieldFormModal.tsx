@@ -1,9 +1,8 @@
 import { useEffect } from 'react';
-import { Modal, Form, Input, InputNumber, Select, Switch, message } from 'antd';
-import type { FieldConfigItem, FieldType } from '../../../api/admin-product-fields';
+import { Modal, Form, Input, InputNumber, Select, Switch, Button, message } from 'antd';
+import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import type { FieldConfigItem, FieldType, FieldOption, FieldValidation } from '../../../api/admin-product-fields';
 import { useCreateFieldConfig, useUpdateFieldConfig } from '../../../api/admin-product-fields';
-
-const { TextArea } = Input;
 
 const FIELD_TYPE_OPTIONS: Array<{ label: string; value: FieldType }> = [
   { label: '文本', value: 'text' },
@@ -27,40 +26,22 @@ interface FormValues {
   required: boolean;
   sortOrder: number;
   enabled: boolean;
-  optionsJsonText?: string;
-  validationJsonText?: string;
+  options: FieldOption[];
+  validationMin?: number;
+  validationMax?: number;
+  validationMinLength?: number;
+  validationMaxLength?: number;
+  validationPattern?: string;
 }
 
-function parseOptions(text?: string): Array<{ label: string; value: string }> | null {
-  if (!text || !text.trim()) return null;
-  try {
-    const parsed = JSON.parse(text);
-    if (!Array.isArray(parsed)) {
-      throw new Error('必须是数组');
-    }
-    return parsed.map((item) => {
-      if (typeof item === 'string') return { label: item, value: item };
-      if (item && typeof item === 'object' && 'label' in item && 'value' in item) {
-        return { label: String(item.label), value: String(item.value) };
-      }
-      throw new Error('每项需包含 label 和 value');
-    });
-  } catch (e) {
-    throw new Error(`选项 JSON 解析失败: ${e instanceof Error ? e.message : '格式错误'}`);
-  }
-}
-
-function parseValidation(text?: string): Record<string, unknown> | null {
-  if (!text || !text.trim()) return null;
-  try {
-    const parsed = JSON.parse(text);
-    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-      throw new Error('必须是对象');
-    }
-    return parsed as Record<string, unknown>;
-  } catch (e) {
-    throw new Error(`校验规则 JSON 解析失败: ${e instanceof Error ? e.message : '格式错误'}`);
-  }
+function buildValidation(values: FormValues): FieldValidation | null {
+  const v: FieldValidation = {};
+  if (values.validationMin != null) v.min = values.validationMin;
+  if (values.validationMax != null) v.max = values.validationMax;
+  if (values.validationMinLength != null) v.minLength = values.validationMinLength;
+  if (values.validationMaxLength != null) v.maxLength = values.validationMaxLength;
+  if (values.validationPattern && values.validationPattern.trim()) v.pattern = values.validationPattern.trim();
+  return Object.keys(v).length > 0 ? v : null;
 }
 
 export function ProductFieldFormModal({
@@ -87,10 +68,12 @@ export function ProductFieldFormModal({
           required: field.required,
           sortOrder: field.sortOrder,
           enabled: field.enabled,
-          optionsJsonText: field.optionsJson ? JSON.stringify(field.optionsJson, null, 2) : '',
-          validationJsonText: field.validationJson
-            ? JSON.stringify(field.validationJson, null, 2)
-            : '',
+          options: field.optionsJson ?? [],
+          validationMin: field.validationJson?.min,
+          validationMax: field.validationJson?.max,
+          validationMinLength: field.validationJson?.minLength,
+          validationMaxLength: field.validationJson?.maxLength,
+          validationPattern: field.validationJson?.pattern ?? '',
         });
       } else {
         form.resetFields();
@@ -99,6 +82,7 @@ export function ProductFieldFormModal({
           required: false,
           sortOrder: 0,
           enabled: true,
+          options: [],
         });
       }
     }
@@ -107,15 +91,9 @@ export function ProductFieldFormModal({
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-      let optionsJson = null;
-      let validationJson = null;
-      try {
-        optionsJson = parseOptions(values.optionsJsonText);
-        validationJson = parseValidation(values.validationJsonText);
-      } catch (e) {
-        message.error(e instanceof Error ? e.message : 'JSON 解析失败');
-        return;
-      }
+      const optionsJson: FieldOption[] | null =
+        values.options.length > 0 ? values.options : null;
+      const validationJson = buildValidation(values);
 
       if (mode === 'create') {
         await createMutation.mutateAsync({
@@ -210,25 +188,74 @@ export function ProductFieldFormModal({
         <Form.Item label="启用" name="enabled" valuePropName="checked" initialValue={true}>
           <Switch checkedChildren="启用" unCheckedChildren="禁用" />
         </Form.Item>
+
         {isSelectType && (
-          <Form.Item
-            label="选项 (JSON 数组)"
-            name="optionsJsonText"
-            help='格式: [{"label":"显示名","value":"值"}] 或 ["选项1","选项2"]'
-          >
-            <TextArea
-              rows={4}
-              placeholder='[{"label":"电源适配器","value":"ADAPTER"}]'
-            />
-          </Form.Item>
+          <div className="mb-4 rounded border border-gray-200 p-3">
+            <div className="mb-2 text-sm font-medium text-gray-700">选项列表</div>
+            <Form.List name="options">
+              {(fields, { add, remove }) => (
+                <>
+                  {fields.map(({ key, name, ...restField }, index) => (
+                    <div key={key} className="mb-2 flex items-start gap-2">
+                      <Form.Item
+                        {...restField}
+                        name={[name, 'label']}
+                        className="!mb-0 flex-1"
+                        rules={[{ required: true, message: '请输入标签' }]}
+                      >
+                        <Input placeholder="标签" />
+                      </Form.Item>
+                      <Form.Item
+                        {...restField}
+                        name={[name, 'value']}
+                        className="!mb-0 flex-1"
+                        rules={[{ required: true, message: '请输入值' }]}
+                      >
+                        <Input placeholder="值" />
+                      </Form.Item>
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<DeleteOutlined />}
+                        onClick={() => remove(index)}
+                        className="mt-1 shrink-0 text-gray-400 hover:text-red-500"
+                      />
+                    </div>
+                  ))}
+                  <Button
+                    type="dashed"
+                    onClick={() => add({ label: '', value: '' })}
+                    icon={<PlusOutlined />}
+                    block
+                  >
+                    添加选项
+                  </Button>
+                </>
+              )}
+            </Form.List>
+          </div>
         )}
-        <Form.Item
-          label="校验规则 (JSON 对象)"
-          name="validationJsonText"
-          help='支持 min/max/minLength/maxLength/pattern，例如 {"min":0,"max":100}'
-        >
-          <TextArea rows={3} placeholder='{"min":0}' />
-        </Form.Item>
+
+        <div className="mb-4 rounded border border-gray-200 p-3">
+          <div className="mb-2 text-sm font-medium text-gray-700">校验规则</div>
+          <div className="grid grid-cols-2 gap-x-4">
+            <Form.Item label="最小值" name="validationMin" className="!mb-0">
+              <InputNumber className="!w-full" placeholder="min" />
+            </Form.Item>
+            <Form.Item label="最大值" name="validationMax" className="!mb-0">
+              <InputNumber className="!w-full" placeholder="max" />
+            </Form.Item>
+            <Form.Item label="最小长度" name="validationMinLength" className="!mb-0">
+              <InputNumber className="!w-full" min={0} placeholder="minLength" />
+            </Form.Item>
+            <Form.Item label="最大长度" name="validationMaxLength" className="!mb-0">
+              <InputNumber className="!w-full" min={0} placeholder="maxLength" />
+            </Form.Item>
+          </div>
+          <Form.Item label="正则表达式" name="validationPattern" className="!mb-0 mt-3">
+            <Input placeholder="例如 ^\d+$" />
+          </Form.Item>
+        </div>
       </Form>
     </Modal>
   );

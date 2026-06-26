@@ -1,6 +1,6 @@
 import { logger } from '../logger';
 import type { ChatSource } from '../../modules/knowledge/knowledge.search.types';
-import { getEffectiveProvider } from '../../modules/ai-settings/ai-settings.service';
+import { getEffectiveProvider, loadPrompt } from '../../modules/ai-settings/ai-settings.service';
 
 export interface GenerateAnswerInput {
   question: string;
@@ -11,7 +11,7 @@ export interface LlmAdapter {
   generateAnswer(input: GenerateAnswerInput): AsyncIterable<string>;
 }
 
-function buildSystemPrompt(sources: ChatSource[]): string {
+function buildSystemPrompt(sources: ChatSource[], dbPrompt: string | null): string {
   const sourceList = sources
     .map((s, i) => {
       const page = s.page ? ` 第${s.page}页` : '';
@@ -19,11 +19,11 @@ function buildSystemPrompt(sources: ChatSource[]): string {
     })
     .join('\n\n');
 
-  return (
+  const instruction = dbPrompt ??
     '你只能基于以下来源回答问题。如果来源不足以回答，请明确说明。\n' +
-    '不要编造任何不在来源中的信息。\n' +
-    `来源：\n${sourceList}`
-  );
+    '不要编造任何不在来源中的信息。\n';
+
+  return `${instruction}\n来源：\n${sourceList}`;
 }
 
 class OpenAiCompatibleLlmAdapter implements LlmAdapter {
@@ -33,7 +33,8 @@ class OpenAiCompatibleLlmAdapter implements LlmAdapter {
       throw new Error('LLM not configured — no enabled provider in DB and no LLM env vars');
     }
 
-    const systemPrompt = buildSystemPrompt(input.sources);
+    const dbPrompt = await loadPrompt('chat_system').catch(() => null);
+    const systemPrompt = buildSystemPrompt(input.sources, dbPrompt);
     const baseUrl = provider.baseUrl.replace(/\/$/, '');
 
     const response = await fetch(`${baseUrl}/v1/chat/completions`, {

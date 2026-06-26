@@ -39,6 +39,10 @@ export async function findPromptById(id: string): Promise<AiPromptDetail | null>
   return prisma.aiPromptSetting.findUnique({ where: { id } });
 }
 
+export async function findPromptByKey(key: string): Promise<AiPromptDetail | null> {
+  return prisma.aiPromptSetting.findFirst({ where: { key, enabled: true } });
+}
+
 export async function updatePrompt(
   id: string,
   data: { title?: string; content?: string; enabled?: boolean },

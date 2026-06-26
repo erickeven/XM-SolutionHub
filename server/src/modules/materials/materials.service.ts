@@ -216,17 +216,7 @@ export async function deleteMaterial(
     throw new AppError(3001, 'Material not found', 404);
   }
 
-  // Remove file from storage
-  const adapter = getStorageAdapter();
-  try {
-    await adapter.removeObject(existing.originalStorageKey);
-    if (existing.previewStorageKey) {
-      await adapter.removeObject(existing.previewStorageKey);
-    }
-  } catch {
-    // Storage cleanup is best-effort; still soft-delete the record
-  }
-
+  // ponytail: only soft-delete — storage cleanup is a separate explicit task
   await repository.softDelete(id);
 
   logFromContext({

@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import { authMiddleware } from '../../middleware/auth';
-import { roleGuard } from '../../middleware/roleGuard';
+import { permissionGuard } from '../../middleware/permissionGuard';
 import * as controller from './field-config.controller';
 
 const router: Router = Router();
 
-router.use(authMiddleware, roleGuard('ADMIN'));
+router.use(authMiddleware, permissionGuard('products.write'));
 
 router.get('/', controller.listHandler);
 router.post('/', controller.createHandler);

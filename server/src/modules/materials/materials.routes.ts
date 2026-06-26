@@ -11,13 +11,14 @@ adminRoutes.use(authMiddleware, permissionGuard('materials.write'), apiLimiter);
 // Upload route with multer middleware
 adminRoutes.post('/', controller.uploadMiddleware, controller.adminUploadHandler);
 adminRoutes.get('/', controller.adminListHandler);
+
+// Dropdown data helpers — must be BEFORE /:id to avoid shadowing
+adminRoutes.get('/solutions-options', controller.solutionsOptionsHandler);
+adminRoutes.get('/products-options', controller.productsOptionsHandler);
+
 adminRoutes.get('/:id', controller.adminGetByIdHandler);
 adminRoutes.patch('/:id', controller.adminUpdateHandler);
 adminRoutes.delete('/:id', controller.adminDeleteHandler);
-
-// Dropdown data helpers
-adminRoutes.get('/solutions-options', controller.solutionsOptionsHandler);
-adminRoutes.get('/products-options', controller.productsOptionsHandler);
 
 // Public routes — mounted at /api/v1/solutions/:id/materials
 const publicRoutes: Router = Router();
