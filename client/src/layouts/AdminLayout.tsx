@@ -32,6 +32,9 @@ import {
   ArrowLeftOutlined,
   SettingOutlined,
   UnorderedListOutlined,
+  ApiOutlined,
+  FolderOutlined,
+  TeamOutlined as TeamIcon,
 } from '@ant-design/icons';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
@@ -46,29 +49,75 @@ interface AdminRouteDef {
   label: string;
   icon: React.ReactNode;
   roles: Array<'STAFF' | 'AUDITOR' | 'ADMIN'>;
+  group?: string;
 }
 
-const ADMIN_ROUTES: AdminRouteDef[] = [
+interface AdminMenuGroup {
+  key: string;
+  label: string;
+  icon: React.ReactNode;
+  children: AdminRouteDef[];
+}
+
+const ADMIN_MENU_GROUPS: (AdminRouteDef | AdminMenuGroup)[] = [
   { path: '/admin', label: '驾驶舱', icon: <DashboardOutlined />, roles: ['STAFF', 'AUDITOR', 'ADMIN'] },
-  { path: '/admin/products', label: '产品管理', icon: <AppstoreOutlined />, roles: ['ADMIN'] },
-  { path: '/admin/product-fields', label: '产品字段', icon: <UnorderedListOutlined />, roles: ['ADMIN'] },
-  { path: '/admin/solutions', label: '方案管理', icon: <BulbOutlined />, roles: ['ADMIN'] },
-  { path: '/admin/materials', label: '资料管理', icon: <FileTextOutlined />, roles: ['ADMIN'] },
-  { path: '/admin/material-fields', label: '资料字段', icon: <UnorderedListOutlined />, roles: ['ADMIN'] },
-  { path: '/admin/knowledge', label: '知识库', icon: <BookOutlined />, roles: ['ADMIN', 'AUDITOR'] },
-  { path: '/admin/leads', label: '线索', icon: <UserSwitchOutlined />, roles: ['STAFF', 'AUDITOR', 'ADMIN'] },
-  { path: '/admin/users', label: '用户', icon: <TeamOutlined />, roles: ['ADMIN'] },
-  { path: '/admin/roles', label: '角色管理', icon: <SafetyCertificateOutlined />, roles: ['ADMIN'] },
-  { path: '/admin/audit', label: '审计', icon: <AuditOutlined />, roles: ['ADMIN', 'AUDITOR'] },
+  {
+    key: 'content', label: '内容管理', icon: <FolderOutlined />,
+    children: [
+      { path: '/admin/products', label: '产品管理', icon: <AppstoreOutlined />, roles: ['ADMIN'] },
+      { path: '/admin/solutions', label: '方案管理', icon: <BulbOutlined />, roles: ['ADMIN'] },
+      { path: '/admin/materials', label: '资料管理', icon: <FileTextOutlined />, roles: ['ADMIN'] },
+      { path: '/admin/knowledge', label: '知识库', icon: <BookOutlined />, roles: ['ADMIN', 'AUDITOR'] },
+    ],
+  },
+  {
+    key: 'ops', label: '运营管理', icon: <TeamIcon />,
+    children: [
+      { path: '/admin/leads', label: '线索', icon: <UserSwitchOutlined />, roles: ['STAFF', 'AUDITOR', 'ADMIN'] },
+      { path: '/admin/users', label: '用户', icon: <TeamOutlined />, roles: ['ADMIN'] },
+      { path: '/admin/audit', label: '审计', icon: <AuditOutlined />, roles: ['ADMIN', 'AUDITOR'] },
+    ],
+  },
+  {
+    key: 'settings', label: '系统设置', icon: <SettingOutlined />,
+    children: [
+      { path: '/admin/product-fields', label: '产品字段', icon: <UnorderedListOutlined />, roles: ['ADMIN'] },
+      { path: '/admin/material-fields', label: '资料字段', icon: <UnorderedListOutlined />, roles: ['ADMIN'] },
+      { path: '/admin/roles', label: '角色权限', icon: <SafetyCertificateOutlined />, roles: ['ADMIN'] },
+      { path: '/admin/ai-settings', label: 'AI及模型', icon: <ApiOutlined />, roles: ['ADMIN'] },
+    ],
+  },
 ];
 
-const ROUTE_LABEL_MAP: Record<string, string> = ADMIN_ROUTES.reduce(
-  (acc, r) => {
-    acc[r.path] = r.label;
-    return acc;
-  },
-  {} as Record<string, string>,
-);
+// Flatten for route label map and selected key detection
+const FLAT_ROUTES: AdminRouteDef[] = [];
+const flatten = (items: typeof ADMIN_MENU_GROUPS) => {
+  for (const item of items) {
+    if ('children' in item) {
+      FLAT_ROUTES.push(...item.children);
+    } else {
+      FLAT_ROUTES.push(item);
+    }
+  }
+};
+flatten(ADMIN_MENU_GROUPS);
+
+const ROUTE_LABEL_MAP: Record<string, string> = {};
+// Include group labels too for breadcrumb
+const GROUP_LABELS: Record<string, string> = {
+  'content': '内容管理',
+  'ops': '运营管理',
+  'settings': '系统设置',
+};
+for (const item of ADMIN_MENU_GROUPS) {
+  if ('children' in item) {
+    for (const child of item.children) {
+      ROUTE_LABEL_MAP[child.path] = child.label;
+    }
+  } else {
+    ROUTE_LABEL_MAP[item.path] = item.label;
+  }
+}
 
 export function AdminLayout() {
   const location = useLocation();
@@ -95,29 +144,45 @@ export function AdminLayout() {
     '/admin/users': 'users.read',
     '/admin/roles': 'users.write',
     '/admin/audit': 'audit.read',
+    '/admin/ai-settings': 'settings.ai.read',
   };
 
   const allowedMenu: MenuItem[] = useMemo(() => {
     if (!user) return [];
-    return ADMIN_ROUTES
-      .filter((r) => {
-        // Check permission first, fall back to role-based check
-        const perm = ROUTE_PERMISSION[r.path];
-        if (perm) return hasPermission(perm);
-        // Fallback: legacy role check
-        const userRole = user.role as string;
-        return (r.roles as string[]).includes(userRole);
-      })
-      .map((r) => ({
-        key: r.path,
-        icon: r.icon,
-        label: r.label,
-      }));
+    const result: MenuItem[] = [];
+    for (const item of ADMIN_MENU_GROUPS) {
+      if ('children' in item) {
+        // Sub-menu group: only include if at least one child is allowed
+        const visibleChildren = item.children.filter((r) => {
+          const perm = ROUTE_PERMISSION[r.path];
+          if (perm) return hasPermission(perm);
+          return (r.roles as string[]).includes(user.role as string);
+        });
+        if (visibleChildren.length > 0) {
+          result.push({
+            key: item.key,
+            icon: item.icon,
+            label: item.label,
+            children: visibleChildren.map((r) => ({
+              key: r.path,
+              icon: r.icon,
+              label: r.label,
+            })),
+          });
+        }
+      } else {
+        const perm = ROUTE_PERMISSION[item.path];
+        const allowed = perm ? hasPermission(perm) : (item.roles as string[]).includes(user.role as string);
+        if (allowed) {
+          result.push({ key: item.path, icon: item.icon, label: item.label });
+        }
+      }
+    }
+    return result;
   }, [user, hasPermission]);
 
   const selectedKey = useMemo(() => {
-    // Find the best-matching route (longest prefix match)
-    const matches = ADMIN_ROUTES.filter((r) =>
+    const matches = FLAT_ROUTES.filter((r) =>
       r.path === '/admin'
         ? location.pathname === '/admin'
         : location.pathname.startsWith(r.path),
