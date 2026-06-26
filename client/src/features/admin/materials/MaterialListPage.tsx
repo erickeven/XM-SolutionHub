@@ -27,6 +27,7 @@ import {
   FilePdfOutlined,
   FileWordOutlined,
   FileOutlined,
+  DatabaseOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -159,17 +160,6 @@ export function MaterialListPage() {
     },
   });
 
-  const permanentDeleteMutation = useMutation({
-    mutationFn: (id: string) => deleteMaterial(id),
-    onSuccess: () => {
-      message.success('已彻底删除');
-      queryClient.invalidateQueries({ queryKey: ['admin-materials'] });
-    },
-    onError: (err: unknown) => {
-      message.error(err instanceof Error ? err.message : '删除失败');
-    },
-  });
-
   const handleEdit = (record: AdminMaterialListItem) => {
     setSelectedId(record.id);
     setEditOpen(true);
@@ -194,17 +184,6 @@ export function MaterialListPage() {
       okType: 'primary',
       cancelText: '取消',
       onOk: () => restoreMutation.mutateAsync(record.id),
-    });
-  };
-
-  const handlePermanentDelete = (record: AdminMaterialListItem) => {
-    Modal.confirm({
-      title: '彻底删除',
-      content: `确定彻底删除资料「${record.title}」？此操作不可恢复。`,
-      okText: '彻底删除',
-      okType: 'danger',
-      cancelText: '取消',
-      onOk: () => permanentDeleteMutation.mutateAsync(record.id),
     });
   };
 
@@ -275,6 +254,38 @@ export function MaterialListPage() {
         ),
     },
     {
+      title: '元数据',
+      key: 'metadata',
+      width: 140,
+      responsive: ['lg'],
+      render: (_: unknown, r) => {
+        if (!r.metadata || Object.keys(r.metadata).length === 0) {
+          return <Text type="secondary">—</Text>;
+        }
+        const entries = Object.entries(r.metadata).filter(([, v]) => v != null && v !== '');
+        if (entries.length === 0) return <Text type="secondary">—</Text>;
+        return (
+          <Tooltip
+            title={
+              <div className="space-y-1">
+                {entries.map(([k, v]) => (
+                  <div key={k} className="text-xs">
+                    <span className="font-medium">{k}: </span>
+                    <span>{Array.isArray(v) ? v.join(', ') : String(v)}</span>
+                  </div>
+                ))}
+              </div>
+            }
+          >
+            <span className="cursor-help text-xs text-slate-500">
+              <DatabaseOutlined className="mr-1" />
+              {entries.length} 项
+            </span>
+          </Tooltip>
+        );
+      },
+    },
+    {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
@@ -320,25 +331,14 @@ export function MaterialListPage() {
             </Button>
           )}
           {record.status === 'INACTIVE' ? (
-            <>
-              <Button
-                size="small"
-                icon={<ReloadOutlined />}
-                onClick={() => handleRestore(record)}
-                loading={restoreMutation.isPending}
-              >
-                恢复
-              </Button>
-              <Button
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-                onClick={() => handlePermanentDelete(record)}
-                loading={permanentDeleteMutation.isPending}
-              >
-                彻底删除
-              </Button>
-            </>
+            <Button
+              size="small"
+              icon={<ReloadOutlined />}
+              onClick={() => handleRestore(record)}
+              loading={restoreMutation.isPending}
+            >
+              恢复
+            </Button>
           ) : (
             <Button
               size="small"
@@ -509,14 +509,9 @@ export function MaterialListPage() {
                       </Button>
                     )}
                     {item.status === 'INACTIVE' ? (
-                      <>
-                        <Button size="small" icon={<ReloadOutlined />} onClick={() => handleRestore(item)}>
-                          恢复
-                        </Button>
-                        <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handlePermanentDelete(item)}>
-                          彻底删除
-                        </Button>
-                      </>
+                      <Button size="small" icon={<ReloadOutlined />} onClick={() => handleRestore(item)}>
+                        恢复
+                      </Button>
                     ) : (
                       <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleMoveToRecycle(item)}>
                         删除

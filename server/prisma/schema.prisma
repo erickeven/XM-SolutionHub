@@ -153,6 +153,7 @@ model Material {
   mimeType           String
   pageCount          Int?
   previewPages       Int          @default(3)
+  metadata           Json?
   status             RecordStatus @default(DRAFT)
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt

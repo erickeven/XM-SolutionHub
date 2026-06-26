@@ -418,7 +418,7 @@ async function main() {
     });
   }
 
-  // ── AiProviderSettings (3 default providers) ──────────
+  // ── AiProviderSettings (3 default providers, idempotent upsert) ──
   const providerDefaults = [
     {
       providerType: 'llm',
@@ -453,7 +453,25 @@ async function main() {
   ];
 
   for (const data of providerDefaults) {
-    await prisma.aiProviderSetting.create({ data });
+    const existing = await prisma.aiProviderSetting.findFirst({
+      where: { providerType: data.providerType },
+    });
+    if (existing) {
+      await prisma.aiProviderSetting.update({
+        where: { id: existing.id },
+        data: {
+          name: data.name,
+          baseUrl: data.baseUrl,
+          apiKeyEncrypted: data.apiKeyEncrypted,
+          model: data.model,
+          dimensions: data.dimensions,
+          enabled: data.enabled,
+          isDefault: data.isDefault,
+        },
+      });
+    } else {
+      await prisma.aiProviderSetting.create({ data });
+    }
   }
 
   // ── AiPromptSettings (4 default prompts) ──────────────

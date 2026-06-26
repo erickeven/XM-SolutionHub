@@ -10,6 +10,7 @@ export interface MaterialListItem {
   pageCount: number | null;
   previewPages: number;
   status: string;
+  metadata: Record<string, unknown> | null;
   createdAt: Date;
   updatedAt: Date;
   solutionName: string | null;
@@ -27,6 +28,7 @@ export interface CreateMaterialInput {
   title: string;
   solutionId?: string;
   productId?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface MaterialQuery {

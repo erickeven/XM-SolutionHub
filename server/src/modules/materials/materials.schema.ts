@@ -13,6 +13,7 @@ export const createMaterialSchema = z.object({
   title: z.string().min(1),
   solutionId: z.string().optional(),
   productId: z.string().optional(),
+  metadata: z.record(z.unknown()).optional(),
 });
 
 export const materialQuerySchema = z.object({
@@ -30,6 +31,7 @@ export const updateMaterialSchema = z.object({
   solutionId: z.string().optional(),
   productId: z.string().optional(),
   status: materialStatusEnum.optional(),
+  metadata: z.record(z.unknown()).optional(),
 });
 
 export type CreateMaterialInput = z.infer<typeof createMaterialSchema>;

@@ -111,17 +111,6 @@ export function ProductListPage() {
     },
   });
 
-  const permanentDeleteMutation = useMutation({
-    mutationFn: (id: string) => deleteProduct(id),
-    onSuccess: () => {
-      message.success('已彻底删除');
-      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-    },
-    onError: (err: unknown) => {
-      message.error(err instanceof Error ? err.message : '删除失败');
-    },
-  });
-
   const handleEdit = (record: AdminProductListItem) => {
     setSelectedId(record.id);
     setModalMode('edit');
@@ -166,17 +155,6 @@ export function ProductListPage() {
       okType: 'primary',
       cancelText: '取消',
       onOk: () => restoreMutation.mutateAsync(record.id),
-    });
-  };
-
-  const handlePermanentDelete = (record: AdminProductListItem) => {
-    Modal.confirm({
-      title: '彻底删除',
-      content: `确定彻底删除产品 ${record.model}？此操作不可恢复。`,
-      okText: '彻底删除',
-      okType: 'danger',
-      cancelText: '取消',
-      onOk: () => permanentDeleteMutation.mutateAsync(record.id),
     });
   };
 
@@ -268,25 +246,14 @@ export function ProductListPage() {
             </Button>
           )}
           {record.status === 'INACTIVE' ? (
-            <>
-              <Button
-                size="small"
-                icon={<ReloadOutlined />}
-                onClick={() => handleRestore(record)}
-                loading={restoreMutation.isPending}
-              >
-                恢复
-              </Button>
-              <Button
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-                onClick={() => handlePermanentDelete(record)}
-                loading={permanentDeleteMutation.isPending}
-              >
-                彻底删除
-              </Button>
-            </>
+            <Button
+              size="small"
+              icon={<ReloadOutlined />}
+              onClick={() => handleRestore(record)}
+              loading={restoreMutation.isPending}
+            >
+              恢复
+            </Button>
           ) : (
             <Button
               size="small"
@@ -446,14 +413,9 @@ export function ProductListPage() {
                       </Button>
                     )}
                     {item.status === 'INACTIVE' ? (
-                      <>
-                        <Button size="small" icon={<ReloadOutlined />} onClick={() => handleRestore(item)}>
-                          恢复
-                        </Button>
-                        <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handlePermanentDelete(item)}>
-                          彻底删除
-                        </Button>
-                      </>
+                      <Button size="small" icon={<ReloadOutlined />} onClick={() => handleRestore(item)}>
+                        恢复
+                      </Button>
                     ) : (
                       <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleMoveToRecycle(item)}>
                         删除

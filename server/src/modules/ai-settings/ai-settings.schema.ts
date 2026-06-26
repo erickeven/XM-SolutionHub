@@ -4,6 +4,8 @@ export const updateProviderSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   baseUrl: z.string().max(500).nullable().optional(),
   apiKeyEncrypted: z.string().max(2000).nullable().optional(),
+  /** Plaintext API key — encrypted to apiKeyEncrypted before storage */
+  apiKeyPlaintext: z.string().max(2000).optional(),
   model: z.string().max(100).nullable().optional(),
   dimensions: z.number().int().positive().nullable().optional(),
   enabled: z.boolean().optional(),
@@ -11,7 +13,8 @@ export const updateProviderSchema = z.object({
 });
 
 export const testConnectionSchema = z.object({
-  providerType: z.enum(['llm', 'embedding', 'rerank']),
+  providerId: z.string().optional(),
+  providerType: z.enum(['llm', 'embedding', 'rerank']).optional(),
   baseUrl: z.string().max(500).optional(),
   apiKey: z.string().max(2000).optional(),
   model: z.string().max(100).optional(),

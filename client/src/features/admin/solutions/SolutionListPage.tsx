@@ -111,17 +111,6 @@ export function SolutionListPage() {
     },
   });
 
-  const permanentDeleteMutation = useMutation({
-    mutationFn: (id: string) => deleteSolution(id),
-    onSuccess: () => {
-      message.success('已彻底删除');
-      queryClient.invalidateQueries({ queryKey: ['admin-solutions'] });
-    },
-    onError: (err: unknown) => {
-      message.error(err instanceof Error ? err.message : '删除失败');
-    },
-  });
-
   const handleEdit = (record: AdminSolutionListItem) => {
     setSelectedId(record.id);
     setModalMode('edit');
@@ -169,18 +158,7 @@ export function SolutionListPage() {
     });
   };
 
-  const handlePermanentDelete = (record: AdminSolutionListItem) => {
-    Modal.confirm({
-      title: '彻底删除',
-      content: `确定彻底删除方案「${record.name}」？此操作不可恢复。`,
-      okText: '彻底删除',
-      okType: 'danger',
-      cancelText: '取消',
-      onOk: () => permanentDeleteMutation.mutateAsync(record.id),
-    });
-  };
-
-  const columns: ColumnsType<AdminSolutionListItem> = [
+    const columns: ColumnsType<AdminSolutionListItem> = [
     {
       title: '方案名称',
       dataIndex: 'name',
@@ -265,25 +243,14 @@ export function SolutionListPage() {
             </Button>
           )}
           {record.status === 'INACTIVE' ? (
-            <>
-              <Button
-                size="small"
-                icon={<ReloadOutlined />}
-                onClick={() => handleRestore(record)}
-                loading={restoreMutation.isPending}
-              >
-                恢复
-              </Button>
-              <Button
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-                onClick={() => handlePermanentDelete(record)}
-                loading={permanentDeleteMutation.isPending}
-              >
-                彻底删除
-              </Button>
-            </>
+            <Button
+              size="small"
+              icon={<ReloadOutlined />}
+              onClick={() => handleRestore(record)}
+              loading={restoreMutation.isPending}
+            >
+              恢复
+            </Button>
           ) : (
             <Button
               size="small"
@@ -418,14 +385,9 @@ export function SolutionListPage() {
                       </Button>
                     )}
                     {item.status === 'INACTIVE' ? (
-                      <>
-                        <Button size="small" icon={<ReloadOutlined />} onClick={() => handleRestore(item)}>
-                          恢复
-                        </Button>
-                        <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handlePermanentDelete(item)}>
-                          彻底删除
-                        </Button>
-                      </>
+                      <Button size="small" icon={<ReloadOutlined />} onClick={() => handleRestore(item)}>
+                        恢复
+                      </Button>
                     ) : (
                       <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleMoveToRecycle(item)}>
                         删除

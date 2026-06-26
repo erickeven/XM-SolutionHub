@@ -51,7 +51,13 @@ export async function adminUploadHandler(
 
     validateMagicBytes(req.file.buffer, req.file.mimetype);
 
-    const input = createMaterialSchema.parse(req.body);
+    // Parse metadata from FormData string
+    const body = { ...req.body };
+    if (typeof body.metadata === 'string') {
+      try { body.metadata = JSON.parse(body.metadata); } catch { delete body.metadata; }
+    }
+
+    const input = createMaterialSchema.parse(body);
     const actorId = req.user?.userId ?? null;
 
     const material = await service.createMaterial(

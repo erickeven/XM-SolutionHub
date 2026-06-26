@@ -3,7 +3,9 @@ import {
   Modal,
   Form,
   Input,
+  InputNumber,
   Select,
+  Switch,
   Upload,
   message,
 } from 'antd';
@@ -15,6 +17,8 @@ import { createMaterial } from '../../../api/admin-materials';
 import type { MaterialType } from '../../../api/admin-materials';
 import { listSolutions } from '../../../api/admin-solutions';
 import { listProducts } from '../../../api/admin-products';
+import { useFieldConfigs } from '../../../api/admin-material-fields';
+import type { FieldConfigItem } from '../../../api/admin-material-fields';
 
 interface MaterialUploadModalProps {
   open: boolean;
@@ -30,13 +34,70 @@ const TYPE_OPTIONS: { label: string; value: MaterialType }[] = [
   { label: '其他', value: 'other' },
 ];
 
+const FIXED_FIELD_KEYS = new Set(['title', 'type', 'status']);
+
+function buildRules(field: FieldConfigItem) {
+  const rules: Array<{ required?: boolean; message?: string }> = [];
+  if (field.required) {
+    rules.push({ required: true, message: `请输入${field.label}` });
+  }
+  return rules;
+}
+
+function renderFieldControl(field: FieldConfigItem) {
+  switch (field.fieldType) {
+    case 'text':
+      return <Input placeholder={`请输入${field.label}`} />;
+    case 'number': {
+      const validation = field.validationJson ?? {};
+      return (
+        <InputNumber
+          className="!w-full"
+          min={typeof validation.min === 'number' ? validation.min : undefined}
+          max={typeof validation.max === 'number' ? validation.max : undefined}
+          placeholder={`请输入${field.label}`}
+        />
+      );
+    }
+    case 'single_select': {
+      const options = field.optionsJson ?? [];
+      return (
+        <Select
+          options={options.map((o) => ({ label: o.label, value: o.value }))}
+          placeholder={`请选择${field.label}`}
+          allowClear
+        />
+      );
+    }
+    case 'multi_select': {
+      const options = field.optionsJson ?? [];
+      return (
+        <Select
+          mode="multiple"
+          options={options.map((o) => ({ label: o.label, value: o.value }))}
+          placeholder={`请选择${field.label}`}
+          allowClear
+        />
+      );
+    }
+    case 'boolean':
+      return <Switch checkedChildren="是" unCheckedChildren="否" />;
+    default:
+      return <Input placeholder={`请输入${field.label}`} />;
+  }
+}
+
+function getValuePropName(field: FieldConfigItem): string {
+  return field.fieldType === 'boolean' ? 'checked' : 'value';
+}
+
 export function MaterialUploadModal({ open, onClose }: MaterialUploadModalProps) {
   const [form] = Form.useForm();
   const queryClient = useQueryClient();
 
   const { data: solutionData } = useQuery({
     queryKey: ['admin-solutions-options'],
-    queryFn: () => listSolutions({ page: 1, pageSize: 200, status: 'ACTIVE' }),
+    queryFn: () => listSolutions({ page: 1, pageSize: 200 }),
     enabled: open,
   });
 
@@ -53,7 +114,7 @@ export function MaterialUploadModal({ open, onClose }: MaterialUploadModalProps)
 
   const { data: productData } = useQuery({
     queryKey: ['admin-products-options'],
-    queryFn: () => listProducts({ page: 1, pageSize: 500, status: 'ACTIVE' }),
+    queryFn: () => listProducts({ page: 1, pageSize: 500 }),
     enabled: open,
   });
 
@@ -68,12 +129,26 @@ export function MaterialUploadModal({ open, onClose }: MaterialUploadModalProps)
     [productData],
   );
 
+  const { data: fieldConfigsRaw, isLoading: fieldsLoading } = useFieldConfigs(true);
+  const fieldConfigs = useMemo(
+    () =>
+      [...(fieldConfigsRaw ?? [])]
+        .filter((f) => !FIXED_FIELD_KEYS.has(f.fieldKey))
+        .sort((a, b) => a.sortOrder - b.sortOrder),
+    [fieldConfigsRaw],
+  );
+
   useEffect(() => {
     if (open) {
       form.resetFields();
-      form.setFieldsValue({ type: 'datasheet', status: 'DRAFT' });
+      const defaults: Record<string, unknown> = { type: 'datasheet', status: 'DRAFT' };
+      (fieldConfigs ?? []).forEach((f) => {
+        if (f.fieldType === 'boolean') defaults[f.fieldKey] = false;
+        else if (f.fieldType === 'multi_select') defaults[f.fieldKey] = [];
+      });
+      form.setFieldsValue(defaults);
     }
-  }, [open, form]);
+  }, [open, form, fieldConfigs]);
 
   const createMutation = useMutation({
     mutationFn: createMaterial,
@@ -105,11 +180,22 @@ export function MaterialUploadModal({ open, onClose }: MaterialUploadModalProps)
       }
       const first = uploadFileList[0] as UploadFile;
       const file = (first.originFileObj ?? first) as File;
+
+      // Collect dynamic field values into metadata
+      const metadata: Record<string, unknown> = {};
+      (fieldConfigs ?? []).forEach((f) => {
+        const v = values[f.fieldKey];
+        if (v !== undefined && v !== null && v !== '') {
+          metadata[f.fieldKey] = v;
+        }
+      });
+
       createMutation.mutate({
         type: values.type as MaterialType,
         title: values.title,
         solutionId: values.solutionId || undefined,
         productId: values.productId || undefined,
+        metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
         file,
       });
     } catch {
@@ -123,7 +209,7 @@ export function MaterialUploadModal({ open, onClose }: MaterialUploadModalProps)
       open={open}
       onOk={handleSubmit}
       onCancel={onClose}
-      confirmLoading={createMutation.isPending}
+      confirmLoading={createMutation.isPending || fieldsLoading}
       okText="上传"
       cancelText="取消"
       width={600}
@@ -163,6 +249,31 @@ export function MaterialUploadModal({ open, onClose }: MaterialUploadModalProps)
         >
           <Input placeholder="例如 LP9961 数据手册 Rev.1.2" />
         </Form.Item>
+
+        {fieldConfigs.length > 0 && (
+          <div className="mb-2 text-sm font-medium text-slate-700">扩展属性</div>
+        )}
+        <div className="grid grid-cols-1 gap-x-4 md:grid-cols-2">
+          {fieldConfigs?.map((field) => {
+            const isWide =
+              field.fieldType === 'multi_select' ||
+              field.fieldType === 'boolean' ||
+              field.fieldType === 'single_select';
+            const colSpan = isWide ? 'md:col-span-2' : '';
+            return (
+              <Form.Item
+                key={field.id}
+                label={field.label}
+                name={field.fieldKey}
+                valuePropName={getValuePropName(field)}
+                rules={buildRules(field)}
+                className={colSpan}
+              >
+                {renderFieldControl(field)}
+              </Form.Item>
+            );
+          })}
+        </div>
 
         <Form.Item label="所属方案" name="solutionId">
           <Select

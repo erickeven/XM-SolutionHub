@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { AppError } from '../../lib/errors';
 import { successResponse } from '../../lib/response';
-import { createFieldConfigSchema, updateFieldConfigSchema } from './field-config.schema';
+import { createFieldConfigSchema, updateFieldConfigSchema, toggleFieldConfigSchema } from './field-config.schema';
 import * as service from './field-config.service';
 
 function requireId(req: Request): string {
@@ -60,7 +60,7 @@ export async function toggleHandler(
 ): Promise<void> {
   try {
     const id = requireId(req);
-    const enabled = req.body.enabled === true;
+    const { enabled } = toggleFieldConfigSchema.parse(req.body);
     const result = await service.toggleField(id, enabled);
     res.status(200).json(successResponse(result));
   } catch (err) {

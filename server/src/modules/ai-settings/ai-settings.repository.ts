@@ -9,6 +9,13 @@ export async function findProviderById(id: string): Promise<AiProviderRaw | null
   return prisma.aiProviderSetting.findUnique({ where: { id } });
 }
 
+export async function findEnabledProvidersByType(type: string): Promise<AiProviderRaw[]> {
+  return prisma.aiProviderSetting.findMany({
+    where: { providerType: type, enabled: true },
+    orderBy: [{ isDefault: 'desc' }, { name: 'asc' }],
+  });
+}
+
 export async function updateProvider(
   id: string,
   data: Partial<{

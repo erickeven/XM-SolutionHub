@@ -38,11 +38,13 @@ async function buildParamsSchemas(): Promise<{
   optionalSchema: z.ZodObject<Record<string, z.ZodTypeAny>>;
 }> {
   const configs = await findAll(true);
+  const FIXED_FIELDS = new Set(['model', 'series', 'status', 'advantages']);
 
   const shape: Record<string, z.ZodTypeAny> = {};
   const optionalShape: Record<string, z.ZodTypeAny> = {};
 
   for (const cfg of configs) {
+    if (FIXED_FIELDS.has(cfg.fieldKey)) continue;
     const base = fieldTypeToZod(cfg.fieldType);
     shape[cfg.fieldKey] = cfg.required ? base : base.optional();
     optionalShape[cfg.fieldKey] = base.optional();

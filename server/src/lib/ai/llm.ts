@@ -1,6 +1,6 @@
-import { env } from '../../config';
 import { logger } from '../logger';
 import type { ChatSource } from '../../modules/knowledge/knowledge.search.types';
+import { getEffectiveProvider } from '../../modules/ai-settings/ai-settings.service';
 
 export interface GenerateAnswerInput {
   question: string;
@@ -28,21 +28,22 @@ function buildSystemPrompt(sources: ChatSource[]): string {
 
 class OpenAiCompatibleLlmAdapter implements LlmAdapter {
   async *generateAnswer(input: GenerateAnswerInput): AsyncIterable<string> {
-    if (!env.LLM_BASE_URL || !env.LLM_API_KEY) {
-      throw new Error('LLM not configured');
+    const provider = await getEffectiveProvider('llm');
+    if (!provider) {
+      throw new Error('LLM not configured — no enabled provider in DB and no LLM env vars');
     }
 
     const systemPrompt = buildSystemPrompt(input.sources);
-    const baseUrl = env.LLM_BASE_URL.replace(/\/$/, '');
+    const baseUrl = provider.baseUrl.replace(/\/$/, '');
 
     const response = await fetch(`${baseUrl}/v1/chat/completions`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${env.LLM_API_KEY}`,
+        Authorization: `Bearer ${provider.apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: env.LLM_MODEL,
+        model: provider.model,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: input.question },

@@ -39,10 +39,21 @@ export interface AiPromptDetail extends AiPromptItem {
   updatedAt: Date;
 }
 
+/** Resolved runtime config for an AI provider — decrypted apiKey, used by llm/embedding adapters */
+export interface AiProviderConfig {
+  providerType: string;
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+  dimensions: number | null;
+}
+
 export interface UpdateProviderInput {
   name?: string;
   baseUrl?: string | null;
   apiKeyEncrypted?: string | null;
+  /** Plaintext API key on input — encrypted before storage, NEVER returned from GET */
+  apiKeyPlaintext?: string;
   model?: string | null;
   dimensions?: number | null;
   enabled?: boolean;

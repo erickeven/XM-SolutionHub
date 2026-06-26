@@ -87,9 +87,10 @@ export async function updateFieldConfig(
   return res.data;
 }
 
-export async function toggleFieldConfig(id: string): Promise<FieldConfigItem> {
+export async function toggleFieldConfig(id: string, enabled: boolean): Promise<FieldConfigItem> {
   const { data: res } = await apiClient.patch<ApiResponse<FieldConfigItem>>(
     `/admin/product-fields/${id}/toggle`,
+    { enabled },
   );
   return res.data;
 }
@@ -135,7 +136,8 @@ export function useUpdateFieldConfig() {
 export function useToggleFieldConfig() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: toggleFieldConfig,
+    mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) =>
+      toggleFieldConfig(id, enabled),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEY });
     },

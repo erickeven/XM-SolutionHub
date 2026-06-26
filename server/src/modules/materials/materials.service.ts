@@ -33,6 +33,7 @@ export async function listMaterials(
       pageCount: m.pageCount,
       previewPages: m.previewPages,
       status: m.status,
+      metadata: (m as never as { metadata: Record<string, unknown> | null }).metadata ?? null,
       createdAt: m.createdAt,
       updatedAt: m.updatedAt,
       solutionName: (m as never as { solution: { name: string } | null }).solution?.name ?? null,
@@ -62,6 +63,7 @@ export async function getMaterial(id: string): Promise<MaterialDetail> {
     pageCount: material.pageCount,
     previewPages: material.previewPages,
     status: material.status,
+    metadata: (material as never as { metadata: Record<string, unknown> | null }).metadata ?? null,
     createdAt: material.createdAt,
     updatedAt: material.updatedAt,
     solutionName: null,
@@ -113,6 +115,7 @@ export async function createMaterial(
       title: input.title,
       solutionId: input.solutionId,
       productId: input.productId,
+      metadata: input.metadata,
       originalStorageKey: storageKey,
       previewStorageKey,
       pageCount,
@@ -139,6 +142,7 @@ export async function createMaterial(
     pageCount: material.pageCount,
     previewPages: material.previewPages,
     status: material.status,
+    metadata: (material as never as { metadata: Record<string, unknown> | null }).metadata ?? null,
     createdAt: material.createdAt,
     updatedAt: material.updatedAt,
     solutionName: null,
@@ -155,6 +159,7 @@ export async function updateMaterial(
   id: string,
   input: {
     status?: 'DRAFT' | 'ACTIVE' | 'INACTIVE';
+    metadata?: Record<string, unknown>;
   },
   actorId: string | null,
 ): Promise<MaterialDetail> {
@@ -193,6 +198,7 @@ export async function updateMaterial(
     pageCount: material.pageCount,
     previewPages: material.previewPages,
     status: material.status,
+    metadata: (material as never as { metadata: Record<string, unknown> | null }).metadata ?? null,
     createdAt: material.createdAt,
     updatedAt: material.updatedAt,
     solutionName: null,

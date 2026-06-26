@@ -108,6 +108,7 @@ export async function create(
       previewStorageKey: data.previewStorageKey ?? null,
       mimeType: data.mimeType,
       pageCount: data.pageCount ?? null,
+      metadata: (data.metadata ?? undefined) as never,
       status: 'DRAFT',
     },
   });
@@ -123,6 +124,7 @@ export async function update(
     status?: 'DRAFT' | 'ACTIVE' | 'INACTIVE';
     pageCount?: number;
     previewStorageKey?: string;
+    metadata?: Record<string, unknown>;
   },
 ): Promise<Material> {
   const updateData: Record<string, unknown> = {};
@@ -134,6 +136,8 @@ export async function update(
   if (data.pageCount !== undefined) updateData.pageCount = data.pageCount;
   if (data.previewStorageKey !== undefined)
     updateData.previewStorageKey = data.previewStorageKey;
+  if (data.metadata !== undefined)
+    updateData.metadata = data.metadata as never;
 
   return prisma.material.update({ where: { id }, data: updateData as never });
 }

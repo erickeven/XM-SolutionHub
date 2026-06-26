@@ -16,6 +16,7 @@ export interface AdminMaterialListItem {
   mimeType: string;
   pageCount: number | null;
   previewPages: number;
+  metadata: Record<string, unknown> | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -48,6 +49,7 @@ export interface CreateMaterialFormInput {
   solutionId?: string;
   productId?: string;
   file: File;
+  metadata?: Record<string, unknown>;
 }
 
 export interface UpdateMaterialInput {
@@ -56,6 +58,7 @@ export interface UpdateMaterialInput {
   solutionId?: string | null;
   productId?: string | null;
   status?: MaterialStatus;
+  metadata?: Record<string, unknown>;
 }
 
 export async function listMaterials(
@@ -85,6 +88,7 @@ export async function createMaterial(
   form.append('title', input.title);
   if (input.solutionId) form.append('solutionId', input.solutionId);
   if (input.productId) form.append('productId', input.productId);
+  if (input.metadata) form.append('metadata', JSON.stringify(input.metadata));
   // multipart/form-data; boundary is auto-set by request interceptor for FormData
   const { data: res } = await apiClient.post<ApiResponse<AdminMaterialDetail>>(
     '/admin/materials',

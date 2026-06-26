@@ -54,9 +54,8 @@ export async function testConnectionHandler(
   next: NextFunction,
 ): Promise<void> {
   try {
-    // validate body shape even if we don't use it yet
-    testConnectionSchema.parse(req.body);
-    const result = await service.testConnection();
+    const input = testConnectionSchema.parse(req.body);
+    const result = await service.testConnection(input);
     res.status(200).json(successResponse(result));
   } catch (err) {
     next(err);

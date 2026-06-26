@@ -70,7 +70,7 @@ export function MaterialFieldSettingsPage() {
 
   const handleToggle = async (record: FieldConfigItem, checked: boolean) => {
     try {
-      await toggleMutation.mutateAsync(record.id);
+      await toggleMutation.mutateAsync({ id: record.id, enabled: checked });
       message.success(checked ? '已启用' : '已禁用');
     } catch (err) {
       message.error(err instanceof Error ? err.message : '操作失败');
@@ -92,6 +92,14 @@ export function MaterialFieldSettingsPage() {
       dataIndex: 'label',
       key: 'label',
       width: 160,
+      render: (v: string, record: FieldConfigItem) => (
+        <span>
+          {v}
+          {CORE_FIELDS.has(record.fieldKey) && (
+            <Tag color="blue" className="!ml-2">系统字段</Tag>
+          )}
+        </span>
+      ),
     },
     {
       title: '类型',

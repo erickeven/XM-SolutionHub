@@ -51,3 +51,7 @@ export const updateFieldConfigSchema = z.object({
     path: ['optionsJson'],
   },
 );
+
+export const toggleFieldConfigSchema = z.object({
+  enabled: z.boolean(),
+});
