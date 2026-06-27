@@ -37,6 +37,7 @@ import {
   getMaterialPreviewUrl,
 } from '../../../api/admin-materials';
 import { listSolutions } from '../../../api/admin-solutions';
+import { listProducts } from '../../../api/admin-products';
 import type {
   AdminMaterialListItem,
   MaterialType,
@@ -90,6 +91,7 @@ export function MaterialListPage() {
   const [statusFilter, setStatusFilter] = useState('ACTIVE');
   const [typeFilter, setTypeFilter] = useState('');
   const [solutionFilter, setSolutionFilter] = useState('');
+  const [productFilter, setProductFilter] = useState<string | undefined>();
   const [search, setSearch] = useState('');
   const [uploadOpen, setUploadOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -105,6 +107,15 @@ export function MaterialListPage() {
     value: s.id,
   }));
 
+  const { data: products } = useQuery({
+    queryKey: ['admin-products-short'],
+    queryFn: () => listProducts({ status: 'ACTIVE', page: 1, pageSize: 200 }),
+  });
+  const productOptions = (products?.items ?? []).map((p) => ({
+    label: p.model,
+    value: p.id,
+  }));
+
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: [
       'admin-materials',
@@ -113,6 +124,7 @@ export function MaterialListPage() {
       statusFilter,
       typeFilter,
       solutionFilter,
+      productFilter,
       search,
     ],
     queryFn: () =>
@@ -122,6 +134,7 @@ export function MaterialListPage() {
         status: (statusFilter || undefined) as 'ACTIVE' | 'DRAFT' | 'INACTIVE' | '' | undefined,
         type: (typeFilter || undefined) as MaterialType | '' | undefined,
         solutionId: solutionFilter || undefined,
+        productId: productFilter,
         search: search || undefined,
       }),
   });
@@ -411,6 +424,19 @@ export function MaterialListPage() {
             }}
             options={[{ label: '全部方案', value: '' }, ...solutionOptions]}
             placeholder="按方案筛选"
+            style={{ width: 180 }}
+            allowClear
+            showSearch
+            optionFilterProp="label"
+          />
+          <Select
+            value={productFilter}
+            onChange={(v: string | undefined) => {
+              setProductFilter(v);
+              setPage(1);
+            }}
+            options={[{ label: '全部产品', value: undefined }, ...productOptions]}
+            placeholder="按产品筛选"
             style={{ width: 180 }}
             allowClear
             showSearch

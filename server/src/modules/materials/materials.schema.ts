@@ -23,6 +23,7 @@ export const materialQuerySchema = z.object({
   status: materialStatusEnum.optional(),
   type: materialTypeEnum.optional(),
   solutionId: z.string().optional(),
+  productId: z.string().optional(),
 });
 
 export const updateMaterialSchema = z.object({

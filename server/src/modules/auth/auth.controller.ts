@@ -92,11 +92,8 @@ export async function refreshHandler(
     if (!refreshToken) {
       throw new AppError(2004, 'Missing refresh token', 401);
     }
-    const csrfToken = req.headers['x-csrf-token'];
-    if (typeof csrfToken !== 'string' || !csrfToken) {
-      throw new AppError(2001, 'Missing CSRF token', 401);
-    }
-    const result = await authService.refresh(refreshToken, csrfToken);
+    const csrfToken = req.headers['x-csrf-token'] as string | undefined;
+    const result = await authService.refresh(refreshToken, csrfToken ?? '');
     setSessionCookies(res, result.refreshToken);
     res.status(200).json(successResponse({ accessToken: result.accessToken }));
   } catch (err) {

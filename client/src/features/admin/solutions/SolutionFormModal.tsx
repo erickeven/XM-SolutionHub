@@ -7,6 +7,7 @@ import {
   getSolution,
   getSolutionProductOptions,
 } from '../../../api/admin-solutions';
+import { listMaterials } from '../../../api/admin-materials';
 import type { SolutionStatus } from '../../../api/admin-solutions';
 
 interface SolutionFormModalProps {
@@ -40,9 +41,21 @@ export function SolutionFormModal({
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: materialData, isLoading: materialsLoading } = useQuery({
+    queryKey: ['admin-materials', 'options'],
+    queryFn: () => listMaterials({ page: 1, pageSize: 200 }),
+    enabled: open,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const productSelectOptions = (productOptions ?? []).map((p) => ({
     label: `${p.model} — ${p.series}`,
     value: p.id,
+  }));
+
+  const materialSelectOptions = (materialData?.items ?? []).map((m) => ({
+    label: m.title,
+    value: m.id,
   }));
 
   const filterOption = (input: string, option?: { label?: unknown; value?: unknown }) => {
@@ -59,10 +72,11 @@ export function SolutionFormModal({
           description: existing.description,
           status: existing.status,
           productIds: existing.productIds ?? [],
+          materialIds: existing.materialIds ?? [],
         });
       } else if (mode === 'create') {
         form.resetFields();
-        form.setFieldsValue({ status: 'DRAFT' as SolutionStatus, productIds: [] });
+        form.setFieldsValue({ status: 'DRAFT' as SolutionStatus, productIds: [], materialIds: [] });
       }
     }
   }, [open, mode, existing, form]);
@@ -101,6 +115,7 @@ export function SolutionFormModal({
         description: values.description,
         status: values.status,
         productIds: values.productIds ?? [],
+        materialIds: values.materialIds ?? [],
       };
       if (mode === 'create') {
         createMutation.mutate(input);
@@ -154,6 +169,17 @@ export function SolutionFormModal({
             options={productSelectOptions}
             loading={productsLoading}
             placeholder="选择本方案关联的芯片型号（可搜索型号或系列）"
+            showSearch
+            filterOption={filterOption}
+            optionFilterProp="label"
+          />
+        </Form.Item>
+        <Form.Item label="关联资料" name="materialIds">
+          <Select
+            mode="multiple"
+            options={materialSelectOptions}
+            loading={materialsLoading}
+            placeholder="选择本方案关联的资料文档"
             showSearch
             filterOption={filterOption}
             optionFilterProp="label"

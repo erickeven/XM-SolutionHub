@@ -18,6 +18,7 @@ import {
   ProfileOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../hooks/useAuth';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 
 const NAV_ITEMS = [
   { path: '/', label: '首页' },
@@ -255,7 +256,9 @@ export function MainLayout() {
 
       {/* Content */}
       <main className="flex-1 pb-14 md:pb-0">
-        <Outlet />
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
       </main>
 
       {/* Footer */}

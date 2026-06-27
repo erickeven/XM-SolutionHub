@@ -38,6 +38,7 @@ export interface MaterialQuery {
   status?: 'DRAFT' | 'ACTIVE' | 'INACTIVE';
   type?: MaterialType;
   solutionId?: string;
+  productId?: string;
 }
 
 export interface MaterialPaginatedResult {

@@ -10,13 +10,14 @@ import type {
 export async function findMany(
   query: MaterialQuery,
 ): Promise<{ items: Material[]; total: number }> {
-  const { page, limit, search, status, type, solutionId } = query;
+  const { page, limit, search, status, type, solutionId, productId } = query;
   const skip = (page - 1) * limit;
 
   const where: Record<string, unknown> = {};
   if (status) where.status = status;
   if (type) where.type = type;
   if (solutionId) where.solutionId = solutionId;
+  if (productId) where.productId = productId;
   if (search) {
     where.title = { contains: search, mode: 'insensitive' };
   }

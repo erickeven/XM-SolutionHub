@@ -1,2 +1,2 @@
 -- AlterTable: Add metadata JSON column to Material
-ALTER TABLE "materials" ADD COLUMN "metadata" JSONB;
+ALTER TABLE "Material" ADD COLUMN "metadata" JSONB;

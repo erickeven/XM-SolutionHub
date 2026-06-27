@@ -30,6 +30,8 @@ export interface AdminSolutionProduct {
 export interface AdminSolutionDetail extends AdminSolutionListItem {
   productIds: string[];
   products: AdminSolutionProduct[];
+  materialIds: string[];
+  materials: { id: string; title: string; type: string }[];
 }
 
 export interface AdminSolutionListResult {
@@ -50,6 +52,7 @@ export interface CreateSolutionInput {
   name: string;
   description: string;
   productIds?: string[];
+  materialIds?: string[];
   status?: SolutionStatus;
 }
 
@@ -57,6 +60,7 @@ export interface UpdateSolutionInput {
   name?: string;
   description?: string;
   productIds?: string[];
+  materialIds?: string[];
   status?: SolutionStatus;
 }
 

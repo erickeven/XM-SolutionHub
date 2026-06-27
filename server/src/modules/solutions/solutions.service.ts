@@ -23,6 +23,7 @@ export async function listSolutions(
       createdAt: s.createdAt,
       updatedAt: s.updatedAt,
       productCount: (s as never as { _count: { productSolutions: number } })._count.productSolutions,
+      materialCount: (s as never as { _count: { materials: number } })._count.materials,
     })),
     total,
     page: query.page,
@@ -53,7 +54,8 @@ export async function getSolution(id: string): Promise<SolutionDetail> {
       model: ps.product.model,
       series: ps.product.series,
     })),
-    productIds: solution.productSolutions.map((ps) => ps.productId),
+      productIds: solution.productSolutions.map((ps) => ps.productId),
+      materialIds: solution.materials.map((m) => m.id),
   };
 }
 
@@ -96,6 +98,10 @@ export async function createSolution(
     await repository.linkProducts(solution.id, input.productIds);
   }
 
+  if (input.materialIds && input.materialIds.length > 0) {
+    await repository.linkMaterials(solution.id, input.materialIds);
+  }
+
   logFromContext({
     actorId,
     action: 'solution.create',
@@ -118,13 +124,20 @@ export async function updateSolution(
     throw new AppError(3001, 'Solution not found', 404);
   }
 
-  const { productIds, ...updateData } = input;
+  const { productIds, materialIds, ...updateData } = input;
   await repository.update(id, updateData);
 
   if (productIds !== undefined) {
     await repository.unlinkAllProducts(id);
     if (productIds.length > 0) {
       await repository.linkProducts(id, productIds);
+    }
+  }
+
+  if (materialIds !== undefined) {
+    await repository.unlinkAllMaterials(id);
+    if (materialIds.length > 0) {
+      await repository.linkMaterials(id, materialIds);
     }
   }
 

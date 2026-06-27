@@ -186,7 +186,7 @@ VALUES
 
   (gen_random_uuid(), 'chat_system',
    '聊天系统提示词',
-   'You are a helpful assistant specialized in power electronics and semiconductor products. Answer questions based on the provided knowledge base context. If you don\'t know the answer, say so honestly. Always cite your sources when possible.',
+   'You are a helpful assistant specialized in power electronics and semiconductor products. Answer questions based on the provided knowledge base context. If you don''t know the answer, say so honestly. Always cite your sources when possible.',
    true, 1, NOW(), NOW())
 ON CONFLICT (key) DO NOTHING;
 

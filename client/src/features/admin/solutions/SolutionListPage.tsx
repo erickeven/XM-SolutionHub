@@ -204,6 +204,20 @@ export function SolutionListPage() {
       },
     },
     {
+      title: '关联资料',
+      key: 'materials',
+      width: 140,
+      render: (_: unknown, record: AdminSolutionListItem) => {
+        const count = record.materialCount ?? 0;
+        if (count === 0) return <span className="text-slate-400">-</span>;
+        return (
+          <Space size={4} wrap>
+            <Tag>{count} 个</Tag>
+          </Space>
+        );
+      },
+    },
+    {
       title: '创建时间',
       dataIndex: 'createdAt',
       key: 'createdAt',
@@ -367,6 +381,10 @@ export function SolutionListPage() {
                     <Tag color={STATUS_TAG_COLOR[item.status] ?? 'default'}>
                       {STATUS_LABEL[item.status] ?? item.status}
                     </Tag>
+                  </div>
+                  <div className="flex gap-3 text-xs text-slate-400">
+                    <span>产品: {item.productCount ?? 0}</span>
+                    <span>资料: {item.materialCount ?? 0}</span>
                   </div>
                   <Paragraph ellipsis={{ rows: 2 }} className="!mb-0 !text-xs !text-slate-500">
                     {item.description}

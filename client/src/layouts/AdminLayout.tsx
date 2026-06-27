@@ -38,6 +38,7 @@ import {
 } from '@ant-design/icons';
 import { useAuth } from '../hooks/useAuth';
 import { usePermissions } from '../hooks/usePermissions';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 
 const { Header, Sider, Content } = Layout;
 const { useBreakpoint } = Grid;
@@ -311,7 +312,9 @@ export function AdminLayout() {
           </div>
         </Header>
         <Content className="bg-slate-50 p-4 md:p-6">
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </Content>
       </Layout>
 

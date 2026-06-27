@@ -28,7 +28,7 @@ export async function findMany(
       take: limit,
       orderBy: { createdAt: 'desc' },
       include: {
-        _count: { select: { productSolutions: true } },
+        _count: { select: { productSolutions: true, materials: true } },
       },
     }),
     prisma.solution.count({ where }),
@@ -126,4 +126,21 @@ export async function linkProducts(
 
 export async function unlinkAllProducts(solutionId: string): Promise<void> {
   await prisma.productSolution.deleteMany({ where: { solutionId } });
+}
+
+export async function linkMaterials(
+  solutionId: string,
+  materialIds: string[],
+): Promise<void> {
+  await prisma.material.updateMany({
+    where: { id: { in: materialIds } },
+    data: { solutionId },
+  });
+}
+
+export async function unlinkAllMaterials(solutionId: string): Promise<void> {
+  await prisma.material.updateMany({
+    where: { solutionId },
+    data: { solutionId: null },
+  });
 }
