@@ -111,6 +111,18 @@ export async function updateProduct(
   };
 }
 
+export async function hardDeleteProduct(id: string, actorId?: string): Promise<void> {
+  const existing = await repository.findById(id);
+  if (!existing) throw new AppError(3001, 'Product not found', 404);
+  if (existing.status !== 'INACTIVE') {
+    throw new AppError(4001, 'Cannot permanently delete active product. Move to recycle bin first.', 400);
+  }
+  await repository.hardDelete(id);
+  if (actorId) {
+    logFromContext({ actorId, action: 'product.hardDelete', targetType: 'Product', targetId: id });
+  }
+}
+
 export async function deleteProduct(
   id: string,
   actorId: string | null,

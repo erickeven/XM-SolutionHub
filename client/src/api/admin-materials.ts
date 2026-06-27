@@ -115,6 +115,10 @@ export async function deleteMaterial(id: string): Promise<{ id: string }> {
   return res.data;
 }
 
+export async function hardDeleteMaterial(id: string): Promise<void> {
+  await apiClient.delete(`/admin/materials/${id}/permanent`);
+}
+
 export function getMaterialPreviewUrl(id: string): string {
   const base = import.meta.env.VITE_API_BASE_URL ?? '/api/v1';
   return `${base}/materials/${id}/preview`;

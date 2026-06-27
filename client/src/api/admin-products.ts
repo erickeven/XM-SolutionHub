@@ -110,3 +110,7 @@ export async function deleteProduct(id: string): Promise<{ id: string }> {
   );
   return res.data;
 }
+
+export async function hardDeleteProduct(id: string): Promise<void> {
+  await apiClient.delete(`/admin/products/${id}/permanent`);
+}

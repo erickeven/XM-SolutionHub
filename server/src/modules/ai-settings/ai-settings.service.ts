@@ -77,12 +77,24 @@ export async function updateProvider(
   }
   // undefined or empty string → do not modify stored key
 
+  // Normalize baseUrl: trim, remove trailing slash, remove duplicate /v1
+  if (data.baseUrl) {
+    data.baseUrl = normalizeBaseUrl(data.baseUrl);
+  }
+
   const updated = await repository.updateProvider(id, data);
   return toProviderItem(updated);
 }
 
+function normalizeBaseUrl(url: string): string {
+  let cleaned = url.trim();
+  cleaned = cleaned.replace(/\/+$/, '');        // Remove trailing slash
+  cleaned = cleaned.replace(/\/v1\/?$/i, '');   // Remove /v1 suffix (case insensitive)
+  return cleaned;
+}
+
 function buildTestUrl(baseUrl: string, providerType: string): string {
-  const cleanUrl = baseUrl.replace(/\/$/, '');
+  const cleanUrl = normalizeBaseUrl(baseUrl);
   if (providerType === 'llm') return `${cleanUrl}/v1/chat/completions`;
   if (providerType === 'embedding') return `${cleanUrl}/v1/embeddings`;
   return `${cleanUrl}/v1/chat/completions`; // fallback
@@ -140,7 +152,7 @@ export async function testConnection(input: {
   }
 
   if (providerType === 'rerank') {
-    return { success: false, latencyMs: 0, error: 'Rerank endpoint not yet supported' };
+    return { success: false, latencyMs: 0, error: 'Rerank 功能暂不支持测试' };
   }
 
   const url = buildTestUrl(baseUrl, providerType);

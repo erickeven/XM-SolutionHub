@@ -149,3 +149,7 @@ export async function softDelete(id: string): Promise<Material> {
     data: { status: 'INACTIVE' },
   });
 }
+
+export async function hardDelete(id: string): Promise<void> {
+  await prisma.material.delete({ where: { id } });
+}

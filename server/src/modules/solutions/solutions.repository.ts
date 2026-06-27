@@ -114,6 +114,10 @@ export async function softDelete(id: string): Promise<Solution> {
   });
 }
 
+export async function hardDelete(id: string): Promise<void> {
+  await prisma.solution.delete({ where: { id } });
+}
+
 export async function linkProducts(
   solutionId: string,
   productIds: string[],

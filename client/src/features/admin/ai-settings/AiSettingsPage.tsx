@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Tabs, Table, Button, Modal, Form, Input, InputNumber, Switch, message, Tag, Space, Tooltip } from 'antd';
+import { Tabs, Table, Button, Modal, Form, Input, InputNumber, Switch, message, Tag, Space, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { CheckCircleOutlined, CloseCircleOutlined, EditOutlined, ApiOutlined } from '@ant-design/icons';
 import type { AiProviderItem, AiPromptItem } from '../../../api/admin-ai-settings';
@@ -65,9 +65,13 @@ function ProviderEditModal({
       confirmLoading={updateMutation.isPending}
       footer={(_, { OkBtn, CancelBtn }) => (
         <Space>
-          <Button onClick={handleTest} loading={testMutation.isPending} icon={<ApiOutlined />}>
-            测试连接
-          </Button>
+          {record.providerType !== 'rerank' ? (
+            <Button onClick={handleTest} loading={testMutation.isPending} icon={<ApiOutlined />}>
+              测试连接
+            </Button>
+          ) : (
+            <Button disabled>不支持测试</Button>
+          )}
           <CancelBtn />
           <OkBtn />
         </Space>
@@ -77,8 +81,8 @@ function ProviderEditModal({
         <Form.Item label="名称" name="name" rules={[{ required: true }]}>
           <Input />
         </Form.Item>
-        <Form.Item label="接口地址" name="baseUrl">
-          <Input placeholder="https://api.example.com/v1" />
+        <Form.Item label="接口地址" name="baseUrl" help={<Typography.Text type="secondary" style={{ fontSize: 12 }}>不要填写 /v1，系统会自动拼接兼容 OpenAI 风格的路径</Typography.Text>}>
+          <Input placeholder="https://api.example.com" />
         </Form.Item>
         <Form.Item label="API Key" name="apiKeyPlaintext">
           <Input.Password placeholder={record.apiKeyMasked ?? '留空不修改'} />

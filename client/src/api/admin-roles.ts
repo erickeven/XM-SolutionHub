@@ -10,6 +10,11 @@ export interface PermissionItem {
   action: string;
 }
 
+export interface PermissionGroup {
+  resourceGroup: string;
+  permissions: PermissionItem[];
+}
+
 export interface RoleListItem {
   id: string;
   name: string;
@@ -80,22 +85,11 @@ export async function deleteRole(id: string): Promise<{ id: string }> {
   return res.data;
 }
 
-export async function listPermissions(): Promise<PermissionItem[]> {
+export async function listPermissions(): Promise<PermissionGroup[]> {
   const { data: res } = await apiClient.get<
-    ApiResponse<{ items: PermissionItem[] }>
+    ApiResponse<{ items: PermissionGroup[] }>
   >('/admin/roles/permissions');
   return res.data.items;
-}
-
-export function groupPermissionsByResource(
-  permissions: PermissionItem[],
-): Record<string, PermissionItem[]> {
-  return permissions.reduce<Record<string, PermissionItem[]>>((acc, p) => {
-    const group = p.resourceGroup || 'other';
-    if (!acc[group]) acc[group] = [];
-    acc[group].push(p);
-    return acc;
-  }, {});
 }
 
 // React Query hooks

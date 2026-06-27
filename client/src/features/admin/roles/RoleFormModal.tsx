@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Modal, Form, Input, Card, Checkbox, message, Spin } from 'antd';
-import type { RoleListItem, PermissionItem } from '../../../api/admin-roles';
+import { Modal, Form, Input, Card, Checkbox, message, Spin, Result, Button } from 'antd';
+import type { RoleListItem, PermissionItem, PermissionGroup } from '../../../api/admin-roles';
 import {
   useCreateRole,
   useUpdateRole,
   useRole,
   usePermissionList,
-  groupPermissionsByResource,
 } from '../../../api/admin-roles';
 
 const { TextArea } = Input;
@@ -59,22 +58,19 @@ export function RoleFormModal({ open, mode, role, onClose }: RoleFormModalProps)
   // Track checked permissions separately (checkbox groups live outside Form to avoid complexity)
   const [checkedPermissions, setCheckedPermissions] = useState<string[]>([]);
 
-  // Group permissions by resource group
-  const permissionGroups = useMemo(() => {
-    const items = permissionList.data ?? [];
-    return groupPermissionsByResource(items);
-  }, [permissionList.data]);
+  // Permission data is already grouped by resourceGroup from the backend
+  const permissionGroups: PermissionGroup[] = permissionList.data ?? [];
 
   const groupOrder = useMemo(() => {
-    return Object.keys(permissionGroups).sort((a, b) => {
-      const order = ['admin', 'products', 'solutions', 'materials', 'knowledge', 'users', 'audit', 'leads'];
-      const ai = order.indexOf(a);
-      const bi = order.indexOf(b);
-      if (ai === -1 && bi === -1) return a.localeCompare(b);
+    const order = ['admin', 'products', 'solutions', 'materials', 'knowledge', 'users', 'audit', 'leads'];
+    return [...permissionGroups].sort((a, b) => {
+      const ai = order.indexOf(a.resourceGroup);
+      const bi = order.indexOf(b.resourceGroup);
+      if (ai === -1 && bi === -1) return a.resourceGroup.localeCompare(b.resourceGroup);
       if (ai === -1) return 1;
       if (bi === -1) return -1;
       return ai - bi;
-    });
+    }).map((g) => g.resourceGroup);
   }, [permissionGroups]);
 
   // Reset/populate form when opening
@@ -126,8 +122,8 @@ export function RoleFormModal({ open, mode, role, onClose }: RoleFormModalProps)
         message.success('角色更新成功');
       }
       onClose();
-    } catch {
-      // validation errors
+    } catch (e) {
+      message.error(String(e));
     }
   };
 
@@ -180,11 +176,20 @@ export function RoleFormModal({ open, mode, role, onClose }: RoleFormModalProps)
         <div className="flex justify-center py-8">
           <Spin tip="加载权限列表..." />
         </div>
+      ) : permissionList.isError ? (
+        <Result
+          status="error"
+          title="加载权限失败"
+          subTitle={String(permissionList.error)}
+          extra={<Button onClick={() => permissionList.refetch()}>重试</Button>}
+        />
       ) : (
         <div className="max-h-[400px] space-y-3 overflow-y-auto pr-2">
-          {groupOrder.map((group) => {
-            const perms = permissionGroups[group] ?? [];
-            const groupLabel = RESOURCE_GROUP_LABEL[group] ?? group;
+          {groupOrder.map((groupName) => {
+            const group = permissionGroups.find((g) => g.resourceGroup === groupName);
+            if (!group) return null;
+            const perms = group.permissions;
+            const groupLabel = RESOURCE_GROUP_LABEL[groupName] ?? groupName;
             const options = perms.map((p) => ({
               label: `${describePermission(p)}${p.description ? `（${p.description}）` : ''}`,
               value: p.id,
@@ -195,7 +200,7 @@ export function RoleFormModal({ open, mode, role, onClose }: RoleFormModalProps)
 
             return (
               <Card
-                key={group}
+                key={groupName}
                 size="small"
                 title={
                   <span className="text-sm font-medium">

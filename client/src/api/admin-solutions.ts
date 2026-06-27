@@ -110,6 +110,10 @@ export async function deleteSolution(id: string): Promise<{ id: string }> {
   return res.data;
 }
 
+export async function hardDeleteSolution(id: string): Promise<void> {
+  await apiClient.delete(`/admin/solutions/${id}/permanent`);
+}
+
 export async function getSolutionProductOptions(): Promise<
   AdminSolutionProductOption[]
 > {

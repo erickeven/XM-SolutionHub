@@ -19,6 +19,7 @@ adminRoutes.get('/products-options', controller.productsOptionsHandler);
 adminRoutes.get('/:id', controller.adminGetByIdHandler);
 adminRoutes.patch('/:id', controller.adminUpdateHandler);
 adminRoutes.delete('/:id', controller.adminDeleteHandler);
+adminRoutes.delete('/:id/permanent', controller.adminHardDeleteHandler);
 
 // Public routes — mounted at /api/v1/solutions/:id/materials
 const publicRoutes: Router = Router();

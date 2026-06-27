@@ -13,6 +13,7 @@ import {
   Tag,
   Input,
   Select,
+  Popconfirm,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -28,6 +29,7 @@ import {
   listSolutions,
   deleteSolution,
   updateSolution,
+  hardDeleteSolution,
 } from '../../../api/admin-solutions';
 import type { AdminSolutionListItem } from '../../../api/admin-solutions';
 import { SolutionFormModal } from './SolutionFormModal';
@@ -97,6 +99,17 @@ export function SolutionListPage() {
     },
     onError: (err: unknown) => {
       message.error(err instanceof Error ? err.message : '操作失败');
+    },
+  });
+
+  const hardDeleteMutation = useMutation({
+    mutationFn: (id: string) => hardDeleteSolution(id),
+    onSuccess: () => {
+      message.success('已永久删除');
+      queryClient.invalidateQueries({ queryKey: ['admin-solutions'] });
+    },
+    onError: (err: unknown) => {
+      message.error(err instanceof Error ? err.message : '删除失败');
     },
   });
 
@@ -257,14 +270,26 @@ export function SolutionListPage() {
             </Button>
           )}
           {record.status === 'INACTIVE' ? (
-            <Button
-              size="small"
-              icon={<ReloadOutlined />}
-              onClick={() => handleRestore(record)}
-              loading={restoreMutation.isPending}
-            >
-              恢复
-            </Button>
+            <>
+              <Button
+                size="small"
+                icon={<ReloadOutlined />}
+                onClick={() => handleRestore(record)}
+                loading={restoreMutation.isPending}
+              >
+                恢复
+              </Button>
+              <Popconfirm
+                title="此操作不可撤销"
+                description="确认永久删除？"
+                onConfirm={() => hardDeleteMutation.mutate(record.id)}
+                okText="确认删除"
+                cancelText="取消"
+                okButtonProps={{ danger: true }}
+              >
+                <Button type="link" danger loading={hardDeleteMutation.isPending}>彻底删除</Button>
+              </Popconfirm>
+            </>
           ) : (
             <Button
               size="small"
@@ -403,9 +428,21 @@ export function SolutionListPage() {
                       </Button>
                     )}
                     {item.status === 'INACTIVE' ? (
-                      <Button size="small" icon={<ReloadOutlined />} onClick={() => handleRestore(item)}>
-                        恢复
-                      </Button>
+                      <>
+                        <Button size="small" icon={<ReloadOutlined />} onClick={() => handleRestore(item)}>
+                          恢复
+                        </Button>
+                        <Popconfirm
+                          title="此操作不可撤销"
+                          description="确认永久删除？"
+                          onConfirm={() => hardDeleteMutation.mutate(item.id)}
+                          okText="确认删除"
+                          cancelText="取消"
+                          okButtonProps={{ danger: true }}
+                        >
+                          <Button type="link" danger size="small">彻底删除</Button>
+                        </Popconfirm>
+                      </>
                     ) : (
                       <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleMoveToRecycle(item)}>
                         删除

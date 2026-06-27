@@ -71,6 +71,10 @@ export async function softDelete(id: string): Promise<Product> {
   });
 }
 
+export async function hardDelete(id: string): Promise<void> {
+  await prisma.product.delete({ where: { id } });
+}
+
 // ── Public read-only queries (always ACTIVE) ──
 
 export async function findActiveProductsPaginated(params: {

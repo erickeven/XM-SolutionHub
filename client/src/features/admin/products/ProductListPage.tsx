@@ -13,6 +13,7 @@ import {
   Tag,
   Input,
   Select,
+  Popconfirm,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -28,6 +29,7 @@ import {
   listProducts,
   deleteProduct,
   updateProduct,
+  hardDeleteProduct,
 } from '../../../api/admin-products';
 import type { AdminProductListItem } from '../../../api/admin-products';
 import { ProductFormModal } from './ProductFormModal';
@@ -97,6 +99,17 @@ export function ProductListPage() {
     },
     onError: (err: unknown) => {
       message.error(err instanceof Error ? err.message : '操作失败');
+    },
+  });
+
+  const hardDeleteMutation = useMutation({
+    mutationFn: (id: string) => hardDeleteProduct(id),
+    onSuccess: () => {
+      message.success('已永久删除');
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+    },
+    onError: (err: unknown) => {
+      message.error(err instanceof Error ? err.message : '删除失败');
     },
   });
 
@@ -246,14 +259,26 @@ export function ProductListPage() {
             </Button>
           )}
           {record.status === 'INACTIVE' ? (
-            <Button
-              size="small"
-              icon={<ReloadOutlined />}
-              onClick={() => handleRestore(record)}
-              loading={restoreMutation.isPending}
-            >
-              恢复
-            </Button>
+            <>
+              <Button
+                size="small"
+                icon={<ReloadOutlined />}
+                onClick={() => handleRestore(record)}
+                loading={restoreMutation.isPending}
+              >
+                恢复
+              </Button>
+              <Popconfirm
+                title="此操作不可撤销"
+                description="确认永久删除？"
+                onConfirm={() => hardDeleteMutation.mutate(record.id)}
+                okText="确认删除"
+                cancelText="取消"
+                okButtonProps={{ danger: true }}
+              >
+                <Button type="link" danger loading={hardDeleteMutation.isPending}>彻底删除</Button>
+              </Popconfirm>
+            </>
           ) : (
             <Button
               size="small"
@@ -413,9 +438,21 @@ export function ProductListPage() {
                       </Button>
                     )}
                     {item.status === 'INACTIVE' ? (
-                      <Button size="small" icon={<ReloadOutlined />} onClick={() => handleRestore(item)}>
-                        恢复
-                      </Button>
+                      <>
+                        <Button size="small" icon={<ReloadOutlined />} onClick={() => handleRestore(item)}>
+                          恢复
+                        </Button>
+                        <Popconfirm
+                          title="此操作不可撤销"
+                          description="确认永久删除？"
+                          onConfirm={() => hardDeleteMutation.mutate(item.id)}
+                          okText="确认删除"
+                          cancelText="取消"
+                          okButtonProps={{ danger: true }}
+                        >
+                          <Button type="link" danger size="small">彻底删除</Button>
+                        </Popconfirm>
+                      </>
                     ) : (
                       <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleMoveToRecycle(item)}>
                         删除

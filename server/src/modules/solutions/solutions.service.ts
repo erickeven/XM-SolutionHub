@@ -162,6 +162,18 @@ export async function getAllProductOptions(): Promise<
   });
 }
 
+export async function hardDeleteSolution(id: string, actorId?: string): Promise<void> {
+  const existing = await repository.findById(id);
+  if (!existing) throw new AppError(3001, 'Solution not found', 404);
+  if (existing.status !== 'INACTIVE') {
+    throw new AppError(4001, 'Cannot permanently delete active solution. Move to recycle bin first.', 400);
+  }
+  await repository.hardDelete(id);
+  if (actorId) {
+    logFromContext({ actorId, action: 'solution.hardDelete', targetType: 'Solution', targetId: id });
+  }
+}
+
 export async function deleteSolution(
   id: string,
   actorId: string | null,

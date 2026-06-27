@@ -120,6 +120,17 @@ export async function adminUpdateHandler(
   }
 }
 
+export async function adminHardDeleteHandler(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const id = requireId(req);
+    const actorId = (req as any).user?.id;
+    await service.hardDeleteMaterial(id, actorId);
+    res.json(successResponse(null, 'Material permanently deleted'));
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function adminDeleteHandler(
   req: Request,
   res: Response,

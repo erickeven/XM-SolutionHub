@@ -207,6 +207,26 @@ export async function updateMaterial(
   };
 }
 
+export async function hardDeleteMaterial(id: string, actorId?: string): Promise<void> {
+  const existing = await repository.findById(id);
+  if (!existing) throw new AppError(3001, 'Material not found', 404);
+  if (existing.status !== 'INACTIVE') {
+    throw new AppError(4001, 'Cannot permanently delete active material. Move to recycle bin first.', 400);
+  }
+
+  // Clean up storage files
+  const adapter = getStorageAdapter();
+  const keysToDelete: string[] = [];
+  if (existing.originalStorageKey) keysToDelete.push(existing.originalStorageKey);
+  if (existing.previewStorageKey) keysToDelete.push(existing.previewStorageKey);
+  await Promise.allSettled(keysToDelete.map((key) => adapter.removeObject(key)));
+
+  await repository.hardDelete(id);
+  if (actorId) {
+    logFromContext({ actorId, action: 'material.hardDelete', targetType: 'Material', targetId: id });
+  }
+}
+
 export async function deleteMaterial(
   id: string,
   actorId: string | null,

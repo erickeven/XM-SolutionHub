@@ -13,5 +13,6 @@ router.get('/:id', controller.getByIdHandler);
 router.post('/', controller.createHandler);
 router.patch('/:id', controller.updateHandler);
 router.delete('/:id', controller.deleteHandler);
+router.delete('/:id/permanent', controller.hardDeleteHandler);
 
 export default router;

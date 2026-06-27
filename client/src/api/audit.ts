@@ -9,6 +9,10 @@ export interface AuditLogItem {
   targetId: string | null;
   payload: unknown;
   createdAt: string;
+  actorLabel?: string;
+  actionLabel?: string;
+  targetLabel?: string;
+  targetShortId?: string;
 }
 
 export interface AuditLogResult {

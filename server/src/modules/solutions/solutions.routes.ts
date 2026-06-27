@@ -13,6 +13,7 @@ adminRoutes.get('/:id', controller.getByIdHandler);
 adminRoutes.post('/', controller.createHandler);
 adminRoutes.patch('/:id', controller.updateHandler);
 adminRoutes.delete('/:id', controller.deleteHandler);
+adminRoutes.delete('/:id/permanent', controller.hardDeleteHandler);
 
 // Public routes — mounted at /api/v1/solutions
 const publicRoutes: Router = Router();
