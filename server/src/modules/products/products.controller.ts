@@ -74,7 +74,7 @@ export async function updateHandler(
 export async function hardDeleteHandler(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const id = requireId(req);
-    const actorId = (req as any).user?.id;
+    const actorId = req.user?.userId;
     await service.hardDeleteProduct(id, actorId);
     res.json(successResponse(null, 'Product permanently deleted'));
   } catch (err) {

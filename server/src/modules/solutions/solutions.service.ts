@@ -168,7 +168,12 @@ export async function hardDeleteSolution(id: string, actorId?: string): Promise<
   if (existing.status !== 'INACTIVE') {
     throw new AppError(4001, 'Cannot permanently delete active solution. Move to recycle bin first.', 400);
   }
-  await repository.hardDelete(id);
+  await prisma.$transaction(async (tx) => {
+    // Clean up ProductSolution associations (no DB-level onDelete)
+    await tx.productSolution.deleteMany({ where: { solutionId: id } });
+    // Delete solution (Material.solutionId auto-set to null via onDelete: SetNull)
+    await tx.solution.delete({ where: { id } });
+  });
   if (actorId) {
     logFromContext({ actorId, action: 'solution.hardDelete', targetType: 'Solution', targetId: id });
   }

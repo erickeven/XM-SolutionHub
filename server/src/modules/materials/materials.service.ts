@@ -214,14 +214,29 @@ export async function hardDeleteMaterial(id: string, actorId?: string): Promise<
     throw new AppError(4001, 'Cannot permanently delete active material. Move to recycle bin first.', 400);
   }
 
-  // Clean up storage files
-  const adapter = getStorageAdapter();
-  const keysToDelete: string[] = [];
-  if (existing.originalStorageKey) keysToDelete.push(existing.originalStorageKey);
-  if (existing.previewStorageKey) keysToDelete.push(existing.previewStorageKey);
-  await Promise.allSettled(keysToDelete.map((key) => adapter.removeObject(key)));
+  // DB transaction: clean up KnowledgeDoc chain first, then delete Material
+  await prisma.$transaction(async (tx) => {
+    // 1. Delete KnowledgeDoc (cascades to KnowledgeIndexJob, KnowledgeChunk,
+    //    KnowledgeEvent, KnowledgeEventEntity via DB onDelete: Cascade)
+    await tx.knowledgeDoc.deleteMany({ where: { materialId: id } });
+    // 2. Delete the material
+    await tx.material.delete({ where: { id } });
+  });
 
-  await repository.hardDelete(id);
+  // MinIO cleanup AFTER successful DB transaction (non-critical)
+  try {
+    const adapter = getStorageAdapter();
+    const keysToDelete: string[] = [];
+    if (existing.originalStorageKey) keysToDelete.push(existing.originalStorageKey);
+    if (existing.previewStorageKey) keysToDelete.push(existing.previewStorageKey);
+    if (keysToDelete.length > 0) {
+      await Promise.allSettled(keysToDelete.map((key) => adapter.removeObject(key)));
+    }
+  } catch (err) {
+    // ponytail: MinIO deletion failure is non-critical — DB is already consistent
+    console.error('MinIO cleanup failed for material', id, err);
+  }
+
   if (actorId) {
     logFromContext({ actorId, action: 'material.hardDelete', targetType: 'Material', targetId: id });
   }

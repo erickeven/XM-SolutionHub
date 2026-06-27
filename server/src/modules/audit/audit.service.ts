@@ -173,20 +173,16 @@ export function formatAuditLogsAsCsv(
     targetShortId?: string;
   }>,
 ): string {
-  const header = 'id,actorId,actorLabel,action,actionLabel,targetType,targetId,targetLabel,targetShortId,createdAt,payload';
+  const header = 'id,actorId,action,targetType,targetId,createdAt,payload';
   const rows = items.map((item) => {
     const sanitized = sanitizePayload(item.payload);
     const payloadStr = sanitized === null ? '' : JSON.stringify(sanitized);
     return [
       csvEscape(item.id),
       csvEscape(item.actorId ?? ''),
-      csvEscape(item.actorLabel ?? ''),
       csvEscape(item.action),
-      csvEscape(item.actionLabel),
       csvEscape(item.targetType),
       csvEscape(item.targetId ?? ''),
-      csvEscape(item.targetLabel ?? ''),
-      csvEscape(item.targetShortId ?? ''),
       csvEscape(item.createdAt.toISOString()),
       csvEscape(payloadStr),
     ].join(',');

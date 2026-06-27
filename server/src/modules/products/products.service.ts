@@ -1,3 +1,4 @@
+import prisma from '../../lib/prisma';
 import { AppError } from '../../lib/errors';
 import { logFromContext } from '../audit/audit.service';
 import * as repository from './products.repository';
@@ -117,7 +118,12 @@ export async function hardDeleteProduct(id: string, actorId?: string): Promise<v
   if (existing.status !== 'INACTIVE') {
     throw new AppError(4001, 'Cannot permanently delete active product. Move to recycle bin first.', 400);
   }
-  await repository.hardDelete(id);
+  await prisma.$transaction(async (tx) => {
+    // Clean up ProductSolution associations (no DB-level onDelete)
+    await tx.productSolution.deleteMany({ where: { productId: id } });
+    // Delete product (Material.productId auto-set to null via onDelete: SetNull)
+    await tx.product.delete({ where: { id } });
+  });
   if (actorId) {
     logFromContext({ actorId, action: 'product.hardDelete', targetType: 'Product', targetId: id });
   }
