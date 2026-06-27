@@ -22,24 +22,34 @@ function ProviderEditModal({
 
   const handleSave = async () => {
     const values = await form.validateFields();
-    await updateMutation.mutateAsync({ id: record.id, input: values });
+    // Clean payload: remove empty apiKeyPlaintext so backend doesn't try to encrypt an empty string
+    const payload = { ...values };
+    if (payload.apiKeyPlaintext === '' || payload.apiKeyPlaintext === undefined) {
+      delete payload.apiKeyPlaintext;
+    }
+    await updateMutation.mutateAsync({ id: record.id, input: payload });
     message.success('已保存');
     onClose();
   };
 
   const handleTest = async () => {
     const values = form.getFieldsValue();
+    const rawKey = values.apiKeyPlaintext;
+    if (!rawKey && record.apiKeyMasked) {
+      message.info('请输入新 API Key 测试当前表单配置，或保存后测试已保存配置');
+      return;
+    }
     try {
       const result = await testMutation.mutateAsync({
         providerType: record.providerType as 'llm' | 'embedding' | 'rerank',
         baseUrl: values.baseUrl ?? undefined,
-        apiKey: values.apiKeyPlaintext ?? undefined,
+        apiKey: rawKey ?? undefined,
         model: values.model ?? undefined,
       });
       if (result.success) {
         message.success(`连接成功, 延迟 ${result.latencyMs}ms`);
       } else {
-        message.error((result as { error?: string }).error ?? '连接失败');
+        message.error(result.error ?? '连接失败');
       }
     } catch {
       message.error('连接测试失败，请检查接口地址和 API Key');

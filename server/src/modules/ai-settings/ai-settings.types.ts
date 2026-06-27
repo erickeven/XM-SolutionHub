@@ -48,12 +48,22 @@ export interface AiProviderConfig {
   dimensions: number | null;
 }
 
+/** Input from API — plaintext API key only, NEVER accept apiKeyEncrypted */
 export interface UpdateProviderInput {
   name?: string;
   baseUrl?: string | null;
-  apiKeyEncrypted?: string | null;
-  /** Plaintext API key on input — encrypted before storage, NEVER returned from GET */
   apiKeyPlaintext?: string;
+  model?: string | null;
+  dimensions?: number | null;
+  enabled?: boolean;
+  isDefault?: boolean;
+}
+
+/** Internal data passed to repository — allows apiKeyEncrypted for encrypted storage */
+export interface UpdateProviderData {
+  name?: string;
+  baseUrl?: string | null;
+  apiKeyEncrypted?: string | null;
   model?: string | null;
   dimensions?: number | null;
   enabled?: boolean;

@@ -68,7 +68,13 @@ export async function updateProvider(id: string, input: UpdateProviderInput): Pr
   return res.data;
 }
 
-export async function testConnection(input: TestConnectionInput): Promise<{ success: boolean; latencyMs: number }> {
+export interface TestConnectionResult {
+  success: boolean;
+  latencyMs: number;
+  error?: string;
+}
+
+export async function testConnection(input: TestConnectionInput): Promise<TestConnectionResult> {
   const { data: res } = await apiClient.post<
     ApiResponse<{ success: boolean; latencyMs: number }>
   >('/admin/ai-settings/test', input);

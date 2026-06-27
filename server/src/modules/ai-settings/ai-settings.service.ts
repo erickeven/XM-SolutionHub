@@ -6,6 +6,7 @@ import type {
   AiProviderConfig,
   AiPromptItem,
   UpdateProviderInput,
+  UpdateProviderData,
   UpdatePromptInput,
 } from './ai-settings.types';
 import { AppError } from '../../lib/errors';
@@ -23,8 +24,8 @@ function toProviderItem(p: AiProviderRaw): AiProviderItem {
       const plaintext = decryptApiKey(p.apiKeyEncrypted);
       apiKeyMasked = maskApiKey(plaintext);
     } catch {
-      // If decryption fails, show the raw masked value for debugging
-      apiKeyMasked = maskApiKey(p.apiKeyEncrypted);
+      // ponytail: decrypt failed → return null, don't leak encrypted value
+      apiKeyMasked = null;
     }
   }
   return {
@@ -68,12 +69,13 @@ export async function updateProvider(
     }
   }
 
-  // Encrypt apiKeyPlaintext if provided, then remove plaintext from what we store
+  // Encrypt apiKeyPlaintext if explicitly provided (non-empty)
   const { apiKeyPlaintext, ...rest } = input;
-  const data: UpdateProviderInput = { ...rest };
-  if (apiKeyPlaintext !== undefined) {
-    data.apiKeyEncrypted = apiKeyPlaintext ? encryptApiKey(apiKeyPlaintext) : null;
+  const data: UpdateProviderData = { ...rest };
+  if (apiKeyPlaintext !== undefined && apiKeyPlaintext !== '') {
+    data.apiKeyEncrypted = encryptApiKey(apiKeyPlaintext);
   }
+  // undefined or empty string → do not modify stored key
 
   const updated = await repository.updateProvider(id, data);
   return toProviderItem(updated);
