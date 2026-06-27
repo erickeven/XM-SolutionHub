@@ -33,6 +33,7 @@ import {
 } from '../../../api/admin-solutions';
 import type { AdminSolutionListItem } from '../../../api/admin-solutions';
 import { SolutionFormModal } from './SolutionFormModal';
+import { ShortId } from '../../../components/ShortId';
 
 const { useBreakpoint } = Grid;
 const { Text, Paragraph } = Typography;
@@ -179,6 +180,13 @@ export function SolutionListPage() {
       width: 220,
       ellipsis: true,
       render: (v: string) => <span className="font-semibold text-slate-900">{v}</span>,
+    },
+    {
+      title: 'ID',
+      dataIndex: 'id',
+      key: 'id',
+      width: 160,
+      render: (id: string) => <ShortId id={id} />,
     },
     {
       title: '描述',
@@ -365,7 +373,7 @@ export function SolutionListPage() {
             dataSource={items}
             rowKey="id"
             loading={isLoading}
-            scroll={{ x: 900 }}
+            scroll={{ x: 1060 }}
             pagination={{
               current: page,
               pageSize,

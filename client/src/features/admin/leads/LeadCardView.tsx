@@ -1,6 +1,7 @@
 import { Card, Tag, Button, Typography } from 'antd';
 import type { LeadItem } from '../../../api/leads';
 import { StatusTransition } from './StatusTransition';
+import { ShortId } from '../../../components/ShortId';
 
 const { Text } = Typography;
 
@@ -54,6 +55,9 @@ export function LeadCardView({
               {item.assignedTo && <span>分配给: {item.assignedTo}</span>}
               <span>
                 最后活跃: {new Date(item.lastActiveAt).toLocaleDateString('zh-CN')}
+              </span>
+              <span className="w-full">
+                <ShortId id={item.id} />
               </span>
             </div>
             <div className="flex gap-2 pt-1">

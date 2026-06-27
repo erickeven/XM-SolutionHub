@@ -46,6 +46,7 @@ import type {
 } from '../../../api/admin-materials';
 import { MaterialUploadModal } from './MaterialUploadModal';
 import { MaterialEditModal } from './MaterialEditModal';
+import { ShortId } from '../../../components/ShortId';
 
 const { useBreakpoint } = Grid;
 const { Text } = Typography;
@@ -244,6 +245,13 @@ export function MaterialListPage() {
           <span className="font-medium text-slate-900">{v}</span>
         </Space>
       ),
+    },
+    {
+      title: 'ID',
+      dataIndex: 'id',
+      key: 'id',
+      width: 160,
+      render: (id: string) => <ShortId id={id} />,
     },
     {
       title: '类型',
@@ -493,7 +501,7 @@ export function MaterialListPage() {
             dataSource={items}
             rowKey="id"
             loading={isLoading}
-            scroll={{ x: 1200 }}
+            scroll={{ x: 1360 }}
             pagination={{
               current: page,
               pageSize,

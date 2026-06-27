@@ -33,6 +33,7 @@ import {
 } from '../../../api/admin-products';
 import type { AdminProductListItem } from '../../../api/admin-products';
 import { ProductFormModal } from './ProductFormModal';
+import { ShortId } from '../../../components/ShortId';
 
 const { useBreakpoint } = Grid;
 const { Text } = Typography;
@@ -183,6 +184,13 @@ export function ProductListPage() {
           <div className="text-xs text-slate-500">{r.series}</div>
         </div>
       ),
+    },
+    {
+      title: 'ID',
+      dataIndex: 'id',
+      key: 'id',
+      width: 160,
+      render: (id: string) => <ShortId id={id} />,
     },
     {
       title: '系列',
@@ -356,7 +364,7 @@ export function ProductListPage() {
             dataSource={items}
             rowKey="id"
             loading={isLoading}
-            scroll={{ x: 1000 }}
+            scroll={{ x: 1160 }}
             pagination={{
               current: page,
               pageSize,

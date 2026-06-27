@@ -25,6 +25,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { listUsers, deleteUser, updateUser } from '../../../api/users';
 import type { UserListItem } from '../../../api/users';
 import { UserFormModal } from './UserFormModal';
+import { ShortId } from '../../../components/ShortId';
 
 const { useBreakpoint } = Grid;
 const { Text } = Typography;
@@ -160,6 +161,13 @@ export function UserListPage() {
       key: 'email',
       ellipsis: true,
       width: 240,
+    },
+    {
+      title: 'ID',
+      dataIndex: 'id',
+      key: 'id',
+      width: 160,
+      render: (id: string) => <ShortId id={id} />,
     },
     {
       title: '角色',
@@ -317,7 +325,7 @@ export function UserListPage() {
             dataSource={items}
             rowKey="id"
             loading={isLoading}
-            scroll={{ x: 900 }}
+            scroll={{ x: 1060 }}
             pagination={{
               current: page,
               pageSize,

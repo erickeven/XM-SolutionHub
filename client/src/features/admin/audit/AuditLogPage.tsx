@@ -19,6 +19,7 @@ import { DownloadOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { listAuditLogs, exportAuditLogs } from '../../../api/audit';
 import type { AuditLogItem } from '../../../api/audit';
+import { ShortId } from '../../../components/ShortId';
 
 const { useBreakpoint } = Grid;
 const { RangePicker } = DatePicker;
@@ -76,8 +77,8 @@ export function AuditLogPage() {
       ellipsis: true,
       render: (_: string | undefined, record: AuditLogItem) =>
         record.actorLabel
-          ? <Tooltip title={record.actorId}>{record.actorLabel}</Tooltip>
-          : (record.actorId ?? '—'),
+          ? <Tooltip title={<ShortId id={record.actorId ?? ''} showCopy={false} />}>{record.actorLabel}</Tooltip>
+          : (record.actorId ? <ShortId id={record.actorId} /> : '—'),
     },
     {
       title: '操作',
@@ -101,8 +102,8 @@ export function AuditLogPage() {
       ellipsis: true,
       render: (_: string | undefined, record: AuditLogItem) =>
         record.targetLabel
-          ? <Tooltip title={record.targetId}>{record.targetLabel}</Tooltip>
-          : (record.targetShortId ?? record.targetId ?? '—'),
+          ? <Tooltip title={<ShortId id={record.targetId ?? ''} showCopy={false} />}>{record.targetLabel}</Tooltip>
+          : (record.targetId ? <ShortId id={record.targetId} /> : '—'),
     },
     {
       title: '时间',
@@ -246,8 +247,8 @@ export function AuditLogPage() {
                     </span>
                   </div>
                   <div className="text-xs text-slate-500">
-                    <div>操作人: {item.actorLabel ?? item.actorId ?? '—'}</div>
-                    <div>目标: {item.targetType} {item.targetLabel ?? item.targetShortId ?? item.targetId ?? ''}</div>
+                    <div>操作人: {item.actorLabel ?? (item.actorId ? <ShortId id={item.actorId} /> : '—')}</div>
+                    <div>目标: {item.targetType} {item.targetLabel ?? (item.targetId ? <ShortId id={item.targetId} /> : '')}</div>
                   </div>
                 </div>
               </Card>
