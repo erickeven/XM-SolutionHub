@@ -19,7 +19,7 @@ export async function chatHandler(
       req.user.userId,
       req.user.role,
       parsed.query,
-      parsed.sessionId,
+      parsed.sessionId ?? undefined,
     );
   } catch (err) {
     next(err);
