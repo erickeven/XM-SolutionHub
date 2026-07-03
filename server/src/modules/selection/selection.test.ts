@@ -110,6 +110,18 @@ describe('Selection Algorithm', () => {
     expect(() => selectionInputSchema.parse({ inputVoltageMin: 100 })).toThrow();
   });
 
+  it('application type is optional: electrical params alone can match', () => {
+    const input = selectionInputSchema.parse({
+      inputVoltageMin: 100,
+      inputVoltageMax: 240,
+      outputVoltage: 12,
+      outputCurrent: 1.5,
+    });
+    const results = matchProducts(input, [makeProduct()]);
+    expect(results[0]!.matchLevel).toBe('exact');
+    expect(results[0]!.reasons).toContain('未指定应用类型，默认满足');
+  });
+
   it('non-ACTIVE products excluded (filter happens before matching)', () => {
     const products = [
       makeProduct({ id: 'active', status: 'ACTIVE' }),
@@ -456,12 +468,31 @@ describe('Selection Algorithm', () => {
     ).toThrow(ZodError);
   });
 
-  it('Zod validation: missing required field → ZodError', () => {
+  it('Zod validation: missing required electrical field → ZodError', () => {
     expect(() =>
       selectionInputSchema.parse({
         inputVoltageMin: 100,
         inputVoltageMax: 240,
-        // missing outputVoltage, outputCurrent, applicationType
+        // missing outputVoltage and outputCurrent
+      }),
+    ).toThrow(ZodError);
+  });
+
+  it('Zod validation: output voltage/current must be positive', () => {
+    expect(() =>
+      selectionInputSchema.parse({
+        inputVoltageMin: 100,
+        inputVoltageMax: 240,
+        outputVoltage: 0,
+        outputCurrent: 1.5,
+      }),
+    ).toThrow(ZodError);
+    expect(() =>
+      selectionInputSchema.parse({
+        inputVoltageMin: 100,
+        inputVoltageMax: 240,
+        outputVoltage: 12,
+        outputCurrent: -1,
       }),
     ).toThrow(ZodError);
   });

@@ -104,6 +104,10 @@ function scoreApplication(
   const diffs: string[] = [];
   const pApp = getStr(params, 'applicationType');
 
+  if (!input.applicationType) {
+    return { score: WEIGHT_APPLICATION, reasons: ['未指定应用类型，默认满足'], diffs };
+  }
+
   if (pApp === undefined) {
     return { score: 0, reasons, diffs: ['缺少应用类型参数'] };
   }
@@ -359,6 +363,10 @@ export function matchProducts(
     results.push({
       productId: product.id,
       model: product.model,
+      series: product.series,
+      params: product.params,
+      advantages: product.advantages,
+      datasheetMaterialId: product.datasheetMaterialId,
       matchLevel,
       score: totalScore,
       reasons: [...electrical.reasons, ...application.reasons, ...efficiency.reasons, ...certification.reasons, ...environment.reasons],

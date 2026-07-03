@@ -2,13 +2,15 @@ import type { ThemeConfig } from 'antd';
 
 export const antdTheme: ThemeConfig = {
   token: {
-    colorPrimary: '#2563EB',
+    colorPrimary: '#1D4ED8',
     colorSuccess: '#16A34A',
     colorWarning: '#D97706',
     colorError: '#DC2626',
-    colorInfo: '#2563EB',
+    colorInfo: '#1D4ED8',
     colorTextBase: '#111827',
     colorBgBase: '#FFFFFF',
+    colorBorder: '#D8DEE8',
+    colorBgLayout: '#F6F8FB',
     borderRadius: 6,
     fontSize: 14,
     fontFamily:
@@ -20,7 +22,7 @@ export const antdTheme: ThemeConfig = {
       triggerBg: 'transparent',
       triggerColor: '#94a3b8',
       headerBg: '#FFFFFF',
-      bodyBg: '#F8FAFC',
+      bodyBg: '#F6F8FB',
       headerHeight: 56,
       headerPadding: '0 24px',
     },
@@ -28,7 +30,7 @@ export const antdTheme: ThemeConfig = {
       darkItemBg: 'transparent',
       darkSubMenuItemBg: 'transparent',
       darkItemColor: '#94a3b8',
-      darkItemSelectedBg: 'rgba(255,255,255,0.08)',
+      darkItemSelectedBg: 'rgba(214,160,76,0.18)',
       darkItemSelectedColor: '#FFFFFF',
       darkItemHoverBg: 'rgba(255,255,255,0.06)',
       darkItemHoverColor: '#FFFFFF',
@@ -38,11 +40,11 @@ export const antdTheme: ThemeConfig = {
       fontSize: 14,
     },
     Table: {
-      headerBg: '#F8FAFC',
+      headerBg: '#F6F8FB',
       headerColor: '#374151',
       headerSortActiveBg: '#F1F5F9',
       headerSortHoverBg: '#F1F5F9',
-      borderColor: '#E5E7EB',
+      borderColor: '#D8DEE8',
       rowHoverBg: '#F8FAFC',
       fontSize: 13,
       cellPaddingBlock: 12,
@@ -50,14 +52,15 @@ export const antdTheme: ThemeConfig = {
     },
     Card: {
       borderRadiusLG: 8,
-      colorBorderSecondary: '#E5E7EB',
+      colorBorderSecondary: '#D8DEE8',
       paddingLG: 20,
     },
     Button: {
       borderRadius: 6,
-      controlHeight: 36,
+      controlHeight: 38,
       controlHeightSM: 32,
       fontWeight: 500,
+      primaryShadow: 'none',
     },
     Modal: {
       borderRadiusLG: 10,
@@ -68,17 +71,17 @@ export const antdTheme: ThemeConfig = {
     },
     Input: {
       borderRadius: 6,
-      controlHeight: 36,
+      controlHeight: 38,
       controlHeightSM: 32,
     },
     Select: {
       borderRadius: 6,
-      controlHeight: 36,
+      controlHeight: 38,
       controlHeightSM: 32,
     },
     InputNumber: {
       borderRadius: 6,
-      controlHeight: 36,
+      controlHeight: 38,
       controlHeightSM: 32,
     },
     DatePicker: {

@@ -56,13 +56,14 @@ export function MainLayout() {
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
-      {/* Header: 64px, navy-950 */}
-      <header className="sticky top-0 z-40 h-16 border-b border-white/10 bg-navy-950 text-white">
+      <header className="sticky top-0 z-40 h-16 border-b border-white/10 bg-navy-950/95 text-white shadow-[0_1px_0_rgba(255,255,255,0.04)] backdrop-blur">
         <div className="container-page flex h-full items-center justify-between">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2">
-            <span className="text-lg font-bold tracking-wide">芯茂微</span>
-            <span className="hidden text-sm text-slate-400 sm:inline">
+          <Link to="/" className="flex items-center gap-3">
+            <span className="flex h-8 w-8 items-center justify-center rounded-md border border-copper-400/40 bg-copper-500/15 text-copper-400">
+              <AppstoreOutlined />
+            </span>
+            <span className="text-lg font-bold">芯茂微</span>
+            <span className="hidden border-l border-white/15 pl-3 text-sm text-slate-400 sm:inline">
               SolutionHub
             </span>
           </Link>
@@ -73,10 +74,10 @@ export function MainLayout() {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
+                className={`rounded-md px-3 py-2 text-sm transition-colors ${
                   isActive(item.path)
-                    ? 'bg-white/10 font-medium text-white'
-                    : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                    ? 'bg-white/[0.12] font-medium text-white'
+                    : 'text-slate-300 hover:bg-white/[0.08] hover:text-white'
                 }`}
               >
                 {item.label}
@@ -90,7 +91,7 @@ export function MainLayout() {
               <Button
                 type="primary"
                 size="small"
-                className="!bg-copper-500 !border-copper-500 hover:!bg-amber-600 hover:!border-amber-600"
+                className="!border-copper-500 !bg-copper-500 hover:!border-copper-400 hover:!bg-copper-400"
               >
                 <RobotOutlined /> 开始对话
               </Button>
@@ -156,7 +157,7 @@ export function MainLayout() {
 
           {/* Mobile hamburger */}
           <button
-            className="text-white md:hidden"
+            className="flex h-9 w-9 items-center justify-center rounded-md border border-white/10 text-white md:hidden"
             onClick={() => setMobileMenuOpen(true)}
             aria-label="打开菜单"
           >
@@ -167,12 +168,7 @@ export function MainLayout() {
 
       {/* Mobile menu drawer */}
       <Drawer
-        title={
-          <div className="flex items-center gap-2">
-            <span className="font-bold">芯茂微</span>
-            <span className="text-sm text-slate-500">SolutionHub</span>
-          </div>
-        }
+        title="导航"
         placement="right"
         open={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
@@ -262,7 +258,7 @@ export function MainLayout() {
       </main>
 
       {/* Footer */}
-      <footer className="hidden md:block border-t border-white/10 bg-navy-950 text-slate-400">
+      <footer className="hidden border-t border-white/10 bg-navy-950 text-slate-400 md:block">
         <div className="container-page py-8">
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             <div>
@@ -300,12 +296,12 @@ export function MainLayout() {
           <div className="mt-6 flex flex-col items-center justify-between gap-2 border-t border-slate-800 pt-4 text-xs sm:flex-row">
             <span>© {new Date().getFullYear()} 芯茂微电子. All rights reserved.</span>
             <div className="flex gap-4">
-              <a href="#" className="hover:text-white">
+              <span className="cursor-default">
                 隐私政策
-              </a>
-              <a href="#" className="hover:text-white">
+              </span>
+              <span className="cursor-default">
                 服务条款
-              </a>
+              </span>
             </div>
           </div>
         </div>

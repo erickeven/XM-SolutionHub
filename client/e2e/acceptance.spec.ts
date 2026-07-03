@@ -21,8 +21,9 @@ const SIDEBAR_LABELS: Record<string, string> = {
   '知识库': 'knowledge',
   '线索': 'leads',
   '用户': 'users',
-  '角色管理': 'roles',
+  '角色权限': 'roles',
   '审计': 'audit',
+  'AI及模型': 'ai-settings',
 };
 
 const PUBLIC_PAGES = [
@@ -39,7 +40,8 @@ const VIEWPORTS = [
 ];
 
 function isExpectedApiError(msg: string, pageName: string): boolean {
-  if (pageName === 'selection' && msg.includes('400 (Bad Request)')) return true;
+  void msg;
+  void pageName;
   return false;
 }
 
@@ -103,7 +105,7 @@ test.describe('admin', () => {
     await page.waitForTimeout(1000);
   }
 
-  test('all admin pages (11/11)', async ({ browser }) => {
+  test('all admin pages (12/12)', async ({ browser }) => {
     test.skip(!ADMIN_PASSWORD, 'E2E_ADMIN_PASSWORD not set');
     test.setTimeout(180000);
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
@@ -121,11 +123,11 @@ test.describe('admin', () => {
     await p.screenshot({ path: path.join(SCREENSHOT_DIR, 'admin-dashboard.png'), fullPage: true });
     expect(p.url(), 'Dashboard must not redirect to /login after login').not.toContain('/login');
 
-    // All 11 admin pages in sidebar order
+    // Dashboard plus all sidebar pages in AdminLayout order
     const sidebarOrder = [
       '产品管理', '产品字段', '方案管理',
       '资料管理', '资料字段', '知识库',
-      '线索', '用户', '角色管理', '审计',
+      '线索', '用户', '角色权限', '审计', 'AI及模型',
     ];
     let passed = 1;
 
@@ -135,13 +137,12 @@ test.describe('admin', () => {
       await p.screenshot({ path: path.join(SCREENSHOT_DIR, `admin-${slug}.png`), fullPage: true });
       expect(
         p.url(),
-        `${label} (${slug}) must not redirect to /login (passed=${passed}/11)`,
+        `${label} (${slug}) must not redirect to /login (passed=${passed}/12)`,
       ).not.toContain('/login');
       passed++;
     }
 
-    // All 11 pages must pass
-    expect(passed, `Admin pages loaded: ${passed}/11`).toBe(11);
+    expect(passed, `Admin pages loaded: ${passed}/12`).toBe(12);
     expect(consoleErrors, 'No unexpected console errors').toEqual([]);
     await ctx.close();
   });

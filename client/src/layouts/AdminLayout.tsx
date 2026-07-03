@@ -244,17 +244,18 @@ export function AdminLayout() {
 
   const siderContent = (
     <div className="flex h-full flex-col">
-      <div className="flex h-14 items-center gap-2 px-4 text-white">
+      <div className="flex h-14 items-center gap-2 border-b border-white/10 px-4 text-white">
         <SettingOutlined style={{ fontSize: 18, color: '#B7791F' }} />
         {!collapsed && !isMobile && (
-          <span className="font-bold tracking-wide">XM 管理后台</span>
+          <span className="font-bold">XM 管理后台</span>
         )}
-        {isMobile && <span className="font-bold tracking-wide">XM 管理后台</span>}
+        {isMobile && <span className="font-bold">XM 管理后台</span>}
       </div>
       <Menu
         theme="dark"
         mode="inline"
         selectedKeys={[selectedKey]}
+        defaultOpenKeys={['content', 'ops', 'settings']}
         items={allowedMenu}
         onClick={handleMenuClick}
         className="!border-0 !bg-transparent"
@@ -263,21 +264,21 @@ export function AdminLayout() {
   );
 
   return (
-    <Layout className="min-h-screen">
+    <Layout className="min-h-screen bg-slate-50">
       {!isMobile && (
         <Sider
-          width={220}
+          width={240}
           collapsible
           collapsed={isTablet || collapsed}
           collapsedWidth={64}
           trigger={null}
-          className="!bg-navy-900"
+          className="!bg-navy-900 shadow-[inset_-1px_0_0_rgba(255,255,255,0.08)]"
         >
           {siderContent}
         </Sider>
       )}
       <Layout>
-        <Header className="flex h-14 items-center justify-between !bg-white !px-4 !border-b !border-slate-200">
+        <Header className="flex h-14 items-center justify-between !border-b !border-slate-200 !bg-white/95 !px-4 backdrop-blur">
           <div className="flex items-center gap-3">
             {!isMobile && (
               <Button
@@ -298,7 +299,7 @@ export function AdminLayout() {
           <div className="flex items-center gap-2">
             <Tooltip title="返回站点">
               <Link to="/">
-                <Button type="text" size="small" icon={<HomeOutlined />}>
+                <Button type="text" size="small" icon={<HomeOutlined />} className="!hidden sm:!inline-flex">
                   返回站点
                 </Button>
               </Link>

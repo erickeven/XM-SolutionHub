@@ -245,7 +245,7 @@ export type SelectionInput = {
   inputVoltageMax: number;
   outputVoltage: number;
   outputCurrent: number;
-  applicationType: string;
+  applicationType?: string;
   efficiencyLevel?: string;
   standbyPowerMax?: number;
   maxAmbientTemp?: number;
@@ -260,6 +260,10 @@ export type SelectionInput = {
 export type MatchResult = {
   productId: string;
   model: string;
+  series: string;
+  params: Record<string, unknown>;
+  advantages: string[];
+  datasheetMaterialId?: string | null;
   matchLevel: "exact" | "approximate" | "fallback";
   score: number;
   reasons: string[];
@@ -282,8 +286,10 @@ export type MatchResult = {
 1. 必填参数缺失直接返回参数错误。
 2. 电气参数不覆盖用户需求时不可标记为精确匹配。
 3. 差异说明必须面向用户可读，例如“输出电流低于需求 0.2A”。
-4. 热门推荐只在用户参数为空或极少时使用。
-5. 产品状态非 `ACTIVE` 不进入外部推荐。
+4. 精准匹配需要输入电压范围、输出电压和输出电流四项核心参数；参数不完整时前端展示热门产品和补参提示，不调用匹配接口。
+5. 应用类型、能效、认证和环境尺寸是可选加权项；未指定应用类型时按中性满分处理，不制造 400 错误。
+6. 热门推荐只在用户参数为空或核心电气参数不完整时使用。
+7. 产品状态非 `ACTIVE` 不进入外部推荐。
 
 ## 6. 文件与资料服务
 

@@ -2,11 +2,11 @@ import { z } from 'zod';
 
 export const selectionInputSchema = z
   .object({
-    inputVoltageMin: z.number(),
-    inputVoltageMax: z.number(),
-    outputVoltage: z.number(),
-    outputCurrent: z.number(),
-    applicationType: z.string().min(1),
+    inputVoltageMin: z.number().min(0),
+    inputVoltageMax: z.number().min(0),
+    outputVoltage: z.number().positive(),
+    outputCurrent: z.number().positive(),
+    applicationType: z.string().trim().optional().default(''),
     efficiencyLevel: z.string().optional(),
     standbyPowerMax: z.number().optional(),
     maxAmbientTemp: z.number().optional(),

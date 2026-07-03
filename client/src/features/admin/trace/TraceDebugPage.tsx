@@ -13,6 +13,11 @@ export function TraceDebugPage() {
   const { docId } = useParams<{ docId: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ['trace', docId],
+    queryFn: () => getTrace(docId!),
+    enabled: !!docId && user?.role === 'ADMIN',
+  });
 
   // Non-admin redirect
   if (user && user.role !== 'ADMIN') {
@@ -33,12 +38,6 @@ export function TraceDebugPage() {
       />
     );
   }
-
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['trace', docId],
-    queryFn: () => getTrace(docId),
-    enabled: !!docId,
-  });
 
   if (isLoading) {
     return <Skeleton active paragraph={{ rows: 10 }} />;

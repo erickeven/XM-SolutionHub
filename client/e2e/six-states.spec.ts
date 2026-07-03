@@ -21,7 +21,7 @@ test.describe('Loading state — Skeleton visible', () => {
     await settle(page);
     // With no backend, popularProducts query fails → no skeleton, but
     // the page itself renders. Check that the page container exists.
-    const container = page.locator('.bg-slate-50.min-h-\\[calc\\(100vh-64px\\)\\]');
+    const container = page.getByTestId('selection-page');
     await expect(container).toBeVisible({ timeout: 10_000 });
   });
 
@@ -102,7 +102,7 @@ test.describe('Unauthorized state — 403 or redirect to login', () => {
     const body = page.locator('body');
     await expect(body).toBeVisible();
     // Should either stay on /profile with 403 or redirect to /login
-    expect(url === '/profile' || url.includes('/login')).toBeTruthy();
+    expect(url.includes('/profile') || url.includes('/login')).toBeTruthy();
   });
 
   test('ai-chat redirects to login when unauthenticated', async ({ page }) => {

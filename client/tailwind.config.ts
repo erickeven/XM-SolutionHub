@@ -8,8 +8,10 @@ const config: Config = {
         navy: {
           950: '#07111F',
           900: '#0B1F36',
+          800: '#102A45',
         },
         copper: {
+          400: '#D6A04C',
           500: '#B7791F',
         },
       },
@@ -32,6 +34,7 @@ const config: Config = {
       },
       boxShadow: {
         card: '0 1px 2px rgba(15, 23, 42, 0.06)',
+        soft: '0 10px 30px rgba(15, 23, 42, 0.08)',
         popover: '0 12px 32px rgba(15, 23, 42, 0.18)',
       },
       screens: {

@@ -2,6 +2,14 @@
 
 面向工程师的芯片选型与方案资料平台，集成 AI 问答和线索管理。前后端分离架构，后端为模块化单体（Node.js + Express + Prisma），前端为 React + Ant Design，通过 Docker Compose 一键部署 PostgreSQL + pgvector + Redis + MinIO + Nginx 全套基础设施。
 
+## 当前状态
+
+- 前台已完成本轮视觉重构：首页使用真实芯片评估板主视觉，选型、资料、登录/注册和后台基础布局统一为深海军蓝、芯片铜金和工业灰体系。
+- 选型接口以四个核心电气参数作为精准匹配条件，应用类型和认证为可选加权项；参数不完整时前端展示热门产品并提示补充参数。
+- 产品对比已从占位提示改为最多 3 个型号的参数对比弹窗。
+- 密码重置链接使用 `WEB_ORIGIN` 生成，避免生产环境硬编码到本地地址。
+- 本地基线已通过 lint、前后端 typecheck、前后端 Vitest 和生产构建；数据库依赖的集成测试仍需在 PostgreSQL/Redis/MinIO 启动后执行。
+
 ## 技术栈
 
 | 层 | 选型 |
@@ -16,8 +24,8 @@
 ## 前置条件
 
 - **Docker** 24+（含 Docker Compose v2）
-- **Node.js** 20 LTS
-- **pnpm** 9+
+- **Node.js** 20 LTS（生产镜像使用 Node 20）
+- **pnpm** 9+；如本机安装的是 pnpm 10，需要 Node.js 22.13+，或固定使用 pnpm 9
 
 ## 目录结构
 
@@ -145,6 +153,18 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm build
 - `pnpm typecheck` — TypeScript 类型检查（server + client）
 - `pnpm test` — Vitest 单元测试
 - `pnpm build` — 构建产物（server tsc + client vite build）
+
+Playwright 验收需先启动真实后端依赖；`acceptance.spec.ts` 的后台完整登录流还需要设置 `E2E_ADMIN_PASSWORD`。仅启动前端 Vite 时，公开页会因 `/api` 代理不可用产生资源错误，不作为完整验收结果。
+
+当前沙箱中全局 `pnpm` 与 Node 版本存在差异时，可直接调用本地工具等价验证：
+
+```bash
+node node_modules/eslint/bin/eslint.js . --ext .ts,.tsx
+cd client && node ../node_modules/typescript/bin/tsc --noEmit
+node node_modules/vite/bin/vite.js build
+cd ../server && node ../node_modules/typescript/bin/tsc --noEmit
+node ../node_modules/typescript/bin/tsc
+```
 
 ## 服务端口
 

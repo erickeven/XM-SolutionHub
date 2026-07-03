@@ -1,6 +1,6 @@
 # XM-SolutionHub — 芯茂微选型与资料系统
 
-> **状态**: 已完成全量实现并通过局域网部署验证；AI 外部服务配置待补齐。本文档随实施更新。
+> **状态**: 已完成主体实现；本轮已同步 UI 重构、选型契约修复、Hook 顺序修复和文档更新。AI 外部服务配置与数据库依赖集成验证仍需在目标环境补齐。
 
 ## 项目定位
 
@@ -87,10 +87,10 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm e2e
 ```bash
 # 从项目根目录
 rsync -avz --exclude '.git' --exclude '.env.local' --exclude 'node_modules' \
-  ./ root@172.16.12.85:/opt/xinmaowei/
+  ./ root@172.16.172.85:/opt/xinmaowei/
 
 # SSH 登入后
-ssh root@172.16.12.85
+ssh root@172.16.172.85
 cd /opt/xinmaowei
 docker compose up -d
 pnpm install && pnpm --filter server prisma:migrate && pnpm build

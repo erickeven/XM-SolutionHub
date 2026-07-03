@@ -13,12 +13,14 @@ export function SolutionsPage() {
   });
 
   return (
-    <div className="container-page py-6 pb-20 md:py-10 md:pb-10">
-      <div className="mb-8 border-b border-slate-200 pb-6">
-        <h1 className="text-2xl font-bold text-slate-900 md:text-[28px]">
+    <div className="page-shell pb-20 md:pb-10">
+      <div className="container-page py-6 md:py-10">
+      <div className="mb-6 rounded-lg border border-slate-200 bg-white p-5 shadow-card md:p-6">
+        <div className="section-kicker">SOLUTION LIBRARY</div>
+        <h1 className="section-title mt-1">
           方案资料
         </h1>
-        <p className="mt-2 text-sm text-slate-600">
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
           按应用方案查看关联型号、测试报告与设计资料
         </p>
       </div>
@@ -39,7 +41,7 @@ export function SolutionsPage() {
             {data.items.map((solution) => (
               <article
                 key={solution.id}
-                className="rounded-lg border border-slate-200 bg-white p-5 shadow-card transition-colors hover:border-blue-400"
+                className="surface-card p-5 transition-colors hover:border-blue-400 hover:bg-blue-50/40"
               >
                 <div className="mb-4 flex items-start justify-between gap-3">
                   <FileTextOutlined className="mt-1 text-xl text-copper-500" />
@@ -73,6 +75,7 @@ export function SolutionsPage() {
           )}
         </>
       )}
+      </div>
     </div>
   );
 }

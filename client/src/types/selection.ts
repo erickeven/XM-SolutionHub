@@ -3,7 +3,7 @@ export interface SelectionInput {
   inputVoltageMax: number;
   outputVoltage: number;
   outputCurrent: number;
-  applicationType: string;
+  applicationType?: string;
   efficiencyLevel?: string;
   certifications?: string[];
 }
@@ -11,6 +11,10 @@ export interface SelectionInput {
 export interface MatchResult {
   productId: string;
   model: string;
+  series: string;
+  params: Record<string, unknown>;
+  advantages: string[];
+  datasheetMaterialId?: string | null;
   matchLevel: 'exact' | 'approximate' | 'fallback';
   score: number;
   reasons: string[];

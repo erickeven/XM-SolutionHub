@@ -292,7 +292,9 @@ export async function passwordReset(email: string): Promise<PasswordResetResult>
   });
 
   // DEV MODE: return reset link directly instead of sending email
-  const resetLink = `http://localhost:5173/reset-password?token=${token}`;
+  const resetUrl = new URL('/reset-password', config.WEB_ORIGIN);
+  resetUrl.searchParams.set('token', token);
+  const resetLink = resetUrl.toString();
   return { resetLink };
 }
 

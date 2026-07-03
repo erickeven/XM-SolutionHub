@@ -7,7 +7,7 @@ import {
 } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import type { MatchResult } from '../../types/selection';
-import type { Product } from '../../types/product';
+import type { Product, ProductParams } from '../../types/product';
 
 const MATCH_LEVEL_CONFIG: Record<
   MatchResult['matchLevel'],
@@ -17,6 +17,39 @@ const MATCH_LEVEL_CONFIG: Record<
   approximate: { color: 'gold', label: '近似匹配', hex: '#D97706' },
   fallback: { color: 'default', label: '备选方案', hex: '#6B7280' },
 };
+
+function formatNumber(value: unknown, suffix: string): string {
+  if (typeof value === 'number' && Number.isFinite(value)) return `${value}${suffix}`;
+  if (typeof value === 'string' && value.trim()) return `${value}${suffix}`;
+  return '-';
+}
+
+function buildParamItems(params: ProductParams | Record<string, unknown>) {
+  const inputRange =
+    params.inputVoltageMin != null && params.inputVoltageMax != null
+      ? `${params.inputVoltageMin}-${params.inputVoltageMax}V`
+      : '-';
+  const output =
+    params.outputVoltage != null || params.outputCurrent != null
+      ? `${formatNumber(params.outputVoltage, 'V')}/${formatNumber(params.outputCurrent, 'A')}`
+      : '-';
+  const standby =
+    params.standbyPower != null
+      ? `${params.standbyPower}W`
+      : params.standbyPowerMax != null
+        ? `≤${params.standbyPowerMax}W`
+        : '-';
+  const certs = Array.isArray(params.certifications)
+    ? params.certifications.filter((item): item is string => typeof item === 'string').join(', ')
+    : '-';
+
+  return [
+    { label: '输入', value: inputRange },
+    { label: '输出', value: output },
+    { label: '待机', value: standby },
+    { label: '认证', value: certs || '-' },
+  ];
+}
 
 interface SelectionCardProps {
   result?: MatchResult;
@@ -48,37 +81,29 @@ export function SelectionCard({
 }
 
 function PopularCard({ product }: { product: Product }) {
-  const p = product.params ?? {};
-  const inputRange =
-    p.inputVoltageMin != null && p.inputVoltageMax != null
-      ? `${p.inputVoltageMin}-${p.inputVoltageMax}V`
-      : p.inputVoltageMin != null
-        ? `${p.inputVoltageMin}V`
-        : p.inputVoltageMax != null
-          ? `${p.inputVoltageMax}V`
-          : '-';
-  const output = `${p.outputVoltage ?? '-'}V/${p.outputCurrent ?? '-'}A`;
+  const paramItems = buildParamItems(product.params ?? {});
 
   return (
     <Link
       to={`/products/${product.id}`}
-      className="block rounded-lg border border-slate-200 bg-white p-4 shadow-card transition-colors hover:border-blue-600"
+      className="group block rounded-lg border border-slate-200 bg-white p-4 shadow-card transition-colors hover:border-blue-600 hover:bg-blue-50/40"
     >
-      <div className="flex items-center justify-between">
-        <span className="text-lg font-semibold text-slate-900">
+      <div className="flex items-start justify-between gap-3">
+        <span className="break-all text-lg font-semibold text-slate-900 group-hover:text-blue-700">
           {product.model}
         </span>
-        <span className="text-xs text-slate-400">{product.series}</span>
+        <Tag color={product.datasheetMaterialId ? 'green' : 'gold'} className="!m-0">
+          {product.datasheetMaterialId ? '资料完整' : '整理中'}
+        </Tag>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-600">
-        <div>
-          <div className="text-slate-400">输入</div>
-          <div className="font-semibold text-slate-900">{inputRange}</div>
-        </div>
-        <div>
-          <div className="text-slate-400">输出</div>
-          <div className="font-semibold text-slate-900">{output}</div>
-        </div>
+      <div className="mt-1 text-xs text-slate-500">{product.series}</div>
+      <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-600 sm:grid-cols-4">
+        {paramItems.map((item) => (
+          <div key={item.label} className="rounded-md bg-slate-50 px-2 py-2">
+            <div className="text-slate-400">{item.label}</div>
+            <div className="truncate font-semibold text-slate-900">{item.value}</div>
+          </div>
+        ))}
       </div>
       {product.advantages && product.advantages.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-1">
@@ -104,6 +129,7 @@ function MatchCard({
 }) {
   const config = MATCH_LEVEL_CONFIG[result.matchLevel];
   const visibleReasons = result.reasons.slice(0, 3);
+  const paramItems = buildParamItems(result.params ?? {});
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-card transition-colors hover:border-blue-400">
@@ -112,7 +138,7 @@ function MatchCard({
           <div className="flex items-center gap-2">
             <Link
               to={`/products/${result.productId}`}
-              className="text-lg font-semibold text-slate-900 hover:text-blue-600"
+              className="break-all text-lg font-semibold text-slate-900 hover:text-blue-600"
             >
               {result.model}
             </Link>
@@ -120,6 +146,7 @@ function MatchCard({
               {config.label}
             </Tag>
           </div>
+          <div className="mt-1 text-xs text-slate-500">{result.series}</div>
         </div>
         <div className="flex flex-shrink-0 items-baseline gap-1 text-right">
           <span className="text-xs text-slate-500">匹配度</span>
@@ -130,6 +157,15 @@ function MatchCard({
             {result.score}%
           </span>
         </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+        {paramItems.map((item) => (
+          <div key={item.label} className="rounded-md border border-slate-100 bg-slate-50 px-2 py-2">
+            <div className="text-slate-400">{item.label}</div>
+            <div className="truncate font-semibold text-slate-900">{item.value}</div>
+          </div>
+        ))}
       </div>
 
       {visibleReasons.length > 0 && (
@@ -155,6 +191,16 @@ function MatchCard({
             </li>
           ))}
         </ul>
+      )}
+
+      {result.advantages.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1">
+          {result.advantages.slice(0, 3).map((adv) => (
+            <Tag key={adv} className="!m-0 !text-xs">
+              {adv}
+            </Tag>
+          ))}
+        </div>
       )}
 
       <div className="mt-4 flex items-center gap-2 border-t border-slate-100 pt-3">
