@@ -49,12 +49,17 @@ let refreshPromise: Promise<string> | null = null;
 let lastRefreshTime = 0;
 
 async function refreshAccessToken(): Promise<string> {
+  const csrfToken = readCookie('csrf-token');
+  if (!csrfToken) {
+    throw new Error('No refresh session');
+  }
+
   if (!refreshPromise) {
     refreshPromise = refreshClient
       .post<ApiResponse<{ accessToken: string }>>(
         '/auth/refresh',
         {},
-        { headers: { 'x-csrf-token': readCookie('csrf-token') ?? '' } },
+        { headers: { 'x-csrf-token': csrfToken } },
       )
       .then(({ data }) => {
         useAuthStore.getState().setAccessToken(data.data.accessToken);
@@ -88,8 +93,8 @@ apiClient.interceptors.response.use(
         request.headers.Authorization = `Bearer ${token}`;
         return apiClient(request);
       } catch {
-        // ponytail: cooldown guard — if a refresh succeeded within 1s,
-        // a single CSRF-rotation race failure won't destroy the session
+        // If a refresh succeeded within 1s, a single CSRF rotation race
+        // failure should not destroy the session.
         if (Date.now() - lastRefreshTime > 1000) {
           useAuthStore.getState().clearAuth();
         }

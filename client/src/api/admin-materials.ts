@@ -33,6 +33,17 @@ export interface AdminMaterialListResult {
   pageSize: number;
 }
 
+export interface MaterialSolutionOption {
+  id: string;
+  name: string;
+}
+
+export interface MaterialProductOption {
+  id: string;
+  model: string;
+  series: string;
+}
+
 export interface ListMaterialsParams {
   page?: number;
   pageSize?: number;
@@ -122,4 +133,18 @@ export async function hardDeleteMaterial(id: string): Promise<void> {
 export function getMaterialPreviewUrl(id: string): string {
   const base = import.meta.env.VITE_API_BASE_URL ?? '/api/v1';
   return `${base}/materials/${id}/preview`;
+}
+
+export async function listMaterialSolutionOptions(): Promise<MaterialSolutionOption[]> {
+  const { data: res } = await apiClient.get<ApiResponse<MaterialSolutionOption[]>>(
+    '/admin/materials/solutions-options',
+  );
+  return res.data;
+}
+
+export async function listMaterialProductOptions(): Promise<MaterialProductOption[]> {
+  const { data: res } = await apiClient.get<ApiResponse<MaterialProductOption[]>>(
+    '/admin/materials/products-options',
+  );
+  return res.data;
 }

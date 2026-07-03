@@ -41,6 +41,7 @@
 │   │   ├── config/
 │   │   ├── lib/
 │   │   ├── middleware/
+│   │   ├── scripts/     # 运维脚本，如管理员初始化
 │   │   ├── workers/
 │   │   └── app.ts
 │   ├── prisma/
@@ -76,7 +77,10 @@ cp .env.example .env
 pnpm --filter server prisma:generate
 pnpm --filter server prisma:migrate:dev
 
-# 5. 种子数据
+# 5. 初始化管理员（不清业务数据）
+pnpm --filter server admin:init
+
+# 可选：演示数据（会重置示例产品、资料、知识库等数据）
 pnpm --filter server prisma:seed
 
 # 6. 启动后端（终端 1）
@@ -108,7 +112,8 @@ cp .env.example .env
 - `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` / `CSRF_SECRET` — 生成强随机值
 - `STORAGE_SIGNING_SECRET` — 至少 32 位强随机值，用于文件短链签名
 - `LLM_API_KEY` / `EMBEDDING_API_KEY` — 填入真实 API Key
-- `SEED_ADMIN_PASSWORD` — 管理员初始密码
+- `SEED_ADMIN_EMAIL` — 管理员账号邮箱，默认 `admin@xinmaowei.com`
+- `SEED_ADMIN_PASSWORD` — 管理员初始化密码，生产环境必须至少 12 位且不能使用默认值
 
 ### 2. 构建并启动
 
@@ -122,13 +127,13 @@ docker compose -f docker-compose.prod.yml up -d
 
 ### 3. 初始化数据库
 
-`docker-compose.prod.yml` 会先运行一次性 `migrate` 服务，迁移成功后才启动 API 和 Worker。首次部署如需演示种子数据，再执行：
+`docker-compose.prod.yml` 会先运行一次性 `migrate` 服务，再运行 `init-admin` 服务初始化管理员账号；两者成功后才启动 API 和 Worker。首次部署如需演示种子数据，再执行：
 
 ```bash
 docker compose -f docker-compose.prod.yml run --rm api pnpm --filter @xm-solutionhub/server prisma:seed
 ```
 
-> 注意：生产环境容器使用 `postgres`、`redis`、`minio` 服务名互联，`docker-compose.prod.yml` 已覆盖这三项内部地址。不要在浏览器端暴露 MinIO 管理端口。
+> 注意：`prisma:seed` 会重置演示业务数据，不要在已有生产数据上执行。生产环境容器使用 `postgres`、`redis`、`minio` 服务名互联，`docker-compose.prod.yml` 已覆盖这三项内部地址。不要在浏览器端暴露 MinIO 管理端口。
 
 ### 4. 验证服务
 
@@ -139,6 +144,9 @@ docker compose -f docker-compose.prod.yml ps
 # 健康检查
 curl http://localhost/api/v1/health
 # 期望: {"code":0,"message":"ok","data":{"status":"healthy"}}
+
+# 管理员登录验收
+# 账号使用 SEED_ADMIN_EMAIL，密码使用 SEED_ADMIN_PASSWORD
 ```
 
 ## 验证命令
@@ -154,7 +162,7 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm build
 - `pnpm test` — Vitest 单元测试
 - `pnpm build` — 构建产物（server tsc + client vite build）
 
-Playwright 验收需先启动真实后端依赖；`acceptance.spec.ts` 的后台完整登录流还需要设置 `E2E_ADMIN_PASSWORD`。仅启动前端 Vite 时，公开页会因 `/api` 代理不可用产生资源错误，不作为完整验收结果。
+Playwright 验收需先启动真实后端依赖；`acceptance.spec.ts` 的后台完整登录流还需要设置 `E2E_ADMIN_PASSWORD`，其值应与 `SEED_ADMIN_PASSWORD` 一致。仅启动前端 Vite 时，公开页会因 `/api` 代理不可用产生资源错误，不作为完整验收结果。
 
 当前沙箱中全局 `pnpm` 与 Node 版本存在差异时，可直接调用本地工具等价验证：
 

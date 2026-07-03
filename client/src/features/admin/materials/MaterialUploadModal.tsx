@@ -13,10 +13,12 @@ import type { UploadFile } from 'antd/es/upload/interface';
 import { InboxOutlined } from '@ant-design/icons';
 import type { UploadProps } from 'antd';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { createMaterial } from '../../../api/admin-materials';
+import {
+  createMaterial,
+  listMaterialProductOptions,
+  listMaterialSolutionOptions,
+} from '../../../api/admin-materials';
 import type { MaterialType } from '../../../api/admin-materials';
-import { listSolutions } from '../../../api/admin-solutions';
-import { listProducts } from '../../../api/admin-products';
 import { useFieldConfigs } from '../../../api/admin-material-fields';
 import type { FieldConfigItem } from '../../../api/admin-material-fields';
 
@@ -97,14 +99,14 @@ export function MaterialUploadModal({ open, onClose }: MaterialUploadModalProps)
 
   const { data: solutionData } = useQuery({
     queryKey: ['admin-solutions-options'],
-    queryFn: () => listSolutions({ page: 1, pageSize: 200 }),
+    queryFn: listMaterialSolutionOptions,
     enabled: open,
   });
 
   const solutionOptions = useMemo(
     () => [
       { label: '（无）', value: '' },
-      ...(solutionData?.items ?? []).map((s) => ({
+      ...(solutionData ?? []).map((s) => ({
         label: s.name,
         value: s.id,
       })),
@@ -114,14 +116,14 @@ export function MaterialUploadModal({ open, onClose }: MaterialUploadModalProps)
 
   const { data: productData } = useQuery({
     queryKey: ['admin-products-options'],
-    queryFn: () => listProducts({ page: 1, pageSize: 500 }),
+    queryFn: listMaterialProductOptions,
     enabled: open,
   });
 
   const productOptions = useMemo(
     () => [
       { label: '（无）', value: '' },
-      ...(productData?.items ?? []).map((p) => ({
+      ...(productData ?? []).map((p) => ({
         label: `${p.model} — ${p.series}`,
         value: p.id,
       })),

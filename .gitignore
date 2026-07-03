@@ -2,7 +2,9 @@
 .codegraph/
 
 # Local deploy config (sensitive)
+.env
 .env.local
+server/.env
 
 # OpenCode run continuation
 .omo/run-continuation/

@@ -49,6 +49,7 @@ const ALL_PERMISSIONS: Record<string, string[]> = {
     'users.read', 'users.write',
     'audit.read',
     'leads.read', 'leads.write',
+    'settings.ai.read', 'settings.ai.write',
   ],
   AUDITOR: [
     'admin.dashboard.read',

@@ -64,7 +64,15 @@ test.describe('Empty state', () => {
 
 test.describe('Error state — retry button visible', () => {
   test('selection page error state shows retry button', async ({ page }) => {
-    // Non-empty filter triggers matchProducts query → fails without backend
+    await page.route('**/api/v1/selection/match', (route) =>
+      route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ code: 500, message: 'forced selection error', data: null }),
+      }),
+    );
+
+    // Non-empty filter triggers matchProducts query → forced API error
     await page.goto('/selection?inputVoltageMin=90&inputVoltageMax=264&outputVoltage=5&outputCurrent=2');
     await settle(page);
     // Wait for React Query to settle (retry: 1, then error)

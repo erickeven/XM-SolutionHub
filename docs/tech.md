@@ -73,6 +73,8 @@ xinmaowei-selection/
 │   │   │   ├── leads/
 │   │   │   └── audit/
 │   │   ├── routes/
+│   │   ├── scripts/
+│   │   │   └── init-admin.ts
 │   │   ├── workers/
 │   │   │   └── knowledge-index.worker.ts
 │   │   └── types/
@@ -551,20 +553,23 @@ VITE_API_BASE_URL=/api/v1
 pnpm install
 docker compose up -d postgres redis minio
 pnpm --filter server prisma:migrate
+pnpm --filter server admin:init
 pnpm --filter server dev
 pnpm --filter server worker:knowledge
 pnpm --filter client dev
 ```
 
-`prisma:migrate` 必须执行版本化 migration，其中包含 `CREATE EXTENSION IF NOT EXISTS vector`、`pg_trgm`、向量列与索引 SQL，不额外维护未定义的 `prisma:vector` 命令。API、知识库 Worker 和前端开发服务分别在独立终端运行；生产 Compose 同样将 API 与 Worker 定义为两个服务，但复用同一镜像。
+`prisma:migrate` 必须执行版本化 migration，其中包含 `CREATE EXTENSION IF NOT EXISTS vector`、`pg_trgm`、向量列与索引 SQL，不额外维护未定义的 `prisma:vector` 命令。`admin:init` 只初始化管理员、角色和权限，不清业务数据；生产 Compose 在 migrate 成功后自动运行一次。API、知识库 Worker 和前端开发服务分别在独立终端运行；生产 Compose 同样将 API 与 Worker 定义为两个服务，但复用同一镜像。
 
 必须提供种子数据：
 
-1. 管理员账号。
+1. 管理员账号由 `admin:init` 提供，账号默认 `admin@xinmaowei.com`，密码来自 `SEED_ADMIN_PASSWORD`。
 2. 至少 5 个产品。
 3. 至少 2 个方案。
 4. 至少 1 份可预览 PDF。
 5. 至少 2 份知识库文档、10 条片段，并生成可覆盖单跳与多跳样例的 chunk、event、entity、event-entity 关联。
+
+`prisma:seed` 仅用于开发和演示数据，会重置示例产品、资料、知识库等数据，禁止在已有生产数据上作为管理员初始化手段执行。
 
 ## 11. 测试策略
 

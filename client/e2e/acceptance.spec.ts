@@ -99,7 +99,7 @@ test.describe('admin', () => {
    * Unlike p.goto(), this keeps React mounted — no bootstrapSession / CSRF rotation race.
    */
   async function visitAdminPage(page: Page, label: string) {
-    const menuItem = page.getByRole('menuitem', { name: label });
+    const menuItem = page.getByRole('menuitem', { name: label }).first();
     await menuItem.waitFor({ state: 'visible', timeout: 5000 });
     await menuItem.click();
     await page.waitForTimeout(1000);

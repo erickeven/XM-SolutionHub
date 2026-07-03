@@ -319,23 +319,24 @@ export function AdminLayout() {
         </Content>
       </Layout>
 
-      {/* Mobile drawer */}
-      <Drawer
-        placement="left"
-        open={isMobile && mobileDrawerOpen}
-        onClose={() => setMobileDrawerOpen(false)}
-        width={240}
-        bodyStyle={{ padding: 0, background: '#0B1F36' }}
-        headerStyle={{ background: '#0B1F36', color: '#fff', border: 0 }}
-        title={
-          <div className="flex items-center gap-2 text-white">
-            <SettingOutlined style={{ color: '#B7791F' }} />
-            <span className="font-bold">XM 管理后台</span>
-          </div>
-        }
-      >
-        {siderContent}
-      </Drawer>
+      {isMobile && (
+        <Drawer
+          placement="left"
+          open={mobileDrawerOpen}
+          onClose={() => setMobileDrawerOpen(false)}
+          width={240}
+          bodyStyle={{ padding: 0, background: '#0B1F36' }}
+          headerStyle={{ background: '#0B1F36', color: '#fff', border: 0 }}
+          title={
+            <div className="flex items-center gap-2 text-white">
+              <SettingOutlined style={{ color: '#B7791F' }} />
+              <span className="font-bold">XM 管理后台</span>
+            </div>
+          }
+        >
+          {siderContent}
+        </Drawer>
+      )}
     </Layout>
   );
 }

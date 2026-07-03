@@ -1,10 +1,13 @@
 import { useEffect, useMemo } from 'react';
 import { Modal, Form, Input, InputNumber, Select, Switch, message } from 'antd';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { updateMaterial, getMaterial } from '../../../api/admin-materials';
+import {
+  updateMaterial,
+  getMaterial,
+  listMaterialProductOptions,
+  listMaterialSolutionOptions,
+} from '../../../api/admin-materials';
 import type { MaterialType, MaterialStatus } from '../../../api/admin-materials';
-import { listSolutions } from '../../../api/admin-solutions';
-import { listProducts } from '../../../api/admin-products';
 import { useFieldConfigs } from '../../../api/admin-material-fields';
 import type { FieldConfigItem } from '../../../api/admin-material-fields';
 
@@ -100,14 +103,14 @@ export function MaterialEditModal({
 
   const { data: solutionData } = useQuery({
     queryKey: ['admin-solutions-options-edit'],
-    queryFn: () => listSolutions({ page: 1, pageSize: 200, status: 'ACTIVE' }),
+    queryFn: listMaterialSolutionOptions,
     enabled: open,
   });
 
   const solutionOptions = useMemo(
     () => [
       { label: '（无）', value: '' },
-      ...(solutionData?.items ?? []).map((s) => ({
+      ...(solutionData ?? []).map((s) => ({
         label: s.name,
         value: s.id,
       })),
@@ -117,14 +120,14 @@ export function MaterialEditModal({
 
   const { data: productData } = useQuery({
     queryKey: ['admin-products-options-edit'],
-    queryFn: () => listProducts({ page: 1, pageSize: 500, status: 'ACTIVE' }),
+    queryFn: listMaterialProductOptions,
     enabled: open,
   });
 
   const productOptions = useMemo(
     () => [
       { label: '（无）', value: '' },
-      ...(productData?.items ?? []).map((p) => ({
+      ...(productData ?? []).map((p) => ({
         label: `${p.model} — ${p.series}`,
         value: p.id,
       })),

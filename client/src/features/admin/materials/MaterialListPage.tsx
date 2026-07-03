@@ -37,9 +37,9 @@ import {
   updateMaterial,
   getMaterialPreviewUrl,
   hardDeleteMaterial,
+  listMaterialProductOptions,
+  listMaterialSolutionOptions,
 } from '../../../api/admin-materials';
-import { listSolutions } from '../../../api/admin-solutions';
-import { listProducts } from '../../../api/admin-products';
 import type {
   AdminMaterialListItem,
   MaterialType,
@@ -103,18 +103,18 @@ export function MaterialListPage() {
 
   const { data: solutions } = useQuery({
     queryKey: ['admin-solutions-short'],
-    queryFn: () => listSolutions({ page: 1, pageSize: 200 }),
+    queryFn: listMaterialSolutionOptions,
   });
-  const solutionOptions = (solutions?.items ?? []).map((s) => ({
+  const solutionOptions = (solutions ?? []).map((s) => ({
     label: s.name,
     value: s.id,
   }));
 
   const { data: products } = useQuery({
     queryKey: ['admin-products-short'],
-    queryFn: () => listProducts({ status: 'ACTIVE', page: 1, pageSize: 200 }),
+    queryFn: listMaterialProductOptions,
   });
-  const productOptions = (products?.items ?? []).map((p) => ({
+  const productOptions = (products ?? []).map((p) => ({
     label: p.model,
     value: p.id,
   }));
