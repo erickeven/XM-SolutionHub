@@ -50,24 +50,24 @@ export function FilterPanel({
 }: FilterPanelProps) {
   const activeChips: { field: string; label: string; value: string }[] = [];
 
-  if (values.inputVoltageMin !== undefined && values.inputVoltageMin !== null) {
+  if (values.inputVoltageMin !== undefined && values.inputVoltageMin !== null && values.inputVoltageMin > 0) {
     activeChips.push({
       field: 'inputVoltageMin',
       label: '输入电压下限',
       value: `${values.inputVoltageMin}V`,
     });
   }
-  if (values.inputVoltageMax !== undefined && values.inputVoltageMax !== null) {
+  if (values.inputVoltageMax !== undefined && values.inputVoltageMax !== null && values.inputVoltageMax > 0) {
     activeChips.push({
       field: 'inputVoltageMax',
       label: '输入电压上限',
       value: `${values.inputVoltageMax}V`,
     });
   }
-  if (values.outputVoltage !== undefined && values.outputVoltage !== null) {
+  if (values.outputVoltage !== undefined && values.outputVoltage !== null && values.outputVoltage > 0) {
     activeChips.push({ field: 'outputVoltage', label: '输出电压', value: `${values.outputVoltage}V` });
   }
-  if (values.outputCurrent !== undefined && values.outputCurrent !== null) {
+  if (values.outputCurrent !== undefined && values.outputCurrent !== null && values.outputCurrent > 0) {
     activeChips.push({
       field: 'outputCurrent',
       label: '输出电流',

@@ -29,9 +29,23 @@ export interface KnowledgeDocDetail extends KnowledgeDocListItem {
 }
 
 export interface CreateKnowledgeInput {
-  materialId: string;
+  materialId?: string;
+  title?: string;
+  sourceType: string;
+  // File upload path
+  fileBuffer?: Buffer;
+  originalName?: string;
+  mimeType?: string;
+}
+
+export interface CreateKnowledgeResponse {
+  id: string;
   title: string;
   sourceType: string;
+  status: KnowledgeStatus;
+  materialId: string;
+  material: { id: string; title: string };
+  indexJob: { id: string; status: IndexJobStatus };
 }
 
 export interface UpdateKnowledgeInput {

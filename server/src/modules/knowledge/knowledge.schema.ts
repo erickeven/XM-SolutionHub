@@ -3,8 +3,8 @@ import { z } from 'zod';
 const knowledgeStatusEnum = z.enum(['UPLOADED', 'PROCESSING', 'READY', 'FAILED']);
 
 export const createKnowledgeSchema = z.object({
-  materialId: z.string().min(1, 'materialId is required'),
-  title: z.string().min(1, 'title is required'),
+  materialId: z.string().min(1, 'materialId is required').optional(),
+  title: z.string().min(1, 'title is required').optional(),
   sourceType: z.string().min(1, 'sourceType is required'),
 });
 

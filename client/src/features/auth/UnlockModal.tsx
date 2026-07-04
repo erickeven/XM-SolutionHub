@@ -26,7 +26,7 @@ export function UnlockModal({ open, onClose }: UnlockModalProps) {
           注册即可解锁完整资料
         </Title>
         <Text className="block text-sm text-slate-500">
-          免费注册后，您将获得完整资料查看、下载及 AI 智能问答等全部功能。
+          注册后可查看完整测试报告、下载 BOM/原理图，并继续使用 AI 技术问答。
         </Text>
 
         <div className="mt-6 flex flex-col gap-3">

@@ -5,6 +5,7 @@
     "lint": "eslint . --ext .ts,.tsx",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
+    "build": "pnpm -r build",
     "e2e": "pnpm --filter client e2e",
     "dev": "pnpm -r --parallel dev"
   },

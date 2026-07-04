@@ -12,6 +12,7 @@ import {
   aggregateLeads,
   assignLeadToStaff,
   changeLeadStatus,
+  getLeadDetail,
   getLeadsExport,
 } from './leads.service';
 import type { LeadListQuery, LeadAggregated } from './leads.types';
@@ -89,6 +90,38 @@ export async function listLeadsHandler(
 
     const result = await aggregateLeads(query);
     res.status(200).json(successResponse(result));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getLeadHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const { userId, role } = requireAuth(req);
+    rejectUserRole(role);
+
+    const leadId = req.params.id;
+    if (!leadId) {
+      throw new AppError(1002, 'Missing lead id', 400);
+    }
+
+    // dataScope: STAFF can only read leads assigned to themselves
+    if (role === 'STAFF') {
+      const lead = await prisma.lead.findUnique({ where: { id: leadId } });
+      if (!lead) {
+        throw new AppError(3001, 'Lead not found', 404);
+      }
+      if (lead.assignedTo !== userId) {
+        throw new AppError(2003, 'Cannot view lead not assigned to you', 403);
+      }
+    }
+
+    const detail = await getLeadDetail(leadId);
+    res.status(200).json(successResponse(detail));
   } catch (err) {
     next(err);
   }

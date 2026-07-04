@@ -7,6 +7,7 @@ import {
 } from '../../lib/pdf/derive';
 import { logFromContext } from '../audit/audit.service';
 import type { AuthUser } from '../../middleware/auth';
+import prisma from '../../lib/prisma';
 import * as repository from './materials.repository';
 import type {
   CreateMaterialInput,
@@ -32,8 +33,12 @@ export async function listMaterials(
       pageCount: m.pageCount,
       previewPages: m.previewPages,
       status: m.status,
+      metadata: (m as never as { metadata: Record<string, unknown> | null }).metadata ?? null,
       createdAt: m.createdAt,
       updatedAt: m.updatedAt,
+      solutionName: (m as never as { solution: { name: string } | null }).solution?.name ?? null,
+      productModel: (m as never as { product: { model: string; series: string } | null }).product?.model ?? null,
+      productSeries: (m as never as { product: { model: string; series: string } | null }).product?.series ?? null,
     })),
     total,
     page: query.page,
@@ -58,8 +63,12 @@ export async function getMaterial(id: string): Promise<MaterialDetail> {
     pageCount: material.pageCount,
     previewPages: material.previewPages,
     status: material.status,
+    metadata: (material as never as { metadata: Record<string, unknown> | null }).metadata ?? null,
     createdAt: material.createdAt,
     updatedAt: material.updatedAt,
+    solutionName: null,
+    productModel: null,
+    productSeries: null,
   };
 }
 
@@ -106,6 +115,7 @@ export async function createMaterial(
       title: input.title,
       solutionId: input.solutionId,
       productId: input.productId,
+      metadata: input.metadata,
       originalStorageKey: storageKey,
       previewStorageKey,
       pageCount,
@@ -120,21 +130,25 @@ export async function createMaterial(
       payload: { type: input.type, title: input.title, storageKey },
     });
 
-    return {
-      id: material.id,
-      solutionId: material.solutionId,
-      productId: material.productId,
-      type: material.type,
-      title: material.title,
-      originalStorageKey: material.originalStorageKey,
-      previewStorageKey: material.previewStorageKey,
-      mimeType: material.mimeType,
-      pageCount: material.pageCount,
-      previewPages: material.previewPages,
-      status: material.status,
-      createdAt: material.createdAt,
-      updatedAt: material.updatedAt,
-    };
+  return {
+    id: material.id,
+    solutionId: material.solutionId,
+    productId: material.productId,
+    type: material.type,
+    title: material.title,
+    originalStorageKey: material.originalStorageKey,
+    previewStorageKey: material.previewStorageKey,
+    mimeType: material.mimeType,
+    pageCount: material.pageCount,
+    previewPages: material.previewPages,
+    status: material.status,
+    metadata: (material as never as { metadata: Record<string, unknown> | null }).metadata ?? null,
+    createdAt: material.createdAt,
+    updatedAt: material.updatedAt,
+    solutionName: null,
+    productModel: null,
+    productSeries: null,
+  };
   } catch (error) {
     await Promise.allSettled(uploadedKeys.map((key) => adapter.removeObject(key)));
     throw error;
@@ -145,6 +159,7 @@ export async function updateMaterial(
   id: string,
   input: {
     status?: 'DRAFT' | 'ACTIVE' | 'INACTIVE';
+    metadata?: Record<string, unknown>;
   },
   actorId: string | null,
 ): Promise<MaterialDetail> {
@@ -183,9 +198,48 @@ export async function updateMaterial(
     pageCount: material.pageCount,
     previewPages: material.previewPages,
     status: material.status,
+    metadata: (material as never as { metadata: Record<string, unknown> | null }).metadata ?? null,
     createdAt: material.createdAt,
     updatedAt: material.updatedAt,
+    solutionName: null,
+    productModel: null,
+    productSeries: null,
   };
+}
+
+export async function hardDeleteMaterial(id: string, actorId?: string): Promise<void> {
+  const existing = await repository.findById(id);
+  if (!existing) throw new AppError(3001, 'Material not found', 404);
+  if (existing.status !== 'INACTIVE') {
+    throw new AppError(4001, 'Cannot permanently delete active material. Move to recycle bin first.', 400);
+  }
+
+  // DB transaction: clean up KnowledgeDoc chain first, then delete Material
+  await prisma.$transaction(async (tx) => {
+    // 1. Delete KnowledgeDoc (cascades to KnowledgeIndexJob, KnowledgeChunk,
+    //    KnowledgeEvent, KnowledgeEventEntity via DB onDelete: Cascade)
+    await tx.knowledgeDoc.deleteMany({ where: { materialId: id } });
+    // 2. Delete the material
+    await tx.material.delete({ where: { id } });
+  });
+
+  // MinIO cleanup AFTER successful DB transaction (non-critical)
+  try {
+    const adapter = getStorageAdapter();
+    const keysToDelete: string[] = [];
+    if (existing.originalStorageKey) keysToDelete.push(existing.originalStorageKey);
+    if (existing.previewStorageKey) keysToDelete.push(existing.previewStorageKey);
+    if (keysToDelete.length > 0) {
+      await Promise.allSettled(keysToDelete.map((key) => adapter.removeObject(key)));
+    }
+  } catch (err) {
+    // ponytail: MinIO deletion failure is non-critical — DB is already consistent
+    console.error('MinIO cleanup failed for material', id, err);
+  }
+
+  if (actorId) {
+    logFromContext({ actorId, action: 'material.hardDelete', targetType: 'Material', targetId: id });
+  }
 }
 
 export async function deleteMaterial(
@@ -197,17 +251,7 @@ export async function deleteMaterial(
     throw new AppError(3001, 'Material not found', 404);
   }
 
-  // Remove file from storage
-  const adapter = getStorageAdapter();
-  try {
-    await adapter.removeObject(existing.originalStorageKey);
-    if (existing.previewStorageKey) {
-      await adapter.removeObject(existing.previewStorageKey);
-    }
-  } catch {
-    // Storage cleanup is best-effort; still soft-delete the record
-  }
-
+  // ponytail: only soft-delete — storage cleanup is a separate explicit task
   await repository.softDelete(id);
 
   logFromContext({
@@ -357,4 +401,22 @@ export async function getDownloadUrl(
   }
 
   return { url, expiresInSeconds: SIGNED_URL_EXPIRES };
+}
+
+export async function getSolutionOptions(): Promise<{ id: string; name: string }[]> {
+  const solutions = await prisma.solution.findMany({
+    where: { status: 'ACTIVE' },
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' },
+  });
+  return solutions;
+}
+
+export async function getProductOptions(): Promise<{ id: string; model: string; series: string }[]> {
+  const products = await prisma.product.findMany({
+    where: { status: 'ACTIVE' },
+    select: { id: true, model: true, series: true },
+    orderBy: { model: 'asc' },
+  });
+  return products;
 }

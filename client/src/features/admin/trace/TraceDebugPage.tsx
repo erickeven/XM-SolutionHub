@@ -1,6 +1,8 @@
 import { useParams, Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Skeleton, Result, Empty, Button, Typography } from 'antd';
+import { Skeleton, Result, Empty, Button, Typography, Space } from 'antd';
+import { ArrowLeftOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { getTrace } from '../../../api/trace';
 import { useAuth } from '../../../hooks/useAuth';
 import { DocInfoCard } from './DocInfoCard';
@@ -10,6 +12,12 @@ import { TraceRecordCard } from './TraceRecordCard';
 export function TraceDebugPage() {
   const { docId } = useParams<{ docId: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ['trace', docId],
+    queryFn: () => getTrace(docId!),
+    enabled: !!docId && user?.role === 'ADMIN',
+  });
 
   // Non-admin redirect
   if (user && user.role !== 'ADMIN') {
@@ -31,48 +39,44 @@ export function TraceDebugPage() {
     );
   }
 
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['trace', docId],
-    queryFn: () => getTrace(docId),
-    enabled: !!docId,
-  });
-
   if (isLoading) {
-    return (
-      <div className="mx-auto max-w-[1280px] p-6">
-        <Skeleton active paragraph={{ rows: 10 }} />
-      </div>
-    );
+    return <Skeleton active paragraph={{ rows: 10 }} />;
   }
 
   if (isError) {
     return (
-      <div className="mx-auto max-w-[1280px] p-6">
-        <Result
-          status="error"
-          title="加载失败"
-          subTitle="无法获取检索追踪数据"
-          extra={
-            <Button type="primary" onClick={() => refetch()}>
-              重试
-            </Button>
-          }
-        />
-      </div>
+      <Result
+        status="error"
+        title="加载失败"
+        subTitle="无法获取检索追踪数据"
+        extra={
+          <Button type="primary" onClick={() => refetch()}>
+            重试
+          </Button>
+        }
+      />
     );
   }
 
   if (!data) {
-    return (
-      <div className="mx-auto max-w-[1280px] p-6">
-        <Empty description="无数据" />
-      </div>
-    );
+    return <Empty description="无数据" />;
   }
 
   return (
-    <div className="mx-auto max-w-[1280px] space-y-6 p-6">
-      <Typography.Title level={4}>检索追踪调试</Typography.Title>
+    <div className="space-y-4">
+      <Space>
+        <Button
+          type="text"
+          size="small"
+          icon={<ArrowLeftOutlined />}
+          onClick={() => navigate(-1)}
+        >
+          返回
+        </Button>
+        <Typography.Title level={4} className="!mb-0">
+          检索追踪调试
+        </Typography.Title>
+      </Space>
 
       <DocInfoCard
         doc={data.doc}

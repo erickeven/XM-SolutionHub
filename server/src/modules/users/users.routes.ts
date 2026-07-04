@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { authMiddleware } from '../../middleware/auth';
-import { roleGuard } from '../../middleware/roleGuard';
+import { permissionGuard } from '../../middleware/permissionGuard';
 import { apiLimiter } from '../../middleware/rateLimit';
 import * as controller from './users.controller';
 
 const router: Router = Router();
 
-router.use(authMiddleware, roleGuard('ADMIN'), apiLimiter);
+router.use(authMiddleware, permissionGuard('users.write'), apiLimiter);
 
 router.get('/', controller.listHandler);
 router.get('/:id', controller.detailHandler);

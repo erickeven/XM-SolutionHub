@@ -1,6 +1,9 @@
 import { env } from '../../config';
 import { AppError } from '../../lib/errors';
 import redis from '../../lib/redis';
+import prisma from '../../lib/prisma';
+import { getStorageAdapter } from '../../lib/storage';
+import { getPdfPageCount, extractFirstNPages } from '../../lib/pdf/derive';
 import { logFromContext } from '../audit/audit.service';
 import * as repository from './knowledge.repository';
 import { searchKnowledgeWithDegradation } from './knowledge.search';
@@ -8,6 +11,7 @@ import type {
   KnowledgeDocListItem,
   KnowledgeDocDetail,
   CreateKnowledgeInput,
+  CreateKnowledgeResponse,
   UpdateKnowledgeInput,
   ReindexResponse,
   TraceResponse,
@@ -15,6 +19,8 @@ import type {
 } from './knowledge.types';
 import type { KnowledgeStatus } from '@prisma/client';
 import type { SearchOutput } from './knowledge.search.types';
+import { randomUUID } from 'node:crypto';
+import path from 'node:path';
 
 function nextVersion(current: string | null): string {
   if (!current) return env.KNOWLEDGE_INDEX_VERSION;
@@ -59,37 +65,130 @@ export async function getDoc(id: string): Promise<KnowledgeDocDetail> {
 export async function createDoc(
   data: CreateKnowledgeInput,
   actorId: string | null,
-): Promise<KnowledgeDocListItem> {
-  const materialExists = await repository.materialExists(data.materialId);
-  if (!materialExists) {
-    throw new AppError(4002, 'Referenced material does not exist', 400);
+): Promise<CreateKnowledgeResponse> {
+  const isFileUpload = data.fileBuffer && data.originalName && data.mimeType;
+
+  // Validate: must have materialId OR file upload
+  if (!data.materialId && !isFileUpload) {
+    throw new AppError(1004, 'Either materialId or file upload is required', 400);
   }
 
-  const existing = await repository.findByMaterialId(data.materialId);
-  if (existing) {
-    throw new AppError(4003, 'Knowledge doc for this material already exists', 400);
+  let materialId: string;
+  let materialTitle: string;
+  let materialRecord: { id: string; title: string };
+
+  if (isFileUpload) {
+    // ── Path B: file upload → auto-create Material ──────
+    const ext = path.extname(data.originalName!) || '.bin';
+    const storageKey = `${randomUUID()}${ext}`;
+    const adapter = getStorageAdapter();
+    const uploadedKeys: string[] = [];
+    let previewStorageKey: string | undefined;
+    let pageCount: number | undefined;
+
+    try {
+      // Upload original file
+      await adapter.putObject({
+        storageKey,
+        body: data.fileBuffer!,
+        contentType: data.mimeType!,
+      });
+      uploadedKeys.push(storageKey);
+
+      // Generate PDF preview if applicable
+      if (data.mimeType === 'application/pdf') {
+        pageCount = await getPdfPageCount(data.fileBuffer!);
+        previewStorageKey = `previews/${storageKey}`;
+        const previewBuffer = await extractFirstNPages(data.fileBuffer!, 3);
+        await adapter.putObject({
+          storageKey: previewStorageKey,
+          body: previewBuffer,
+          contentType: 'application/pdf',
+        });
+        uploadedKeys.push(previewStorageKey);
+      }
+
+      // Create Material record
+      const resolvedTitle = data.title || data.originalName!.replace(/\.[^/.]+$/, '');
+      const mimeType = data.mimeType!;
+      const material = await prisma.material.create({
+        data: {
+          type: 'other',
+          title: resolvedTitle,
+          originalStorageKey: storageKey,
+          previewStorageKey: previewStorageKey ?? null,
+          mimeType,
+          pageCount: pageCount ?? null,
+          status: 'DRAFT',
+        },
+      });
+      materialId = material.id;
+      materialTitle = material.title;
+      materialRecord = { id: material.id, title: material.title };
+
+    } catch (error) {
+      // Rollback uploaded files on failure
+      await Promise.allSettled(uploadedKeys.map((key) =>
+        getStorageAdapter().removeObject(key),
+      ));
+      throw error;
+    }
+  } else {
+    // ── Path A: existing materialId ────────────────────
+    const existing = await prisma.material.findUnique({
+      where: { id: data.materialId! },
+      select: { id: true, title: true },
+    });
+    if (!existing) {
+      throw new AppError(4002, 'Referenced material does not exist', 404);
+    }
+
+    // Check no existing KnowledgeDoc for this material
+    const docForMaterial = await repository.findByMaterialId(data.materialId!);
+    if (docForMaterial) {
+      throw new AppError(4003, 'Knowledge doc for this material already exists', 409);
+    }
+
+    materialId = existing.id;
+    materialTitle = existing.title;
+    materialRecord = { id: existing.id, title: existing.title };
   }
 
-  const doc = await repository.create(data);
+  // ── Create KnowledgeDoc ─────────────────────────────
+  const resolvedTitle = data.title || materialTitle;
+  const doc = await repository.create({
+    materialId,
+    title: resolvedTitle,
+    sourceType: data.sourceType,
+  });
+
+  // ── Create KnowledgeIndexJob (PENDING) ──────────────
+  const version = env.KNOWLEDGE_INDEX_VERSION;
+  const job = await repository.createIndexJob(doc.id, version);
+  // Push to Redis Stream for worker
+  await redis.xadd('knowledge:index', '*', 'jobId', job.id);
 
   logFromContext({
     actorId,
     action: 'knowledge.create',
     targetType: 'KnowledgeDoc',
     targetId: doc.id,
-    payload: { materialId: data.materialId, title: data.title, sourceType: data.sourceType },
+    payload: {
+      materialId,
+      title: resolvedTitle,
+      sourceType: data.sourceType,
+      creationPath: isFileUpload ? 'upload' : 'existing',
+    },
   });
 
   return {
     id: doc.id,
-    materialId: doc.materialId,
-    title: doc.title,
+    title: resolvedTitle,
     sourceType: doc.sourceType,
     status: doc.status,
-    indexVersion: doc.indexVersion,
-    indexedAt: doc.indexedAt,
-    errorMessage: doc.errorMessage,
-    materialTitle: null,
+    materialId,
+    material: materialRecord,
+    indexJob: { id: job.id, status: job.status },
   };
 }
 

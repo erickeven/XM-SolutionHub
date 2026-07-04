@@ -7,12 +7,14 @@ export const createUserSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
   role: roleEnum,
+  roleIds: z.array(z.string()).optional(),
 });
 
 export const updateUserSchema = z.object({
   email: z.string().email().optional(),
   role: roleEnum.optional(),
   status: statusEnum.optional(),
+  roleIds: z.array(z.string()).optional(),
 });
 
 export const listUsersQuerySchema = z.object({

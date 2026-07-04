@@ -5,12 +5,16 @@ const solutionStatusEnum = z.enum(['DRAFT', 'ACTIVE', 'INACTIVE']);
 export const createSolutionSchema = z.object({
   name: z.string().min(1),
   description: z.string().min(1),
+  productIds: z.array(z.string()).optional(),
+  materialIds: z.array(z.string()).optional(),
   status: solutionStatusEnum.optional().default('DRAFT'),
 });
 
 export const updateSolutionSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().min(1).optional(),
+  productIds: z.array(z.string()).optional(),
+  materialIds: z.array(z.string()).optional(),
   status: solutionStatusEnum.optional(),
 });
 

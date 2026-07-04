@@ -114,12 +114,12 @@ export function KnowledgeListPage() {
       render: (v: string | null) => v ?? '—',
     },
     {
-      title: '素材标题',
-      dataIndex: 'materialTitle',
+      title: '来源资料',
+      dataIndex: ['material', 'title'],
       key: 'materialTitle',
       ellipsis: true,
       width: 180,
-      render: (v: string | null) => v ?? '—',
+      render: (_: unknown, record: KnowledgeDocItem) => record.material?.title ?? '—',
     },
     {
       title: '操作',
@@ -175,7 +175,7 @@ export function KnowledgeListPage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-slate-50 p-4 md:p-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -259,9 +259,9 @@ export function KnowledgeListPage() {
                     <Tag>{item.sourceType}</Tag>
                     {item.indexVersion && <Tag>{item.indexVersion}</Tag>}
                   </div>
-                  {item.materialTitle && (
+                  {item.material?.title && (
                     <Text type="secondary" className="block text-xs">
-                      素材: {item.materialTitle}
+                      来源资料: {item.material.title}
                     </Text>
                   )}
                   <div className="flex gap-2 pt-1">

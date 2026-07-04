@@ -25,6 +25,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { listUsers, deleteUser, updateUser } from '../../../api/users';
 import type { UserListItem } from '../../../api/users';
 import { UserFormModal } from './UserFormModal';
+import { ShortId } from '../../../components/ShortId';
 
 const { useBreakpoint } = Grid;
 const { Text } = Typography;
@@ -162,15 +163,34 @@ export function UserListPage() {
       width: 240,
     },
     {
+      title: 'ID',
+      dataIndex: 'id',
+      key: 'id',
+      width: 160,
+      render: (id: string) => <ShortId id={id} />,
+    },
+    {
       title: '角色',
       dataIndex: 'role',
       key: 'role',
-      width: 100,
-      render: (role: string) => (
-        <Tag color={ROLE_TAG_COLOR[role] ?? 'default'}>
-          {ROLE_LABEL[role] ?? role}
-        </Tag>
-      ),
+      width: 120,
+      render: (_role: string, record: UserListItem) => {
+        const roleBadges = [
+          <Tag key={record.role} color={ROLE_TAG_COLOR[record.role] ?? 'default'}>
+            {ROLE_LABEL[record.role] ?? record.role}
+          </Tag>,
+        ];
+        if (record.roles && record.roles.length > 0) {
+          record.roles.forEach((r) => {
+            if (r.name !== ROLE_LABEL[record.role]) {
+              roleBadges.push(
+                <Tag key={r.id} color="blue">{r.name}</Tag>,
+              );
+            }
+          });
+        }
+        return <>{roleBadges}</>;
+      },
     },
     {
       title: '状态',
@@ -250,7 +270,7 @@ export function UserListPage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-slate-50 p-4 md:p-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -305,7 +325,7 @@ export function UserListPage() {
             dataSource={items}
             rowKey="id"
             loading={isLoading}
-            scroll={{ x: 900 }}
+            scroll={{ x: 1060 }}
             pagination={{
               current: page,
               pageSize,

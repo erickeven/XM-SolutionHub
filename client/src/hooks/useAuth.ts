@@ -16,21 +16,16 @@ interface UseAuthResult {
 let bootstrapPromise: Promise<void> | null = null;
 
 function bootstrapSession(): Promise<void> {
-  const hasCsrfCookie = document.cookie
-    .split(';')
-    .some((part) => part.trim().startsWith('csrf-token='));
-  if (!hasCsrfCookie) {
-    useAuthStore.getState().setInitialized(true);
-    return Promise.resolve();
-  }
-
   if (!bootstrapPromise) {
     bootstrapPromise = restoreAccessToken()
       .then(async (token) => {
         const user = await authApi.getMe();
         useAuthStore.getState().setAuth(user, token);
       })
-      .catch(() => useAuthStore.getState().clearAuth())
+      .catch(() => {
+        bootstrapPromise = null;
+        useAuthStore.getState().clearAuth();
+      })
       .finally(() => {
         useAuthStore.getState().setInitialized(true);
       });

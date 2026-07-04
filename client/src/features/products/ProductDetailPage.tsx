@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Button, Result, Skeleton, Tag } from 'antd';
+import { ArrowLeftOutlined } from '@ant-design/icons';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { getProductById } from '../../api/products';
 import { ProductParamsMatrix } from './ProductParamsMatrix';
@@ -20,7 +21,7 @@ export function ProductDetailPage() {
 
   if (!id) {
     return (
-      <div className="max-w-[1280px] mx-auto px-6 py-8">
+      <div className="container-page py-8">
         <Result
           status="404"
           title="产品未找到"
@@ -37,7 +38,7 @@ export function ProductDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-[1280px] mx-auto px-6 py-8">
+      <div className="container-page py-8">
         <Skeleton active paragraph={{ rows: 8 }} />
       </div>
     );
@@ -45,7 +46,7 @@ export function ProductDetailPage() {
 
   if (isError || !product) {
     return (
-      <div className="max-w-[1280px] mx-auto px-6 py-8">
+      <div className="container-page py-8">
         <Result
           status="error"
           title="加载失败"
@@ -65,13 +66,14 @@ export function ProductDetailPage() {
     typeof product.params.applicationType === 'string' ? product.params.applicationType : '';
 
   return (
-    <div className="max-w-[1280px] mx-auto px-6 py-8">
-      <Link
-        to={backToSelection}
-        className="text-blue-600 hover:text-blue-700 text-sm mb-4 inline-block"
-      >
-        ← 返回选型
-      </Link>
+    <div className="page-shell pb-20 md:pb-10">
+      <div className="container-page py-6 md:py-10">
+        <Link
+          to={backToSelection}
+          className="mb-4 inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
+        >
+          <ArrowLeftOutlined /> 返回选型
+        </Link>
 
       {isInactive && (
         <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md text-amber-700">
@@ -79,10 +81,11 @@ export function ProductDetailPage() {
         </div>
       )}
 
-      <div className="flex items-start justify-between mb-6">
+      <div className="surface-card mb-6 flex items-start justify-between gap-4 p-5 md:p-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">{product.model}</h1>
-          <p className="text-slate-500 mt-1">{product.series}</p>
+          <div className="section-kicker">PRODUCT DETAIL</div>
+          <h1 className="mt-1 break-all text-2xl font-bold text-slate-900 md:text-[28px]">{product.model}</h1>
+          <p className="mt-1 text-slate-500">{product.series}</p>
         </div>
         <div>
           {product.datasheetMaterialId ? (
@@ -93,20 +96,20 @@ export function ProductDetailPage() {
         </div>
       </div>
 
-      <section className="mb-8">
+      <section className="surface-card mb-5 p-5 md:p-6">
         <h2 className="text-lg font-bold text-slate-900 mb-3">关键参数</h2>
         <ProductParamsMatrix params={product.params} />
       </section>
 
       {applicationType && (
-        <section className="mb-8">
+        <section className="surface-card mb-5 p-5 md:p-6">
           <h2 className="text-lg font-bold text-slate-900 mb-3">推荐应用</h2>
           <Tag color="blue">{applicationType}</Tag>
         </section>
       )}
 
       {product.advantages.length > 0 && (
-        <section className="mb-8">
+        <section className="surface-card mb-5 p-5 md:p-6">
           <h2 className="text-lg font-bold text-slate-900 mb-3">产品优势</h2>
           <ul className="space-y-1">
             {product.advantages.map((adv, idx) => (
@@ -119,7 +122,7 @@ export function ProductDetailPage() {
         </section>
       )}
 
-      <section className="mb-8">
+      <section className="surface-card mb-5 p-5 md:p-6">
         <h2 className="text-lg font-bold text-slate-900 mb-3">规格书</h2>
         {product.datasheetMaterialId ? (
           <div className="flex items-center gap-3">
@@ -138,10 +141,11 @@ export function ProductDetailPage() {
         )}
       </section>
 
-      <section className="mb-8">
+      <section className="surface-card mb-5 p-5 md:p-6">
         <h2 className="text-lg font-bold text-slate-900 mb-3">关联方案</h2>
         <SolutionList solutions={product.solutions ?? []} />
       </section>
+      </div>
     </div>
   );
 }

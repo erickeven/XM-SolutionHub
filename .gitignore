@@ -2,7 +2,9 @@
 .codegraph/
 
 # Local deploy config (sensitive)
+.env
 .env.local
+server/.env
 
 # OpenCode run continuation
 .omo/run-continuation/
@@ -14,6 +16,8 @@ server/dist/
 client/e2e/test-results/
 client/playwright-report/
 client/screenshots/
+client/e2e/screenshots/
+client/e2e/admin-auth.json
 
 # OS
 Thumbs.db
@@ -25,3 +29,5 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+
+.omo/

@@ -3,7 +3,7 @@ import type { ApiResponse } from '../types/api';
 
 export interface KnowledgeDocItem {
   id: string;
-  materialId: string;
+  materialId: string | null;
   title: string;
   sourceType: string;
   status: 'UPLOADED' | 'PROCESSING' | 'READY' | 'FAILED';
@@ -11,6 +11,30 @@ export interface KnowledgeDocItem {
   indexedAt: string | null;
   errorMessage: string | null;
   materialTitle: string | null;
+  material?: {
+    id: string;
+    title: string;
+  };
+  indexJob?: {
+    id: string;
+    status: string;
+  };
+}
+
+export interface CreateKnowledgeResponse {
+  id: string;
+  title: string;
+  sourceType: string;
+  status: string;
+  materialId: string | null;
+  material: {
+    id: string;
+    title: string;
+  } | null;
+  indexJob: {
+    id: string;
+    status: string;
+  };
 }
 
 export interface KnowledgeListResponse {
@@ -86,16 +110,34 @@ export async function getKnowledgeById(id: string): Promise<KnowledgeDetail> {
   return res.data;
 }
 
-export async function createKnowledge(data: {
+export interface CreateKnowledgeJsonParams {
   materialId: string;
+  title?: string;
+  sourceType: string;
+}
+
+export interface CreateKnowledgeFormDataParams {
+  file: File;
   title: string;
   sourceType: string;
-}): Promise<KnowledgeDocItem> {
-  const { data: res } = await apiClient.post<ApiResponse<KnowledgeDocItem>>(
+}
+
+export async function createKnowledge(
+  data: CreateKnowledgeJsonParams | FormData,
+): Promise<CreateKnowledgeResponse> {
+  const { data: res } = await apiClient.post<ApiResponse<CreateKnowledgeResponse>>(
     '/admin/knowledge',
     data,
   );
   return res.data;
+}
+
+export function createKnowledgeFormData(params: CreateKnowledgeFormDataParams): FormData {
+  const form = new FormData();
+  form.append('file', params.file);
+  form.append('title', params.title);
+  form.append('sourceType', params.sourceType);
+  return form;
 }
 
 export async function updateKnowledge(

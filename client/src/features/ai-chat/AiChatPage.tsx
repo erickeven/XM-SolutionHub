@@ -42,24 +42,16 @@ export function AiChatPage() {
     }
   }, [isAuthenticated]);
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (!accessToken) {
-    return <Navigate to="/login" replace />;
-  }
-
   const { data: sessionsData } = useQuery({
     queryKey: ['ai-sessions'],
     queryFn: () => listSessions({ page: 1, pageSize: 50 }),
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !!accessToken,
   });
 
   const { data: sessionMessagesData } = useQuery({
     queryKey: ['ai-session-messages', sessionId],
     queryFn: () => getSessionMessages(sessionId!),
-    enabled: !!sessionId && isAuthenticated,
+    enabled: !!sessionId && isAuthenticated && !!accessToken,
   });
 
   // Sync server messages to local view when not streaming
@@ -265,10 +257,14 @@ export function AiChatPage() {
 
   const sessions = sessionsData?.items ?? [];
 
+  if (!isAuthenticated || !accessToken) {
+    return <Navigate to="/login" replace />;
+  }
+
   return (
-    <div className="flex h-[calc(100vh-64px)] bg-slate-50">
+    <div className="flex h-[calc(100vh-64px-56px)] bg-slate-50 md:h-[calc(100vh-64px)]">
       {/* Desktop left sidebar */}
-      <aside className="hidden w-60 shrink-0 border-r border-slate-200 bg-white md:block">
+      <aside className="hidden w-64 shrink-0 border-r border-slate-200 bg-white md:block">
         <SessionList
           sessions={sessions}
           currentSessionId={sessionId ?? null}
@@ -354,7 +350,7 @@ export function AiChatPage() {
       </main>
 
       {/* Desktop right sidebar */}
-      <aside className="hidden w-72 shrink-0 border-l border-slate-200 bg-white lg:block">
+      <aside className="hidden w-80 shrink-0 border-l border-slate-200 bg-white lg:block">
         <SourcePanel sources={currentSources} />
       </aside>
 

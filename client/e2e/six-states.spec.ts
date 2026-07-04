@@ -21,7 +21,7 @@ test.describe('Loading state — Skeleton visible', () => {
     await settle(page);
     // With no backend, popularProducts query fails → no skeleton, but
     // the page itself renders. Check that the page container exists.
-    const container = page.locator('.bg-slate-50.min-h-\\[calc\\(100vh-64px\\)\\]');
+    const container = page.getByTestId('selection-page');
     await expect(container).toBeVisible({ timeout: 10_000 });
   });
 
@@ -64,7 +64,15 @@ test.describe('Empty state', () => {
 
 test.describe('Error state — retry button visible', () => {
   test('selection page error state shows retry button', async ({ page }) => {
-    // Non-empty filter triggers matchProducts query → fails without backend
+    await page.route('**/api/v1/selection/match', (route) =>
+      route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ code: 500, message: 'forced selection error', data: null }),
+      }),
+    );
+
+    // Non-empty filter triggers matchProducts query → forced API error
     await page.goto('/selection?inputVoltageMin=90&inputVoltageMax=264&outputVoltage=5&outputCurrent=2');
     await settle(page);
     // Wait for React Query to settle (retry: 1, then error)
@@ -102,7 +110,7 @@ test.describe('Unauthorized state — 403 or redirect to login', () => {
     const body = page.locator('body');
     await expect(body).toBeVisible();
     // Should either stay on /profile with 403 or redirect to /login
-    expect(url === '/profile' || url.includes('/login')).toBeTruthy();
+    expect(url.includes('/profile') || url.includes('/login')).toBeTruthy();
   });
 
   test('ai-chat redirects to login when unauthenticated', async ({ page }) => {

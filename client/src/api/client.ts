@@ -37,21 +37,33 @@ apiClient.interceptors.request.use((request) => {
   if (csrfToken && request.method && request.method.toUpperCase() !== 'GET') {
     request.headers['x-csrf-token'] = csrfToken;
   }
+
+  // Let browser auto-set multipart/form-data; boundary= for FormData payloads
+  if (request.data instanceof FormData) {
+    delete request.headers['Content-Type'];
+  }
   return request;
 });
 
 let refreshPromise: Promise<string> | null = null;
+let lastRefreshTime = 0;
 
 async function refreshAccessToken(): Promise<string> {
+  const csrfToken = readCookie('csrf-token');
+  if (!csrfToken) {
+    throw new Error('No refresh session');
+  }
+
   if (!refreshPromise) {
     refreshPromise = refreshClient
       .post<ApiResponse<{ accessToken: string }>>(
         '/auth/refresh',
         {},
-        { headers: { 'x-csrf-token': readCookie('csrf-token') ?? '' } },
+        { headers: { 'x-csrf-token': csrfToken } },
       )
       .then(({ data }) => {
         useAuthStore.getState().setAccessToken(data.data.accessToken);
+        lastRefreshTime = Date.now();
         return data.data.accessToken;
       })
       .finally(() => {
@@ -81,7 +93,11 @@ apiClient.interceptors.response.use(
         request.headers.Authorization = `Bearer ${token}`;
         return apiClient(request);
       } catch {
-        useAuthStore.getState().clearAuth();
+        // If a refresh succeeded within 1s, a single CSRF rotation race
+        // failure should not destroy the session.
+        if (Date.now() - lastRefreshTime > 1000) {
+          useAuthStore.getState().clearAuth();
+        }
       }
     }
 

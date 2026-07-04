@@ -97,8 +97,8 @@ export async function findByMaterialId(materialId: string): Promise<KnowledgeDoc
 export async function create(data: CreateKnowledgeInput): Promise<KnowledgeDoc> {
   return prisma.knowledgeDoc.create({
     data: {
-      materialId: data.materialId,
-      title: data.title,
+      materialId: data.materialId!,
+      title: data.title!,
       sourceType: data.sourceType,
       status: 'UPLOADED',
     },

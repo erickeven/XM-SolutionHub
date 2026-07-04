@@ -58,6 +58,15 @@ export async function listLeads(
   return res.data;
 }
 
+export async function getLead(
+  id: string,
+): Promise<LeadItem & { events?: LeadEvent[] }> {
+  const { data: res } = await apiClient.get<
+    ApiResponse<LeadItem & { events?: LeadEvent[] }>
+  >(`/admin/leads/${id}`);
+  return res.data;
+}
+
 export async function assignLead(
   leadId: string,
   staffId: string,

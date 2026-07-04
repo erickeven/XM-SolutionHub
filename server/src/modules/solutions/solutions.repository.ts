@@ -27,6 +27,9 @@ export async function findMany(
       skip,
       take: limit,
       orderBy: { createdAt: 'desc' },
+      include: {
+        _count: { select: { productSolutions: true, materials: true } },
+      },
     }),
     prisma.solution.count({ where }),
   ]);
@@ -108,5 +111,40 @@ export async function softDelete(id: string): Promise<Solution> {
   return prisma.solution.update({
     where: { id },
     data: { status: 'INACTIVE' },
+  });
+}
+
+export async function hardDelete(id: string): Promise<void> {
+  await prisma.solution.delete({ where: { id } });
+}
+
+export async function linkProducts(
+  solutionId: string,
+  productIds: string[],
+): Promise<void> {
+  await prisma.productSolution.createMany({
+    data: productIds.map((pid) => ({ solutionId, productId: pid })),
+    skipDuplicates: true,
+  });
+}
+
+export async function unlinkAllProducts(solutionId: string): Promise<void> {
+  await prisma.productSolution.deleteMany({ where: { solutionId } });
+}
+
+export async function linkMaterials(
+  solutionId: string,
+  materialIds: string[],
+): Promise<void> {
+  await prisma.material.updateMany({
+    where: { id: { in: materialIds } },
+    data: { solutionId },
+  });
+}
+
+export async function unlinkAllMaterials(solutionId: string): Promise<void> {
+  await prisma.material.updateMany({
+    where: { solutionId },
+    data: { solutionId: null },
   });
 }

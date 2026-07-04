@@ -32,4 +32,8 @@ export interface AuditLogRow {
   targetId: string | null;
   payload: unknown;
   createdAt: Date;
+  actorLabel?: string;
+  actionLabel: string;
+  targetLabel?: string;
+  targetShortId?: string;
 }

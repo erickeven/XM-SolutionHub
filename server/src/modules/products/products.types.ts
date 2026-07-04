@@ -31,14 +31,15 @@ export interface ProductDetail extends ProductListItem {
 export interface CreateProductInput {
   model: string;
   series: string;
-  params: ProductParams;
+  params: Record<string, unknown>;
   advantages: string[];
   status?: 'DRAFT' | 'ACTIVE' | 'INACTIVE';
 }
 
 export interface UpdateProductInput {
+  model?: string;
   series?: string;
-  params?: ProductParams;
+  params?: Record<string, unknown>;
   advantages?: string[];
   status?: 'DRAFT' | 'ACTIVE' | 'INACTIVE';
 }

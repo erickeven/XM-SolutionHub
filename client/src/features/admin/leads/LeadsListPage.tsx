@@ -30,6 +30,7 @@ import { StatusTransition } from './StatusTransition';
 import { LeadEventsDrawer } from './LeadEventsDrawer';
 import { LeadRowExpanded } from './LeadRowExpanded';
 import { LeadCardView } from './LeadCardView';
+import { ShortId } from '../../../components/ShortId';
 
 const { useBreakpoint } = Grid;
 const { RangePicker } = DatePicker;
@@ -136,6 +137,13 @@ export function LeadsListPage() {
         record.email ?? record.userId ?? record.anonymousId ?? '匿名用户',
     },
     {
+      title: 'ID',
+      dataIndex: 'id',
+      key: 'id',
+      width: 160,
+      render: (id: string) => <ShortId id={id} />,
+    },
+    {
       title: '评分',
       dataIndex: 'score',
       key: 'score',
@@ -220,7 +228,7 @@ export function LeadsListPage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-slate-50 p-4 md:p-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -306,7 +314,7 @@ export function LeadsListPage() {
               columns={columns}
               dataSource={items}
               rowKey="id"
-              scroll={{ x: 1000 }}
+              scroll={{ x: 1160 }}
               expandable={{
                 expandedRowKeys,
                 onExpandedRowsChange: (keys) =>

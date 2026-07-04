@@ -11,6 +11,7 @@ import {
   Grid,
   Card,
   Tag,
+  Tooltip,
   message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -18,6 +19,7 @@ import { DownloadOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { listAuditLogs, exportAuditLogs } from '../../../api/audit';
 import type { AuditLogItem } from '../../../api/audit';
+import { ShortId } from '../../../components/ShortId';
 
 const { useBreakpoint } = Grid;
 const { RangePicker } = DatePicker;
@@ -68,19 +70,23 @@ export function AuditLogPage() {
 
   const columns: ColumnsType<AuditLogItem> = [
     {
-      title: '操作人ID',
-      dataIndex: 'actorId',
-      key: 'actorId',
+      title: '操作人',
+      dataIndex: 'actorLabel',
+      key: 'actorLabel',
       width: 200,
       ellipsis: true,
-      render: (v: string | null) => v ?? '—',
+      render: (_: string | undefined, record: AuditLogItem) =>
+        record.actorLabel
+          ? <Tooltip title={<ShortId id={record.actorId ?? ''} showCopy={false} />}>{record.actorLabel}</Tooltip>
+          : (record.actorId ? <ShortId id={record.actorId} /> : '—'),
     },
     {
       title: '操作',
-      dataIndex: 'action',
-      key: 'action',
+      dataIndex: 'actionLabel',
+      key: 'actionLabel',
       width: 160,
-      render: (v: string) => <Tag>{v}</Tag>,
+      render: (v: string | undefined, record: AuditLogItem) =>
+        <Tag>{v ?? record.action}</Tag>,
     },
     {
       title: '目标类型',
@@ -89,12 +95,15 @@ export function AuditLogPage() {
       width: 120,
     },
     {
-      title: '目标ID',
-      dataIndex: 'targetId',
-      key: 'targetId',
+      title: '目标',
+      dataIndex: 'targetLabel',
+      key: 'targetLabel',
       width: 200,
       ellipsis: true,
-      render: (v: string | null) => v ?? '—',
+      render: (_: string | undefined, record: AuditLogItem) =>
+        record.targetLabel
+          ? <Tooltip title={<ShortId id={record.targetId ?? ''} showCopy={false} />}>{record.targetLabel}</Tooltip>
+          : (record.targetId ? <ShortId id={record.targetId} /> : '—'),
     },
     {
       title: '时间',
@@ -126,7 +135,7 @@ export function AuditLogPage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-slate-50 p-4 md:p-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -232,14 +241,14 @@ export function AuditLogPage() {
               <Card key={item.id} size="small" className="!rounded-lg">
                 <div className="space-y-2">
                   <div className="flex items-start justify-between gap-2">
-                    <Tag>{item.action}</Tag>
+                    <Tag>{item.actionLabel ?? item.action}</Tag>
                     <span className="text-xs text-slate-500">
                       {new Date(item.createdAt).toLocaleString('zh-CN')}
                     </span>
                   </div>
                   <div className="text-xs text-slate-500">
-                    <div>操作人: {item.actorId ?? '—'}</div>
-                    <div>目标: {item.targetType} {item.targetId ?? ''}</div>
+                    <div>操作人: {item.actorLabel ?? (item.actorId ? <ShortId id={item.actorId} /> : '—')}</div>
+                    <div>目标: {item.targetType} {item.targetLabel ?? (item.targetId ? <ShortId id={item.targetId} /> : '')}</div>
                   </div>
                 </div>
               </Card>

@@ -2,6 +2,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, Input, Button, message, Typography, Checkbox } from 'antd';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowLeftOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { useAuth } from '../../hooks/useAuth';
 import { registerSchema } from './authSchema';
 import type { RegisterSchema } from './authSchema';
@@ -64,16 +65,35 @@ export function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-8">
-      <div className="w-full max-w-[400px]">
-        <div className="mb-8 text-center">
-          <Link to="/" className="text-2xl font-bold text-navy-950">
-            芯茂微 SolutionHub
+    <div className="flex min-h-screen items-center justify-center bg-navy-950 px-4 py-8">
+      <div className="grid w-full max-w-[980px] gap-6 md:grid-cols-[1fr_440px] md:items-center">
+        <div className="hidden text-white md:block">
+          <Link to="/" className="inline-flex items-center gap-2 text-sm text-slate-300 hover:text-white">
+            <ArrowLeftOutlined /> 返回首页
           </Link>
-          <p className="mt-2 text-sm text-slate-500">创建新账户</p>
+          <div className="mt-10 section-kicker text-copper-400">CREATE ACCOUNT</div>
+          <h1 className="mt-3 text-[34px] font-bold leading-tight">
+            注册后查看完整方案资料
+          </h1>
+          <p className="mt-4 max-w-md text-sm leading-7 text-slate-300">
+            账户用于资料预览、下载审计、AI 问答与线索跟进，敏感令牌通过服务端 Cookie 策略保护。
+          </p>
+          <div className="mt-6 inline-flex items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-200">
+            <SafetyCertificateOutlined className="text-copper-400" />
+            注册即记录隐私版本和同意时间
+          </div>
         </div>
 
-        <Form layout="vertical" onFinish={handleSubmit(onSubmit)} autoComplete="off">
+        <div className="surface-card w-full p-7 shadow-soft md:p-8">
+          <div className="mb-6">
+            <Link to="/" className="text-xl font-bold text-navy-950 md:hidden">
+              芯茂微
+            </Link>
+            <h2 className="mt-3 text-2xl font-bold text-slate-900 md:mt-0">注册</h2>
+            <p className="mt-1 text-sm text-slate-500">创建新账户解锁完整资料下载与 AI 问答</p>
+          </div>
+
+          <Form layout="vertical" onFinish={handleSubmit(onSubmit)} autoComplete="off">
           <Form.Item
             label="邮箱"
             validateStatus={errors.email ? 'error' : ''}
@@ -88,7 +108,7 @@ export function RegisterPage() {
                   type="email"
                   size="large"
                   style={{ minHeight: 44 }}
-                  placeholder=""
+                  placeholder="name@example.com"
                 />
               )}
             />
@@ -107,7 +127,7 @@ export function RegisterPage() {
                   {...field}
                   size="large"
                   style={{ minHeight: 44 }}
-                  placeholder=""
+                  placeholder="至少 8 个字符"
                 />
               )}
             />
@@ -127,7 +147,7 @@ export function RegisterPage() {
                   {...field}
                   size="large"
                   style={{ minHeight: 44 }}
-                  placeholder=""
+                  placeholder="再次输入密码"
                 />
               )}
             />
@@ -165,15 +185,16 @@ export function RegisterPage() {
               注册
             </Button>
           </Form.Item>
-        </Form>
+          </Form>
 
-        <div className="text-center">
-          <Text className="text-sm text-slate-500">
-            已有账户？{' '}
-            <Link to="/login" className="text-blue-600">
-              立即登录
-            </Link>
-          </Text>
+          <div className="text-center">
+            <Text className="text-sm text-slate-500">
+              已有账户？{' '}
+              <Link to="/login" className="text-blue-600">
+                立即登录
+              </Link>
+            </Text>
+          </div>
         </div>
       </div>
     </div>

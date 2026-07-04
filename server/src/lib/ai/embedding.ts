@@ -1,8 +1,16 @@
-import { env } from '../../config';
 import { logger } from '../logger';
+import { getEffectiveProvider } from '../../modules/ai-settings/ai-settings.service';
 
 interface EmbeddingResponse {
   data: Array<{ embedding: number[] }>;
+}
+
+async function getEmbeddingConfig() {
+  const provider = await getEffectiveProvider('embedding');
+  if (!provider) {
+    throw new Error('Embedding not configured — no enabled provider in DB and no embedding env vars');
+  }
+  return provider;
 }
 
 /**
@@ -10,20 +18,19 @@ interface EmbeddingResponse {
  * Throws on failure — embeddings are critical for the indexing pipeline.
  */
 export async function embed(text: string): Promise<number[]> {
-  const baseUrl = env.EMBEDDING_BASE_URL;
-  if (!baseUrl) throw new Error('EMBEDDING_BASE_URL is not configured');
+  const provider = await getEmbeddingConfig();
+  const baseUrl = provider.baseUrl.replace(/\/$/, '');
 
-  const url = `${baseUrl.replace(/\/$/, '')}/v1/embeddings`;
-  const res = await fetch(url, {
+  const res = await fetch(`${baseUrl}/v1/embeddings`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${env.EMBEDDING_API_KEY ?? ''}`,
+      Authorization: `Bearer ${provider.apiKey}`,
     },
     body: JSON.stringify({
-      model: env.EMBEDDING_MODEL,
+      model: provider.model,
       input: text,
-      dimensions: env.EMBEDDING_DIMENSIONS,
+      dimensions: provider.dimensions,
     }),
   });
 
@@ -43,26 +50,24 @@ export async function embed(text: string): Promise<number[]> {
 export async function embedBatch(texts: string[]): Promise<number[][]> {
   if (texts.length === 0) return [];
 
-  const baseUrl = env.EMBEDDING_BASE_URL;
-  if (!baseUrl) throw new Error('EMBEDDING_BASE_URL is not configured');
-
-  const url = `${baseUrl.replace(/\/$/, '')}/v1/embeddings`;
+  const provider = await getEmbeddingConfig();
+  const baseUrl = provider.baseUrl.replace(/\/$/, '');
   const BATCH_SIZE = 10;
   const results: number[][] = [];
 
   for (let i = 0; i < texts.length; i += BATCH_SIZE) {
     const batch = texts.slice(i, i + BATCH_SIZE);
 
-    const res = await fetch(url, {
+    const res = await fetch(`${baseUrl}/v1/embeddings`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${env.EMBEDDING_API_KEY ?? ''}`,
+        Authorization: `Bearer ${provider.apiKey}`,
       },
       body: JSON.stringify({
-        model: env.EMBEDDING_MODEL,
+        model: provider.model,
         input: batch,
-        dimensions: env.EMBEDDING_DIMENSIONS,
+        dimensions: provider.dimensions,
       }),
     });
 

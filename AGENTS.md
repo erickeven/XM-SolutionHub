@@ -1,6 +1,6 @@
 # XM-SolutionHub — 芯茂微选型与资料系统
 
-> **状态**: 已完成全量实现并通过局域网部署验证；AI 外部服务配置待补齐。本文档随实施更新。
+> **状态**: 已完成主体实现；本轮已同步 UI 重构、选型契约修复、Hook 顺序修复、管理员初始化和文档更新。AI 外部服务配置与数据库依赖集成验证仍需在目标环境补齐。
 
 ## 项目定位
 
@@ -35,6 +35,7 @@ docs/            — PRD, design, tech（已定稿）
 pnpm install
 docker compose up -d postgres redis minio
 pnpm --filter server prisma:migrate
+pnpm --filter server admin:init
 pnpm --filter server dev
 pnpm --filter server worker:knowledge
 pnpm --filter client dev
@@ -81,19 +82,19 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm e2e
 | 系统 | Ubuntu 22.04.5 LTS |
 | 环境 | 宝塔面板 / Docker / Node.js / Nginx |
 
-敏感凭据（密码等）存于 `.env.local`（已加入 `.gitignore`，勿提交），内容包括 `DEPLOY_HOST`、`DEPLOY_USER`、`DEPLOY_PASSWORD`、`DEPLOY_PORT`。
+敏感凭据（密码等）存于 `.env.local` 和生产根目录 `.env`（均已加入 `.gitignore`，勿提交）。`.env.local` 内容包括 `DEPLOY_HOST`、`DEPLOY_USER`、`DEPLOY_PASSWORD`、`DEPLOY_PORT`；生产 `.env` 供 `docker-compose.prod.yml` 读取。
 
 首次部署流程（待实施）：
 ```bash
 # 从项目根目录
 rsync -avz --exclude '.git' --exclude '.env.local' --exclude 'node_modules' \
-  ./ root@172.16.12.85:/opt/xinmaowei/
+  ./ root@172.16.172.85:/opt/xinmaowei/
 
 # SSH 登入后
-ssh root@172.16.12.85
+ssh root@172.16.172.85
 cd /opt/xinmaowei
 docker compose up -d
-pnpm install && pnpm --filter server prisma:migrate && pnpm build
+pnpm install && pnpm --filter server prisma:migrate && pnpm --filter server admin:init && pnpm build
 # Nginx 反代配置见宝塔面板
 ```
 

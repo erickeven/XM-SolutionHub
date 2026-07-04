@@ -47,9 +47,9 @@ export function ProfilePage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-slate-50 p-4 md:p-6">
+    <div className="container-page py-6 md:py-10">
       <div className="mx-auto max-w-2xl">
-        <h1 className="mb-4 text-xl font-bold text-slate-900">个人中心</h1>
+        <h1 className="mb-4 text-xl font-bold text-slate-900 md:text-2xl">个人中心</h1>
 
         {/* 账号信息 */}
         <Card title="账号信息" className="mb-4">

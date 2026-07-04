@@ -1,5 +1,5 @@
-import { env } from '../../config';
 import { logger } from '../logger';
+import { loadPrompt, getEffectiveProvider } from '../../modules/ai-settings/ai-settings.service';
 
 export interface ExtractedEvent {
   summary: string;
@@ -21,7 +21,7 @@ interface LLMResponse {
   choices: Array<{ message: { content: string } }>;
 }
 
-const SYSTEM_PROMPT = `你是一个技术文档分析助手。请从给定的文本片段中提取一个关键事件和相关的实体。
+const HARDCODED_SYSTEM_PROMPT = `你是一个技术文档分析助手。请从给定的文本片段中提取一个关键事件和相关的实体。
 
 输出格式为严格的 JSON：
 {
@@ -50,25 +50,27 @@ const SYSTEM_PROMPT = `你是一个技术文档分析助手。请从给定的文
 export async function extractEventAndEntities(
   chunkContent: string,
 ): Promise<ExtractionResult> {
-  const baseUrl = env.LLM_BASE_URL;
-  if (!baseUrl) {
-    logger.warn('LLM_BASE_URL not configured, skipping event/entity extraction');
+  const provider = await getEffectiveProvider('llm');
+  if (!provider || !provider.baseUrl) {
+    logger.warn('No LLM provider configured, skipping event/entity extraction');
     return { event: null, entities: [] };
   }
 
-  const url = `${baseUrl.replace(/\/$/, '')}/v1/chat/completions`;
+  const url = `${provider.baseUrl.replace(/\/$/, '')}/v1/chat/completions`;
 
   try {
+    const dbPrompt = await loadPrompt('extraction').catch(() => null);
+    const systemPrompt = dbPrompt ?? HARDCODED_SYSTEM_PROMPT;
     const res = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${env.LLM_API_KEY ?? ''}`,
+        Authorization: `Bearer ${provider.apiKey}`,
       },
       body: JSON.stringify({
-        model: env.LLM_MODEL,
+        model: provider.model,
         messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'system', content: systemPrompt },
           { role: 'user', content: chunkContent },
         ],
         temperature: 0.1,
@@ -116,7 +118,7 @@ export async function extractEventAndEntities(
 
 // ── Query entity extraction (for standard search mode) ──────────
 
-const ENTITY_EXTRACTION_PROMPT = `Extract all entity names (product models, parameters, technical terms) from the user's question. Return as JSON array of strings.
+const HARDCODED_ENTITY_EXTRACTION_PROMPT = `Extract all entity names (product models, parameters, technical terms) from the user's question. Return as JSON array of strings.
 
 Example:
 Question: "LP9961的LLC谐振频率是多少？"
@@ -132,25 +134,28 @@ Rules:
  * If LLM unavailable: returns [] (caller falls back to trigram matching).
  */
 export async function extractQueryEntities(query: string): Promise<string[]> {
-  const baseUrl = env.LLM_BASE_URL;
-  if (!baseUrl || !env.LLM_API_KEY) {
-    logger.warn('LLM not configured, skipping query entity extraction');
+  const provider = await getEffectiveProvider('llm');
+  if (!provider || !provider.baseUrl) {
+    logger.warn('No LLM provider configured, skipping query entity extraction');
     return [];
   }
 
-  const url = `${baseUrl.replace(/\/$/, '')}/v1/chat/completions`;
+  const url = `${provider.baseUrl.replace(/\/$/, '')}/v1/chat/completions`;
 
   try {
+    const dbPrompt = await loadPrompt('entity_query').catch(() => null);
+    const systemPrompt = dbPrompt ?? HARDCODED_ENTITY_EXTRACTION_PROMPT;
+
     const res = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${env.LLM_API_KEY}`,
+        Authorization: `Bearer ${provider.apiKey}`,
       },
       body: JSON.stringify({
-        model: env.LLM_MODEL,
+        model: provider.model,
         messages: [
-          { role: 'system', content: ENTITY_EXTRACTION_PROMPT },
+          { role: 'system', content: systemPrompt },
           { role: 'user', content: query },
         ],
         temperature: 0.1,
@@ -206,7 +211,7 @@ interface LLMRankResponse {
   choices: Array<{ message: { content: string } }>;
 }
 
-const RANK_PROMPT = `Rank these document snippets by relevance to the question. Return JSON array of { "index": number, "relevance_score": number } pairs. relevance_score is 0.0 to 1.0.
+const HARDCODED_RANK_PROMPT = `Rank these document snippets by relevance to the question. Return JSON array of { "index": number, "relevance_score": number } pairs. relevance_score is 0.0 to 1.0.
 
 Rules:
 1. Only output the JSON array, nothing else
@@ -221,30 +226,33 @@ export async function llmRankCandidates(
   query: string,
   candidates: { id: string; content: string }[],
 ): Promise<{ id: string; score: number }[] | null> {
-  const baseUrl = env.LLM_BASE_URL;
-  if (!baseUrl || !env.LLM_API_KEY) {
-    logger.warn('LLM not configured, skipping LLM precision ranking');
+  const provider = await getEffectiveProvider('llm');
+  if (!provider || !provider.baseUrl) {
+    logger.warn('No LLM provider configured, skipping LLM precision ranking');
     return null;
   }
 
   if (candidates.length === 0) return [];
 
-  const url = `${baseUrl.replace(/\/$/, '')}/v1/chat/completions`;
+  const url = `${provider.baseUrl.replace(/\/$/, '')}/v1/chat/completions`;
 
   const snippets = candidates.map((c, i) => `[${i}] ${c.content.slice(0, 300)}`).join('\n');
   const userMsg = `Question: ${query}\n\nSnippets:\n${snippets}`;
 
   try {
+    const dbPrompt = await loadPrompt('rerank').catch(() => null);
+    const systemPrompt = dbPrompt ?? HARDCODED_RANK_PROMPT;
+
     const res = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${env.LLM_API_KEY}`,
+        Authorization: `Bearer ${provider.apiKey}`,
       },
       body: JSON.stringify({
-        model: env.LLM_MODEL,
+        model: provider.model,
         messages: [
-          { role: 'system', content: RANK_PROMPT },
+          { role: 'system', content: systemPrompt },
           { role: 'user', content: userMsg },
         ],
         temperature: 0.1,

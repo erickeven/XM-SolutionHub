@@ -73,6 +73,8 @@ xinmaowei-selection/
 │   │   │   ├── leads/
 │   │   │   └── audit/
 │   │   ├── routes/
+│   │   ├── scripts/
+│   │   │   └── init-admin.ts
 │   │   ├── workers/
 │   │   │   └── knowledge-index.worker.ts
 │   │   └── types/
@@ -245,7 +247,7 @@ export type SelectionInput = {
   inputVoltageMax: number;
   outputVoltage: number;
   outputCurrent: number;
-  applicationType: string;
+  applicationType?: string;
   efficiencyLevel?: string;
   standbyPowerMax?: number;
   maxAmbientTemp?: number;
@@ -260,6 +262,10 @@ export type SelectionInput = {
 export type MatchResult = {
   productId: string;
   model: string;
+  series: string;
+  params: Record<string, unknown>;
+  advantages: string[];
+  datasheetMaterialId?: string | null;
   matchLevel: "exact" | "approximate" | "fallback";
   score: number;
   reasons: string[];
@@ -282,8 +288,10 @@ export type MatchResult = {
 1. 必填参数缺失直接返回参数错误。
 2. 电气参数不覆盖用户需求时不可标记为精确匹配。
 3. 差异说明必须面向用户可读，例如“输出电流低于需求 0.2A”。
-4. 热门推荐只在用户参数为空或极少时使用。
-5. 产品状态非 `ACTIVE` 不进入外部推荐。
+4. 精准匹配需要输入电压范围、输出电压和输出电流四项核心参数；参数不完整时前端展示热门产品和补参提示，不调用匹配接口。
+5. 应用类型、能效、认证和环境尺寸是可选加权项；未指定应用类型时按中性满分处理，不制造 400 错误。
+6. 热门推荐只在用户参数为空或核心电气参数不完整时使用。
+7. 产品状态非 `ACTIVE` 不进入外部推荐。
 
 ## 6. 文件与资料服务
 
@@ -545,20 +553,23 @@ VITE_API_BASE_URL=/api/v1
 pnpm install
 docker compose up -d postgres redis minio
 pnpm --filter server prisma:migrate
+pnpm --filter server admin:init
 pnpm --filter server dev
 pnpm --filter server worker:knowledge
 pnpm --filter client dev
 ```
 
-`prisma:migrate` 必须执行版本化 migration，其中包含 `CREATE EXTENSION IF NOT EXISTS vector`、`pg_trgm`、向量列与索引 SQL，不额外维护未定义的 `prisma:vector` 命令。API、知识库 Worker 和前端开发服务分别在独立终端运行；生产 Compose 同样将 API 与 Worker 定义为两个服务，但复用同一镜像。
+`prisma:migrate` 必须执行版本化 migration，其中包含 `CREATE EXTENSION IF NOT EXISTS vector`、`pg_trgm`、向量列与索引 SQL，不额外维护未定义的 `prisma:vector` 命令。`admin:init` 只初始化管理员、角色和权限，不清业务数据；生产 Compose 在 migrate 成功后自动运行一次。API、知识库 Worker 和前端开发服务分别在独立终端运行；生产 Compose 同样将 API 与 Worker 定义为两个服务，但复用同一镜像。
 
 必须提供种子数据：
 
-1. 管理员账号。
+1. 管理员账号由 `admin:init` 提供，账号默认 `admin@xinmaowei.com`，密码来自 `SEED_ADMIN_PASSWORD`。
 2. 至少 5 个产品。
 3. 至少 2 个方案。
 4. 至少 1 份可预览 PDF。
 5. 至少 2 份知识库文档、10 条片段，并生成可覆盖单跳与多跳样例的 chunk、event、entity、event-entity 关联。
+
+`prisma:seed` 仅用于开发和演示数据，会重置示例产品、资料、知识库等数据，禁止在已有生产数据上作为管理员初始化手段执行。
 
 ## 11. 测试策略
 

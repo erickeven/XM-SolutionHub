@@ -73,6 +73,17 @@ export async function updateHandler(
   }
 }
 
+export async function hardDeleteHandler(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const id = requireId(req);
+    const actorId = req.user?.userId;
+    await service.hardDeleteSolution(id, actorId);
+    res.json(successResponse(null, 'Solution permanently deleted'));
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function deleteHandler(
   req: Request,
   res: Response,
@@ -111,6 +122,19 @@ export async function publicListHandler(
     const query = solutionQuerySchema.parse(req.query);
     const result = await service.listSolutions({ ...query, status: 'ACTIVE' });
     res.status(200).json(successResponse(result));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function productOptionsHandler(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const options = await service.getAllProductOptions();
+    res.status(200).json(successResponse(options));
   } catch (err) {
     next(err);
   }

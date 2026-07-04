@@ -6,6 +6,8 @@ export interface UserInfo {
   email: string;
   role: UserRole;
   status: UserStatus;
+  permissions: string[];
+  roles?: Array<{ id: string; name: string }>;
 }
 
 export interface RegisterInput {

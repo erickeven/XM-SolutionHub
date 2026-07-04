@@ -1,5 +1,6 @@
 import { AppError } from '../../lib/errors';
 import { logFromContext } from '../audit/audit.service';
+import prisma from '../../lib/prisma';
 import * as repository from './solutions.repository';
 import type {
   CreateSolutionInput,
@@ -21,6 +22,8 @@ export async function listSolutions(
       status: s.status,
       createdAt: s.createdAt,
       updatedAt: s.updatedAt,
+      productCount: (s as never as { _count: { productSolutions: number } })._count.productSolutions,
+      materialCount: (s as never as { _count: { materials: number } })._count.materials,
     })),
     total,
     page: query.page,
@@ -51,6 +54,8 @@ export async function getSolution(id: string): Promise<SolutionDetail> {
       model: ps.product.model,
       series: ps.product.series,
     })),
+      productIds: solution.productSolutions.map((ps) => ps.productId),
+      materialIds: solution.materials.map((m) => m.id),
   };
 }
 
@@ -89,6 +94,14 @@ export async function createSolution(
 ): Promise<SolutionDetail> {
   const solution = await repository.create(input);
 
+  if (input.productIds && input.productIds.length > 0) {
+    await repository.linkProducts(solution.id, input.productIds);
+  }
+
+  if (input.materialIds && input.materialIds.length > 0) {
+    await repository.linkMaterials(solution.id, input.materialIds);
+  }
+
   logFromContext({
     actorId,
     action: 'solution.create',
@@ -97,16 +110,8 @@ export async function createSolution(
     payload: { name: input.name, description: input.description },
   });
 
-  return {
-    id: solution.id,
-    name: solution.name,
-    description: solution.description,
-    status: solution.status,
-    createdAt: solution.createdAt,
-    updatedAt: solution.updatedAt,
-    materials: [],
-    products: [],
-  };
+  // Re-fetch with products
+  return getSolution(solution.id);
 }
 
 export async function updateSolution(
@@ -119,7 +124,22 @@ export async function updateSolution(
     throw new AppError(3001, 'Solution not found', 404);
   }
 
-  const solution = await repository.update(id, input);
+  const { productIds, materialIds, ...updateData } = input;
+  await repository.update(id, updateData);
+
+  if (productIds !== undefined) {
+    await repository.unlinkAllProducts(id);
+    if (productIds.length > 0) {
+      await repository.linkProducts(id, productIds);
+    }
+  }
+
+  if (materialIds !== undefined) {
+    await repository.unlinkAllMaterials(id);
+    if (materialIds.length > 0) {
+      await repository.linkMaterials(id, materialIds);
+    }
+  }
 
   logFromContext({
     actorId,
@@ -129,25 +149,34 @@ export async function updateSolution(
     payload: input as Record<string, unknown>,
   });
 
-  return {
-    id: solution.id,
-    name: solution.name,
-    description: solution.description,
-    status: solution.status,
-    createdAt: solution.createdAt,
-    updatedAt: solution.updatedAt,
-    materials: existing.materials.map((m) => ({
-      id: m.id,
-      type: m.type,
-      title: m.title,
-      status: m.status,
-    })),
-    products: existing.productSolutions.map((ps) => ({
-      id: ps.product.id,
-      model: ps.product.model,
-      series: ps.product.series,
-    })),
-  };
+  // Re-fetch with products
+  return getSolution(id);
+}
+
+export async function getAllProductOptions(): Promise<
+  { id: string; model: string; series: string; status: string }[]
+> {
+  return prisma.product.findMany({
+    select: { id: true, model: true, series: true, status: true },
+    orderBy: { model: 'asc' },
+  });
+}
+
+export async function hardDeleteSolution(id: string, actorId?: string): Promise<void> {
+  const existing = await repository.findById(id);
+  if (!existing) throw new AppError(3001, 'Solution not found', 404);
+  if (existing.status !== 'INACTIVE') {
+    throw new AppError(4001, 'Cannot permanently delete active solution. Move to recycle bin first.', 400);
+  }
+  await prisma.$transaction(async (tx) => {
+    // Clean up ProductSolution associations (no DB-level onDelete)
+    await tx.productSolution.deleteMany({ where: { solutionId: id } });
+    // Delete solution (Material.solutionId auto-set to null via onDelete: SetNull)
+    await tx.solution.delete({ where: { id } });
+  });
+  if (actorId) {
+    logFromContext({ actorId, action: 'solution.hardDelete', targetType: 'Solution', targetId: id });
+  }
 }
 
 export async function deleteSolution(

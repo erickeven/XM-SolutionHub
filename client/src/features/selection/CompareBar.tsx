@@ -14,7 +14,7 @@ export function CompareBar({ items, onRemove, onCompare }: CompareBarProps) {
   if (items.length === 0) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white shadow-md">
+    <div className="fixed bottom-14 left-0 right-0 z-40 border-t border-slate-200 bg-white/95 shadow-card backdrop-blur md:bottom-0">
       <div className="mx-auto flex max-w-[1280px] items-center gap-4 px-4 py-3">
         <span className="text-sm font-medium text-slate-700">
           已选对比 ({items.length}/{MAX_ITEMS})

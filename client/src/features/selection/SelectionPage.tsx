@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Fragment, useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Button, Drawer, Skeleton, Empty, message, Segmented, Alert } from 'antd';
+import { Button, Drawer, Skeleton, Empty, message, Segmented, Alert, Modal, Tag } from 'antd';
 import { FilterOutlined, ReloadOutlined } from '@ant-design/icons';
 import { matchProducts, getPopularProducts } from '../../api/selection';
 import type { SelectionInput, MatchResult } from '../../types/selection';
@@ -10,10 +10,10 @@ import { FilterPanel } from './FilterPanel';
 import { CompareBar } from './CompareBar';
 
 const DEFAULT_FILTER: SelectionInput = {
-  inputVoltageMin: 90,
-  inputVoltageMax: 264,
-  outputVoltage: 5,
-  outputCurrent: 2,
+  inputVoltageMin: 0,
+  inputVoltageMax: 0,
+  outputVoltage: 0,
+  outputCurrent: 0,
   applicationType: '',
   certifications: [],
 };
@@ -37,20 +37,38 @@ function parseParams(searchParams: URLSearchParams): SelectionInput {
   return filter;
 }
 
-/** 全部筛选条件为空/零值时返回 true */
-function isFilterEmpty(f: SelectionInput): boolean {
+function hasRequiredElectrical(f: SelectionInput): boolean {
   return (
-    (!f.inputVoltageMin || f.inputVoltageMin === 0) &&
-    (!f.inputVoltageMax || f.inputVoltageMax === 0) &&
-    (!f.outputVoltage || f.outputVoltage === 0) &&
-    (!f.outputCurrent || f.outputCurrent === 0) &&
-    (!f.applicationType || f.applicationType === '') &&
-    (!f.efficiencyLevel || f.efficiencyLevel === '') &&
-    (!f.certifications || f.certifications.length === 0)
+    (f.inputVoltageMin ?? 0) > 0 &&
+    (f.inputVoltageMax ?? 0) > 0 &&
+    (f.outputVoltage ?? 0) > 0 &&
+    (f.outputCurrent ?? 0) > 0
   );
 }
 
 type SortMode = 'score' | 'model';
+
+function readParam(result: MatchResult, key: string): string {
+  const value = result.params?.[key];
+  if (Array.isArray(value)) {
+    const list = value.filter((item): item is string => typeof item === 'string');
+    return list.length > 0 ? list.join(', ') : '-';
+  }
+  if (typeof value === 'number' || typeof value === 'string') return String(value);
+  return '-';
+}
+
+function formatOutput(result: MatchResult): string {
+  const voltage = readParam(result, 'outputVoltage');
+  const current = readParam(result, 'outputCurrent');
+  return `${voltage === '-' ? '-' : `${voltage}V`} / ${current === '-' ? '-' : `${current}A`}`;
+}
+
+function formatInputRange(result: MatchResult): string {
+  const min = readParam(result, 'inputVoltageMin');
+  const max = readParam(result, 'inputVoltageMax');
+  return min === '-' && max === '-' ? '-' : `${min}-${max}V`;
+}
 
 export function SelectionPage() {
   const [searchParams] = useSearchParams();
@@ -59,9 +77,10 @@ export function SelectionPage() {
   const [debouncedFilter, setDebouncedFilter] = useState<SelectionInput>(filter);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [compareItems, setCompareItems] = useState<MatchResult[]>([]);
+  const [compareOpen, setCompareOpen] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>('score');
 
-  const filterEmpty = useMemo(() => isFilterEmpty(debouncedFilter), [debouncedFilter]);
+  const canMatch = useMemo(() => hasRequiredElectrical(debouncedFilter), [debouncedFilter]);
 
   // Debounce filter changes (500ms)
   useEffect(() => {
@@ -89,13 +108,13 @@ export function SelectionPage() {
   const { data: results, isLoading, isError, refetch } = useQuery({
     queryKey: ['matchProducts', debouncedFilter],
     queryFn: () => matchProducts(debouncedFilter),
-    enabled: !filterEmpty,
+    enabled: canMatch,
   });
 
   const { data: popularProducts, isLoading: popularLoading } = useQuery({
     queryKey: ['popularProducts'],
     queryFn: getPopularProducts,
-    enabled: filterEmpty,
+    enabled: !canMatch,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -146,7 +165,7 @@ export function SelectionPage() {
   }, []);
 
   const handleCompare = useCallback(() => {
-    message.info('对比功能开发中');
+    setCompareOpen(true);
   }, []);
 
   const sortedResults = (() => {
@@ -163,9 +182,12 @@ export function SelectionPage() {
   const comparingIds = new Set(compareItems.map((item) => item.productId));
 
   return (
-    <div className="flex min-h-[calc(100vh-64px)] bg-slate-50">
+    <div
+      data-testid="selection-page"
+      className="flex min-h-[calc(100vh-4rem-3.5rem)] flex-col bg-slate-50 md:flex-row md:min-h-[calc(100vh-4rem)]"
+    >
       {/* PC: left sidebar filter */}
-      <aside className="hidden w-80 shrink-0 border-r border-slate-200 bg-white p-4 md:block">
+      <aside className="hidden w-80 shrink-0 border-r border-slate-200 bg-white p-4 md:block md:overflow-y-auto">
         <div className="mb-3 flex items-center gap-2 text-base font-semibold text-slate-900">
           <FilterOutlined />
           筛选条件
@@ -182,18 +204,18 @@ export function SelectionPage() {
       {/* Main results area */}
       <main className="flex-1 overflow-y-auto p-4 pb-24">
         {/* Popular mode: hint banner */}
-        {filterEmpty && (
+        {!canMatch && (
           <Alert
             type="info"
             showIcon
             message="补充参数获取精准推荐"
-            description="当前展示热门产品，请在左侧填写电气参数以获取精准匹配结果。"
+            description="当前展示热门产品，请填写输入电压、输出电压和输出电流以获取精准匹配结果。"
             className="!mb-4"
           />
         )}
 
         {/* Query summary (only in match mode) */}
-        {!filterEmpty && (
+        {canMatch && (
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <div className="text-sm text-slate-500">
               {filter.applicationType && (
@@ -230,7 +252,7 @@ export function SelectionPage() {
         )}
 
         {/* Mobile filter button (popular mode) */}
-        {filterEmpty && (
+        {!canMatch && (
           <div className="mb-4 flex justify-end md:hidden">
             <Button icon={<FilterOutlined />} onClick={() => setDrawerOpen(true)}>
               筛选
@@ -239,7 +261,7 @@ export function SelectionPage() {
         )}
 
         {/* Popular products (empty-params mode) */}
-        {filterEmpty && (
+        {!canMatch && (
           <>
             <div className="mb-3 text-sm text-slate-500">
               热门产品
@@ -254,7 +276,7 @@ export function SelectionPage() {
               </div>
             )}
             {popularProducts && popularProducts.length > 0 && (
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 {popularProducts.map((product) => (
                   <SelectionCard key={product.id} product={product} mode="popular" />
                 ))}
@@ -269,7 +291,7 @@ export function SelectionPage() {
         )}
 
         {/* Match results (non-empty params mode) */}
-        {!filterEmpty && (
+        {canMatch && (
           <>
             {isLoading && (
               <div className="space-y-4">
@@ -313,7 +335,7 @@ export function SelectionPage() {
                 <div className="mb-3 text-sm text-slate-500">
                   共 <span className="font-medium text-slate-900">{sortedResults.length}</span> 个匹配结果
                 </div>
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                   {sortedResults.map((result) => (
                     <SelectionCard
                       key={result.productId}
@@ -355,6 +377,70 @@ export function SelectionPage() {
         onRemove={handleCompareRemove}
         onCompare={handleCompare}
       />
+
+      <Modal
+        title="产品参数对比"
+        open={compareOpen}
+        onCancel={() => setCompareOpen(false)}
+        footer={null}
+        width={880}
+      >
+        <div className="overflow-x-auto">
+          <div
+            className="grid min-w-[680px] overflow-hidden rounded-lg border border-slate-200"
+            style={{ gridTemplateColumns: `150px repeat(${Math.max(compareItems.length, 1)}, minmax(160px, 1fr))` }}
+          >
+            <div className="bg-slate-50 px-3 py-3 text-sm font-medium text-slate-500">
+              对比项
+            </div>
+            {compareItems.map((item) => (
+              <div key={item.productId} className="bg-slate-50 px-3 py-3">
+                <div className="font-semibold text-slate-900">{item.model}</div>
+                <div className="mt-1 text-xs text-slate-500">{item.series}</div>
+              </div>
+            ))}
+
+            {[
+              { label: '匹配度', render: (item: MatchResult) => `${item.score}%` },
+              {
+                label: '匹配等级',
+                render: (item: MatchResult) => (
+                  <Tag color={item.matchLevel === 'exact' ? 'green' : item.matchLevel === 'approximate' ? 'gold' : 'default'}>
+                    {item.matchLevel === 'exact' ? '精确匹配' : item.matchLevel === 'approximate' ? '近似匹配' : '备选方案'}
+                  </Tag>
+                ),
+              },
+              { label: '输入范围', render: formatInputRange },
+              { label: '输出能力', render: formatOutput },
+              { label: '能效等级', render: (item: MatchResult) => readParam(item, 'efficiencyLevel') },
+              { label: '认证', render: (item: MatchResult) => readParam(item, 'certifications') },
+              {
+                label: '主要理由',
+                render: (item: MatchResult) => item.reasons.slice(0, 2).join('；') || '-',
+              },
+              {
+                label: '差异点',
+                render: (item: MatchResult) => item.diffs.slice(0, 2).join('；') || '无明显差异',
+              },
+              {
+                label: '资料状态',
+                render: (item: MatchResult) => (item.datasheetMaterialId ? '资料完整' : '资料整理中'),
+              },
+            ].map((row) => (
+              <Fragment key={row.label}>
+                <div key={`${row.label}-label`} className="border-t border-slate-200 px-3 py-3 text-sm font-medium text-slate-500">
+                  {row.label}
+                </div>
+                {compareItems.map((item) => (
+                  <div key={`${row.label}-${item.productId}`} className="border-t border-slate-200 px-3 py-3 text-sm text-slate-700">
+                    {row.render(item)}
+                  </div>
+                ))}
+              </Fragment>
+            ))}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
