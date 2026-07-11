@@ -1,6 +1,7 @@
 import { Button, List, Typography } from 'antd';
 import { PlusOutlined, MessageOutlined } from '@ant-design/icons';
 import type { ChatSession } from '../../types/ai-chat';
+import { useUiContent } from '../../api/ui-content';
 
 const RECOMMENDED_QUESTIONS = [
   'LP3798 的待机功耗是多少？',
@@ -16,7 +17,10 @@ interface SessionListProps {
   onRecommend?: (question: string) => void;
 }
 
-function formatRelativeTime(dateStr: string): string {
+function formatRelativeTime(
+  dateStr: string,
+  text: (key: string, fallback: string) => string,
+): string {
   const date = new Date(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -24,10 +28,10 @@ function formatRelativeTime(dateStr: string): string {
   const diffHours = Math.floor(diffMs / (60 * 60 * 1000));
   const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
 
-  if (diffMinutes < 1) return '刚刚';
-  if (diffMinutes < 60) return `${diffMinutes} 分钟前`;
-  if (diffHours < 24) return `${diffHours} 小时前`;
-  if (diffDays < 7) return `${diffDays} 天前`;
+  if (diffMinutes < 1) return text('ai.time.now', '刚刚');
+  if (diffMinutes < 60) return `${diffMinutes} ${text('ai.time.minutesAgo', '分钟前')}`;
+  if (diffHours < 24) return `${diffHours} ${text('ai.time.hoursAgo', '小时前')}`;
+  if (diffDays < 7) return `${diffDays} ${text('ai.time.daysAgo', '天前')}`;
   return date.toLocaleDateString('zh-CN');
 }
 
@@ -38,11 +42,15 @@ export function SessionList({
   onNew,
   onRecommend,
 }: SessionListProps) {
+  const { text } = useUiContent();
+  const recommendedQuestions = RECOMMENDED_QUESTIONS.map((question, index) =>
+    text(`ai.recommended.${index + 1}`, question),
+  );
   return (
     <div className="flex h-full flex-col">
       <div className="border-b border-slate-200 p-3">
         <Button type="primary" icon={<PlusOutlined />} block onClick={onNew}>
-          新建对话
+          {text('ai.newChat', '新建对话')}
         </Button>
       </div>
 
@@ -50,7 +58,7 @@ export function SessionList({
         <List
           header={
             <Typography.Text className="!px-3 !text-xs !font-medium !text-slate-500">
-              历史会话
+              {text('ai.history.title', '历史会话')}
             </Typography.Text>
           }
           dataSource={sessions}
@@ -73,10 +81,10 @@ export function SessionList({
                       session.id === currentSessionId ? '!font-medium !text-blue-700' : '!text-slate-700'
                     }`}
                   >
-                    {session.title || '新对话'}
+                    {session.title || text('ai.newConversation', '新对话')}
                   </Typography.Text>
                   <Typography.Text className="!block !text-xs !text-slate-400">
-                    {formatRelativeTime(session.updatedAt)}
+                    {formatRelativeTime(session.updatedAt, text)}
                   </Typography.Text>
                 </div>
               </div>
@@ -86,10 +94,10 @@ export function SessionList({
 
         <div className="border-t border-slate-200 p-3">
           <Typography.Text className="!block !pb-2 !text-xs !font-medium !text-slate-500">
-            推荐问题
+            {text('ai.recommended.title', '推荐问题')}
           </Typography.Text>
           <div className="space-y-2">
-            {RECOMMENDED_QUESTIONS.map((question) => (
+            {recommendedQuestions.map((question) => (
               <button
                 key={question}
                 onClick={() => onRecommend?.(question)}

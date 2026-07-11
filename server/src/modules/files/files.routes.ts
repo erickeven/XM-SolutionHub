@@ -8,9 +8,16 @@ const router: Router = Router();
 function getContentType(storageKey: string): string {
   const extension = path.extname(storageKey).toLowerCase();
   if (extension === '.pdf') return 'application/pdf';
+  if (extension === '.doc') return 'application/msword';
   if (extension === '.docx') {
     return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
   }
+  if (extension === '.xls') return 'application/vnd.ms-excel';
+  if (extension === '.xlsx') {
+    return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  }
+  if (extension === '.txt') return 'text/plain; charset=utf-8';
+  if (extension === '.zip') return 'application/zip';
   return 'application/octet-stream';
 }
 

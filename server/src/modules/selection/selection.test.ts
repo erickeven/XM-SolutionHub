@@ -122,6 +122,19 @@ describe('Selection Algorithm', () => {
     expect(results[0]!.reasons).toContain('未指定应用类型，默认满足');
   });
 
+  it('uses standbyPowerMax in W when evaluating standby requirements', () => {
+    const product = makeProduct();
+    product.params.standbyPowerMax = 0.08;
+
+    const results = matchProducts(
+      { ...baseInput, standbyPowerMax: 0.1 },
+      [product],
+    );
+
+    expect(results[0]!.reasons).toContain('待机功耗满足需求');
+    expect(results[0]!.diffs.some((diff) => diff.includes('缺少待机功耗'))).toBe(false);
+  });
+
   it('non-ACTIVE products excluded (filter happens before matching)', () => {
     const products = [
       makeProduct({ id: 'active', status: 'ACTIVE' }),

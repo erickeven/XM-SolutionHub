@@ -8,6 +8,7 @@ import {
 import { Link } from 'react-router-dom';
 import type { MatchResult } from '../../types/selection';
 import type { Product, ProductParams } from '../../types/product';
+import { useUiContent } from '../../api/ui-content';
 
 const MATCH_LEVEL_CONFIG: Record<
   MatchResult['matchLevel'],
@@ -24,7 +25,10 @@ function formatNumber(value: unknown, suffix: string): string {
   return '-';
 }
 
-function buildParamItems(params: ProductParams | Record<string, unknown>) {
+function buildParamItems(
+  params: ProductParams | Record<string, unknown>,
+  text: (key: string, fallback: string) => string,
+) {
   const inputRange =
     params.inputVoltageMin != null && params.inputVoltageMax != null
       ? `${params.inputVoltageMin}-${params.inputVoltageMax}V`
@@ -44,10 +48,10 @@ function buildParamItems(params: ProductParams | Record<string, unknown>) {
     : '-';
 
   return [
-    { label: '输入', value: inputRange },
-    { label: '输出', value: output },
-    { label: '待机', value: standby },
-    { label: '认证', value: certs || '-' },
+    { label: text('selection.card.input', '输入'), value: inputRange },
+    { label: text('selection.card.output', '输出'), value: output },
+    { label: text('selection.card.standby', '待机'), value: standby },
+    { label: text('selection.card.certification', '认证'), value: certs || '-' },
   ];
 }
 
@@ -81,7 +85,8 @@ export function SelectionCard({
 }
 
 function PopularCard({ product }: { product: Product }) {
-  const paramItems = buildParamItems(product.params ?? {});
+  const { text } = useUiContent();
+  const paramItems = buildParamItems(product.params ?? {}, text);
 
   return (
     <Link
@@ -93,7 +98,9 @@ function PopularCard({ product }: { product: Product }) {
           {product.model}
         </span>
         <Tag color={product.datasheetMaterialId ? 'green' : 'gold'} className="!m-0">
-          {product.datasheetMaterialId ? '资料完整' : '整理中'}
+          {product.datasheetMaterialId
+            ? text('product.material.complete', '资料完整')
+            : text('product.material.preparingShort', '整理中')}
         </Tag>
       </div>
       <div className="mt-1 text-xs text-slate-500">{product.series}</div>
@@ -127,9 +134,10 @@ function MatchCard({
   onCompare: (id: string) => void;
   isComparing: boolean;
 }) {
+  const { text } = useUiContent();
   const config = MATCH_LEVEL_CONFIG[result.matchLevel];
   const visibleReasons = result.reasons.slice(0, 3);
-  const paramItems = buildParamItems(result.params ?? {});
+  const paramItems = buildParamItems(result.params ?? {}, text);
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-card transition-colors hover:border-blue-400">
@@ -143,13 +151,13 @@ function MatchCard({
               {result.model}
             </Link>
             <Tag color={config.color} className="!m-0">
-              {config.label}
+              {text(`selection.match.${result.matchLevel}`, config.label)}
             </Tag>
           </div>
           <div className="mt-1 text-xs text-slate-500">{result.series}</div>
         </div>
         <div className="flex flex-shrink-0 items-baseline gap-1 text-right">
-          <span className="text-xs text-slate-500">匹配度</span>
+          <span className="text-xs text-slate-500">{text('selection.compare.score', '匹配度')}</span>
           <span
             className="text-xl font-semibold"
             style={{ color: config.hex }}
@@ -207,22 +215,22 @@ function MatchCard({
         <Space size="small">
           <Link to={`/products/${result.productId}`}>
             <Button size="small" icon={<FileTextOutlined />}>
-              规格书
+              {text('product.datasheet.title', '规格书')}
             </Button>
           </Link>
           <Link to={`/products/${result.productId}`}>
             <Button size="small" icon={<FolderOpenOutlined />}>
-              方案资料
+              {text('main.nav.solutions', '方案资料')}
             </Button>
           </Link>
-          <Tooltip title={isComparing ? '取消对比' : '加入对比'}>
+          <Tooltip title={isComparing ? text('selection.compare.remove', '取消对比') : text('selection.compare.add', '加入对比')}>
             <Button
               size="small"
               type={isComparing ? 'primary' : 'default'}
               icon={isComparing ? <CheckOutlined /> : <PlusOutlined />}
               onClick={() => onCompare(result.productId)}
             >
-              {isComparing ? '已加入' : '对比'}
+              {isComparing ? text('selection.compare.added', '已加入') : text('selection.compare.action', '对比')}
             </Button>
           </Tooltip>
         </Space>

@@ -1,4 +1,20 @@
 import { describe, it, expect, beforeAll } from 'vitest';
+import { createZipArchive } from '../../lib/archive/zip';
+
+const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+function createDocx(paragraphs: string[]): Buffer {
+  const documentXml = [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">',
+    '<w:body>',
+    ...paragraphs.map((paragraph) => `<w:p><w:r><w:t>${paragraph}</w:t></w:r></w:p>`),
+    '</w:body></w:document>',
+  ].join('');
+  return createZipArchive([
+    { filename: 'word/document.xml', data: Buffer.from(documentXml, 'utf8') },
+  ]);
+}
 
 describe.skipIf(!process.env.DATABASE_URL)('Materials Admin API', () => {
   let request: ReturnType<typeof import('supertest')>;
@@ -54,6 +70,30 @@ describe.skipIf(!process.env.DATABASE_URL)('Materials Admin API', () => {
   const minimalPdf = Buffer.from(
     '%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\nxref\n0 3\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \ntrailer\n<< /Size 3 /Root 1 0 R >>\nstartxref\n109\n%%EOF',
   );
+
+  describe('Material field configuration', () => {
+    it('updates a select field to boolean with nullable options and validation', async () => {
+      const token = await loginAdmin();
+      const createRes = await request
+        .post('/api/v1/admin/material-fields')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          fieldKey: `testBooleanField${Date.now()}`,
+          label: 'Test select field',
+          fieldType: 'single_select',
+          optionsJson: [{ label: 'Option', value: 'option' }],
+        });
+      expect(createRes.status).toBe(201);
+
+      const updateRes = await request
+        .patch(`/api/v1/admin/material-fields/${createRes.body.data.id as string}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ fieldType: 'boolean', optionsJson: null, validationJson: null });
+      expect(updateRes.status).toBe(200);
+      expect(updateRes.body.data.fieldType).toBe('boolean');
+      expect(updateRes.body.data.optionsJson).toBeNull();
+    });
+  });
 
   describe('POST /api/v1/admin/materials (upload)', () => {
     it('should upload a PDF and return 201 with DRAFT status', async () => {
@@ -133,7 +173,7 @@ describe.skipIf(!process.env.DATABASE_URL)('Materials Admin API', () => {
   });
 
   describe('GET /api/v1/solutions/:id/materials (public)', () => {
-    it('should return materials with stripped fields for anonymous', async () => {
+    it('should return preview metadata without storage keys for anonymous users', async () => {
       const token = await loginAdmin();
       const solutionId = await createSolution(token);
 
@@ -166,18 +206,17 @@ describe.skipIf(!process.env.DATABASE_URL)('Materials Admin API', () => {
       expect(res.body.data.items.length).toBeGreaterThan(0);
 
       const item = res.body.data.items[0];
-      // Anonymous: only id, title, type, previewPages
+      // Anonymous keeps enough metadata for limited preview, but no storage key.
       expect(item).toHaveProperty('id');
       expect(item).toHaveProperty('title');
       expect(item).toHaveProperty('type');
       expect(item).toHaveProperty('previewPages');
-      // Must NOT have storageKey, pageCount, mimeType
+      expect(item).toHaveProperty('pageCount');
+      expect(item).toHaveProperty('mimeType');
       expect(item).not.toHaveProperty('originalStorageKey');
-      expect(item).not.toHaveProperty('pageCount');
-      expect(item).not.toHaveProperty('mimeType');
     });
 
-    it('should return full fields (except storageKey) for authenticated user', async () => {
+    it('should return preview metadata without storage keys for authenticated users', async () => {
       const token = await loginAdmin();
       const solutionId = await createSolution(token);
 
@@ -268,7 +307,7 @@ describe.skipIf(!process.env.DATABASE_URL)('Materials Admin API', () => {
 
       expect(res.status).toBe(302);
       expect(res.headers.location).toBeDefined();
-      expect(res.headers.location).toMatch(/^https?:\/\//);
+      expect(res.headers.location).toMatch(/^(https?:\/\/|\/api\/v1\/files\/)/);
     });
 
     it('should return 302 redirect for authenticated user', async () => {
@@ -281,7 +320,7 @@ describe.skipIf(!process.env.DATABASE_URL)('Materials Admin API', () => {
 
       expect(res.status).toBe(302);
       expect(res.headers.location).toBeDefined();
-      expect(res.headers.location).toMatch(/^https?:\/\//);
+      expect(res.headers.location).toMatch(/^(https?:\/\/|\/api\/v1\/files\/)/);
     });
 
     it('should return 404 for INACTIVE material', async () => {
@@ -305,6 +344,52 @@ describe.skipIf(!process.env.DATABASE_URL)('Materials Admin API', () => {
       const res = await request.get(`/api/v1/materials/${materialId}/preview`);
       expect(res.status).toBe(404);
     });
+
+    it('returns a limited DOCX preview anonymously and full content after login', async () => {
+      const token = await loginAdmin();
+      const solutionId = await createSolution(token);
+      const document = createDocx(
+        Array.from({ length: 160 }, (_, index) => `API paragraph ${index + 1}`),
+      );
+      const uploadRes = await request
+        .post('/api/v1/admin/materials')
+        .set('Authorization', `Bearer ${token}`)
+        .field('type', 'other')
+        .field('title', `Office Preview ${Date.now()}`)
+        .field('solutionId', solutionId)
+        .attach('file', document, { filename: 'office-preview.docx', contentType: DOCX_MIME });
+      expect(uploadRes.status).toBe(201);
+      const materialId = uploadRes.body.data.id as string;
+      await request
+        .patch(`/api/v1/admin/materials/${materialId}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ status: 'ACTIVE' });
+
+      const anonymousPreviewRes = await request.get(
+        `/api/v1/materials/${materialId}/preview-url`,
+      );
+      expect(anonymousPreviewRes.status).toBe(200);
+      expect(anonymousPreviewRes.body.data.isLimitedPreview).toBe(true);
+      const anonymousFileRes = await request.get(anonymousPreviewRes.body.data.url as string);
+      expect(anonymousFileRes.text).toContain('API paragraph 120');
+      expect(anonymousFileRes.text).not.toContain('API paragraph 121');
+
+      const invalidTokenRes = await request
+        .get(`/api/v1/materials/${materialId}/preview-url`)
+        .set('Authorization', 'Bearer expired-or-invalid');
+      expect(invalidTokenRes.status).toBe(401);
+      expect(invalidTokenRes.body.code).toBe(2001);
+
+      const authenticatedPreviewRes = await request
+        .get(`/api/v1/materials/${materialId}/preview-url`)
+        .set('Authorization', `Bearer ${token}`);
+      expect(authenticatedPreviewRes.status).toBe(200);
+      expect(authenticatedPreviewRes.body.data.isLimitedPreview).toBe(false);
+      const authenticatedFileRes = await request.get(
+        authenticatedPreviewRes.body.data.url as string,
+      );
+      expect(authenticatedFileRes.text).toContain('API paragraph 160');
+    });
   });
 
   describe('POST /api/v1/materials/:id/download', () => {
@@ -327,7 +412,7 @@ describe.skipIf(!process.env.DATABASE_URL)('Materials Admin API', () => {
       expect(res.status).toBe(200);
       expect(res.body.code).toBe(0);
       expect(res.body.data).toHaveProperty('url');
-      expect(res.body.data.expiresInSeconds).toBe(600);
+      expect(res.body.data.expiresInSeconds).toBe(1800);
     });
   });
 });

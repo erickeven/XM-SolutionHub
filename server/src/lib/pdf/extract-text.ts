@@ -24,7 +24,7 @@ export async function extractTextFromPdf(buffer: Buffer): Promise<PdfExtractResu
   const data = new Uint8Array(buffer);
   const loadingTask = pdfjs.getDocument({
     data,
-    // ponytail: disable features that require browser APIs
+    // Disable PDF.js features that require browser APIs.
     isEvalSupported: false,
     useSystemFonts: false,
   });

@@ -96,7 +96,7 @@ export function CreateKnowledgeModal({ open, onClose }: CreateKnowledgeModalProp
   const uploadProps: UploadProps = {
     name: 'file',
     multiple: false,
-    accept: '.pdf,.docx',
+    accept: '.pdf,.doc,.docx,.xls,.xlsx',
     beforeUpload: () => false,
   };
 

@@ -8,7 +8,7 @@
 - 选型接口以四个核心电气参数作为精准匹配条件，应用类型和认证为可选加权项；参数不完整时前端展示热门产品并提示补充参数。
 - 产品对比已从占位提示改为最多 3 个型号的参数对比弹窗。
 - 密码重置链接使用 `WEB_ORIGIN` 生成，避免生产环境硬编码到本地地址。
-- 本地基线已通过 lint、前后端 typecheck、前后端 Vitest 和生产构建；数据库依赖的集成测试仍需在 PostgreSQL/Redis/MinIO 启动后执行。
+- 本地基线已通过 lint、前后端 typecheck、前后端 Vitest 和生产构建；数据库依赖的集成测试在部署阶段使用隔离测试库执行。
 
 ## 技术栈
 
@@ -46,8 +46,7 @@
 │   │   └── app.ts
 │   ├── prisma/
 │   │   ├── schema.prisma
-│   │   ├── migrations/
-│   │   └── seed.ts
+│   │   └── migrations/
 │   ├── Dockerfile
 │   └── package.json
 ├── nginx/               # Nginx 配置 + 多阶段构建
@@ -80,7 +79,7 @@ pnpm --filter server prisma:migrate:dev
 # 5. 初始化管理员（不清业务数据）
 pnpm --filter server admin:init
 
-# 可选：演示数据（会重置示例产品、资料、知识库等数据）
+# 可选：兼容 Prisma seed 命令，当前等同于 admin:init，不写演示业务数据
 pnpm --filter server prisma:seed
 
 # 6. 启动后端（终端 1）
@@ -127,13 +126,13 @@ docker compose -f docker-compose.prod.yml up -d
 
 ### 3. 初始化数据库
 
-`docker-compose.prod.yml` 会先运行一次性 `migrate` 服务，再运行 `init-admin` 服务初始化管理员账号；两者成功后才启动 API 和 Worker。首次部署如需演示种子数据，再执行：
+`docker-compose.prod.yml` 会先运行一次性 `migrate` 服务，再运行 `init-admin` 服务初始化管理员账号；两者成功后才启动 API 和 Worker。当前开发阶段不再提供演示种子数据，产品、方案和资料通过后台录入。
 
 ```bash
-docker compose -f docker-compose.prod.yml run --rm api pnpm --filter @xm-solutionhub/server prisma:seed
+docker compose -f docker-compose.prod.yml run --rm api pnpm --filter @xm-solutionhub/server admin:init
 ```
 
-> 注意：`prisma:seed` 会重置演示业务数据，不要在已有生产数据上执行。生产环境容器使用 `postgres`、`redis`、`minio` 服务名互联，`docker-compose.prod.yml` 已覆盖这三项内部地址。不要在浏览器端暴露 MinIO 管理端口。
+> 注意：`admin:init` 和当前 `prisma:seed` 只初始化管理员、角色、权限和系统字段配置，不清空业务数据，也不写入演示产品、方案或资料。生产环境容器使用 `postgres`、`redis`、`minio` 服务名互联，`docker-compose.prod.yml` 已覆盖这三项内部地址。不要在浏览器端暴露 MinIO 管理端口。
 
 ### 4. 验证服务
 

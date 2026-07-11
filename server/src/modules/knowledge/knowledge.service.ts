@@ -4,6 +4,11 @@ import redis from '../../lib/redis';
 import prisma from '../../lib/prisma';
 import { getStorageAdapter } from '../../lib/storage';
 import { getPdfPageCount, extractFirstNPages } from '../../lib/pdf/derive';
+import {
+  createOfficeTextPreview,
+  getLimitedOfficePreviewStorageKey,
+  isOfficeMime,
+} from '../../lib/office/preview';
 import { logFromContext } from '../audit/audit.service';
 import * as repository from './knowledge.repository';
 import { searchKnowledgeWithDegradation } from './knowledge.search';
@@ -95,7 +100,6 @@ export async function createDoc(
       });
       uploadedKeys.push(storageKey);
 
-      // Generate PDF preview if applicable
       if (data.mimeType === 'application/pdf') {
         pageCount = await getPdfPageCount(data.fileBuffer!);
         previewStorageKey = `previews/${storageKey}`;
@@ -106,6 +110,31 @@ export async function createDoc(
           contentType: 'application/pdf',
         });
         uploadedKeys.push(previewStorageKey);
+      } else if (isOfficeMime(data.mimeType!)) {
+        previewStorageKey = `previews/${storageKey}.txt`;
+        const fullPreviewBuffer = createOfficeTextPreview(
+          data.fileBuffer!,
+          data.mimeType!,
+          data.originalName!,
+        );
+        await adapter.putObject({
+          storageKey: previewStorageKey,
+          body: fullPreviewBuffer,
+          contentType: 'text/plain; charset=utf-8',
+        });
+        uploadedKeys.push(previewStorageKey);
+        const limitedPreviewStorageKey = getLimitedOfficePreviewStorageKey(previewStorageKey);
+        await adapter.putObject({
+          storageKey: limitedPreviewStorageKey,
+          body: createOfficeTextPreview(
+            data.fileBuffer!,
+            data.mimeType!,
+            data.originalName!,
+            true,
+          ),
+          contentType: 'text/plain; charset=utf-8',
+        });
+        uploadedKeys.push(limitedPreviewStorageKey);
       }
 
       // Create Material record

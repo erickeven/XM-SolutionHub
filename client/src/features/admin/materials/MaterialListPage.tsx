@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Table,
   Button,
@@ -27,8 +27,8 @@ import {
   UploadOutlined,
   FilePdfOutlined,
   FileWordOutlined,
+  FileExcelOutlined,
   FileOutlined,
-  DatabaseOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -47,6 +47,8 @@ import type {
 import { MaterialUploadModal } from './MaterialUploadModal';
 import { MaterialEditModal } from './MaterialEditModal';
 import { ShortId } from '../../../components/ShortId';
+import { useFieldConfigs } from '../../../api/admin-material-fields';
+import type { FieldConfigItem } from '../../../api/admin-material-fields';
 
 const { useBreakpoint } = Grid;
 const { Text } = Typography;
@@ -76,13 +78,37 @@ const TYPE_FILTER_OPTIONS: { label: string; value: string }[] = [
   { label: '全部', value: '' },
   ...Object.entries(TYPE_LABEL).map(([v, l]) => ({ label: l, value: v })),
 ];
+const FIXED_FIELD_KEYS = new Set(['file', 'title', 'type', 'status', 'solutionId', 'productId']);
 
 function FileTypeIcon({ mimeType }: { mimeType?: string }) {
   if (!mimeType) return <FileOutlined />;
   if (mimeType.includes('pdf')) return <FilePdfOutlined style={{ color: '#DC2626' }} />;
   if (mimeType.includes('word') || mimeType.includes('docx'))
     return <FileWordOutlined style={{ color: '#2563EB' }} />;
+  if (mimeType.includes('excel') || mimeType.includes('spreadsheetml'))
+    return <FileExcelOutlined style={{ color: '#16A34A' }} />;
   return <FileOutlined />;
+}
+
+function formatFieldValue(value: unknown, field?: FieldConfigItem): string {
+  if (value == null || value === '') return '—';
+  if (field?.fieldType === 'boolean') return value ? '是' : '否';
+
+  const optionLabel = (raw: unknown) => {
+    const matched = field?.optionsJson?.find((option) => option.value === String(raw));
+    return matched?.label ?? String(raw);
+  };
+
+  if (Array.isArray(value)) {
+    const labels = value.filter((item) => item != null && item !== '').map(optionLabel);
+    return labels.length > 0 ? labels.join('、') : '—';
+  }
+
+  if (field?.fieldType === 'single_select' || field?.fieldType === 'multi_select') {
+    return optionLabel(value);
+  }
+
+  return String(value);
 }
 
 export function MaterialListPage() {
@@ -100,6 +126,19 @@ export function MaterialListPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const { data: fieldConfigsRaw } = useFieldConfigs(true);
+  const fieldLabelMap = useMemo(
+    () => new Map((fieldConfigsRaw ?? []).map((field) => [field.fieldKey, field.label])),
+    [fieldConfigsRaw],
+  );
+  const dynamicFields = useMemo(
+    () =>
+      [...(fieldConfigsRaw ?? [])]
+        .filter((field) => !FIXED_FIELD_KEYS.has(field.fieldKey))
+        .sort((a, b) => a.sortOrder - b.sortOrder),
+    [fieldConfigsRaw],
+  );
+  const fieldLabel = (fieldKey: string, fallback: string) => fieldLabelMap.get(fieldKey) ?? fallback;
 
   const { data: solutions } = useQuery({
     queryKey: ['admin-solutions-short'],
@@ -232,9 +271,24 @@ export function MaterialListPage() {
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
+  const dynamicColumns: ColumnsType<AdminMaterialListItem> = dynamicFields.map((field) => ({
+    title: field.label,
+    key: `metadata.${field.fieldKey}`,
+    width: 140,
+    ellipsis: true,
+    responsive: ['lg'],
+    render: (_: unknown, record) => (
+      <Tooltip title={formatFieldValue(record.metadata?.[field.fieldKey], field)}>
+        <span className="text-slate-600">
+          {formatFieldValue(record.metadata?.[field.fieldKey], field)}
+        </span>
+      </Tooltip>
+    ),
+  }));
+
   const columns: ColumnsType<AdminMaterialListItem> = [
     {
-      title: '标题',
+      title: fieldLabel('title', '标题'),
       dataIndex: 'title',
       key: 'title',
       width: 260,
@@ -254,7 +308,7 @@ export function MaterialListPage() {
       render: (id: string) => <ShortId id={id} />,
     },
     {
-      title: '类型',
+      title: fieldLabel('type', '类型'),
       dataIndex: 'type',
       key: 'type',
       width: 110,
@@ -269,8 +323,16 @@ export function MaterialListPage() {
       ellipsis: true,
       render: (_: unknown, r) => (
         <div className="text-xs">
-          {r.solutionName && <div className="text-slate-700">方案：{r.solutionName}</div>}
-          {r.productModel && <div className="text-slate-500">产品：{r.productModel}</div>}
+          {r.solutionName && (
+            <div className="text-slate-700">
+              {fieldLabel('solutionId', '方案')}：{r.solutionName}
+            </div>
+          )}
+          {r.productModel && (
+            <div className="text-slate-500">
+              {fieldLabel('productId', '产品')}：{r.productModel}
+            </div>
+          )}
           {!r.solutionName && !r.productModel && <Text type="secondary">—</Text>}
         </div>
       ),
@@ -287,40 +349,9 @@ export function MaterialListPage() {
           <Text type="secondary">—</Text>
         ),
     },
+    ...dynamicColumns,
     {
-      title: '元数据',
-      key: 'metadata',
-      width: 140,
-      responsive: ['lg'],
-      render: (_: unknown, r) => {
-        if (!r.metadata || Object.keys(r.metadata).length === 0) {
-          return <Text type="secondary">—</Text>;
-        }
-        const entries = Object.entries(r.metadata).filter(([, v]) => v != null && v !== '');
-        if (entries.length === 0) return <Text type="secondary">—</Text>;
-        return (
-          <Tooltip
-            title={
-              <div className="space-y-1">
-                {entries.map(([k, v]) => (
-                  <div key={k} className="text-xs">
-                    <span className="font-medium">{k}: </span>
-                    <span>{Array.isArray(v) ? v.join(', ') : String(v)}</span>
-                  </div>
-                ))}
-              </div>
-            }
-          >
-            <span className="cursor-help text-xs text-slate-500">
-              <DatabaseOutlined className="mr-1" />
-              {entries.length} 项
-            </span>
-          </Tooltip>
-        );
-      },
-    },
-    {
-      title: '状态',
+      title: fieldLabel('status', '状态'),
       dataIndex: 'status',
       key: 'status',
       width: 90,
@@ -501,7 +532,7 @@ export function MaterialListPage() {
             dataSource={items}
             rowKey="id"
             loading={isLoading}
-            scroll={{ x: 1360 }}
+            scroll={{ x: Math.max(1360, 1220 + dynamicColumns.length * 140) }}
             pagination={{
               current: page,
               pageSize,
@@ -551,6 +582,18 @@ export function MaterialListPage() {
                     {item.pageCount != null && <span>{item.pageCount} 页</span>}
                     <span>{new Date(item.createdAt).toLocaleDateString('zh-CN')}</span>
                   </div>
+                  {dynamicFields.length > 0 && (
+                    <div className="grid grid-cols-1 gap-1 rounded bg-slate-50 p-2 text-xs text-slate-600">
+                      {dynamicFields.map((field) => (
+                        <div key={field.id} className="flex justify-between gap-3">
+                          <span className="shrink-0 text-slate-400">{field.label}</span>
+                          <span className="min-w-0 truncate text-right">
+                            {formatFieldValue(item.metadata?.[field.fieldKey], field)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <div className="flex flex-wrap gap-2 pt-1">
                     <Button size="small" icon={<EyeOutlined />} onClick={() => handlePreview(item)}>
                       预览

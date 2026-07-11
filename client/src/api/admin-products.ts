@@ -53,6 +53,7 @@ export interface CreateProductInput {
   series: string;
   params: ProductParamsInput;
   advantages: string[];
+  datasheetMaterialId?: string | null;
   status?: ProductStatus;
 }
 
@@ -61,6 +62,7 @@ export interface UpdateProductInput {
   series?: string;
   params?: ProductParamsInput;
   advantages?: string[];
+  datasheetMaterialId?: string | null;
   status?: ProductStatus;
 }
 

@@ -36,14 +36,18 @@ function toPublicListItem(p: {
   params: unknown;
   advantages: string[];
   datasheetMaterialId: string | null;
-}): PublicProductListItem {
+}, activeDatasheetIds?: Set<string>): PublicProductListItem {
+  const datasheetMaterialId =
+    p.datasheetMaterialId && activeDatasheetIds?.has(p.datasheetMaterialId)
+      ? p.datasheetMaterialId
+      : null;
   return {
     id: p.id,
     model: p.model,
     series: p.series,
     params: p.params,
     advantages: p.advantages,
-    datasheetMaterialId: p.datasheetMaterialId,
+    datasheetMaterialId,
   };
 }
 
@@ -55,9 +59,12 @@ export async function publicListHandler(
   try {
     const query = publicProductQuerySchema.parse(req.query);
     const { items, total } = await repository.findActiveProductsPaginated(query);
+    const activeDatasheetIds = await repository.findActiveDatasheetIds(
+      items.map((item) => item.datasheetMaterialId).filter((id): id is string => Boolean(id)),
+    );
     res.status(200).json(
       successResponse({
-        items: items.map(toPublicListItem),
+        items: items.map((item) => toPublicListItem(item, activeDatasheetIds)),
         total,
         page: query.page,
         limit: query.limit,
@@ -81,6 +88,9 @@ export async function publicGetByIdHandler(
     if (!product) {
       throw new AppError(3001, 'Product not found', 404);
     }
+    const activeDatasheetIds = await repository.findActiveDatasheetIds(
+      product.datasheetMaterialId ? [product.datasheetMaterialId] : [],
+    );
 
     const detail: PublicProductDetail = {
       id: product.id,
@@ -88,7 +98,10 @@ export async function publicGetByIdHandler(
       series: product.series,
       params: product.params,
       advantages: product.advantages,
-      datasheetMaterialId: product.datasheetMaterialId,
+      datasheetMaterialId:
+        product.datasheetMaterialId && activeDatasheetIds.has(product.datasheetMaterialId)
+          ? product.datasheetMaterialId
+          : null,
       solutions: product.productSolutions.map((ps) => ({
         id: ps.solution.id,
         name: ps.solution.name,

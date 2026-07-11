@@ -16,7 +16,7 @@ const router: Router = Router();
 router.post('/register', registerHandler);
 router.post('/login', loginHandler);
 router.post('/refresh', csrfMiddleware, refreshHandler);
-router.post('/logout', authMiddleware, csrfMiddleware, logoutHandler);
+router.post('/logout', csrfMiddleware, logoutHandler);
 router.get('/me', authMiddleware, meHandler);
 router.post('/password-reset', passwordResetHandler);
 router.post('/password-reset/confirm', passwordResetConfirmHandler);

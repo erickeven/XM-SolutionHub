@@ -46,9 +46,10 @@ export async function findById(id: string) {
         orderBy: { createdAt: 'desc' },
       },
       productSolutions: {
+        where: { product: { status: 'ACTIVE' } },
         include: {
           product: {
-            select: { id: true, model: true, series: true },
+            select: { id: true, model: true, series: true, status: true },
           },
         },
       },

@@ -222,7 +222,7 @@ describe.skipIf(!process.env.DATABASE_URL)('Security Audit', () => {
       });
     });
 
-    it('AUDITOR can assign leads (POST /:id/assign) → 200', async () => {
+    it('AUDITOR cannot assign leads (POST /:id/assign) → 403', async () => {
       const prisma = (await import('../lib/prisma')).default;
 
       const auditor = await prisma.user.create({
@@ -252,9 +252,8 @@ describe.skipIf(!process.env.DATABASE_URL)('Security Audit', () => {
         .set('Authorization', `Bearer ${token}`)
         .send({ staffId: staff.id });
 
-      expect(res.status).toBe(200);
-      expect(res.body.code).toBe(0);
-      expect(res.body.data.assignedTo).toBe(staff.id);
+      expect(res.status).toBe(403);
+      expect(res.body.code).toBe(2003);
 
       await prisma.leadEvent.deleteMany({ where: { leadId: lead.id } });
       await prisma.lead.delete({ where: { id: lead.id } });
@@ -428,7 +427,7 @@ describe.skipIf(!process.env.DATABASE_URL)('Security Audit', () => {
       // rate-limited, we verify the rateLimit middleware works elsewhere.
       // Since /api/v1/ai/chat has no rate limiter attached, we skip this
       // specific assertion and verify rate limiting on a rate-limited route.
-      // ponytail: ai/chat route has no rate limiter in current wiring; test auth limiter instead
+      // The AI chat route has no dedicated limiter in this wiring; test the auth limiter instead.
 
       // Verify authLimiter returns 429 (already proven above, but test independently)
       const email2 = `sec-ai-ratelimit2-${Date.now()}@example.com`;
@@ -583,7 +582,7 @@ describe.skipIf(!process.env.DATABASE_URL)('Security Audit', () => {
       });
 
       if (!material) {
-        // ponytail: no active material in DB, skip this test
+        // No active material exists in this fixture, so this assertion is not applicable.
         await prisma.user.delete({ where: { id: user.id } });
         return;
       }
@@ -596,7 +595,7 @@ describe.skipIf(!process.env.DATABASE_URL)('Security Audit', () => {
       expect(res.body.code).toBe(0);
       // Should return a signed URL, not a permanent URL
       expect(res.body.data.url).toBeTruthy();
-      expect(res.body.data.expiresInSeconds).toBeLessThanOrEqual(600);
+      expect(res.body.data.expiresInSeconds).toBeLessThanOrEqual(1800);
 
       await prisma.user.delete({ where: { id: user.id } });
     });
@@ -629,7 +628,7 @@ describe.skipIf(!process.env.DATABASE_URL)('Security Audit', () => {
 
       expect(res.status).toBe(200);
       // Signed URL must have expiry, not a permanent path
-      expect(res.body.data.expiresInSeconds).toBeLessThanOrEqual(600);
+      expect(res.body.data.expiresInSeconds).toBeLessThanOrEqual(1800);
       expect(res.body.data.expiresInSeconds).toBeGreaterThan(0);
 
       await prisma.user.delete({ where: { id: user.id } });

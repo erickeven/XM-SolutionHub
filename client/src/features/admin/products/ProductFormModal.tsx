@@ -17,6 +17,7 @@ import {
   getProduct,
 } from '../../../api/admin-products';
 import type { ProductStatus } from '../../../api/admin-products';
+import { listMaterials } from '../../../api/admin-materials';
 import { useFieldConfigs } from '../../../api/admin-product-fields';
 import type { FieldConfigItem } from '../../../api/admin-product-fields';
 
@@ -97,6 +98,30 @@ export function ProductFormModal({
   });
 
   const { data: fieldConfigsRaw, isLoading: fieldsLoading } = useFieldConfigs(true);
+  const { data: datasheetData, isLoading: datasheetsLoading } = useQuery({
+    queryKey: ['admin-product-datasheets'],
+    queryFn: () =>
+      listMaterials({
+        page: 1,
+        pageSize: 100,
+        type: 'datasheet',
+      }),
+    enabled: open,
+    staleTime: 60 * 1000,
+  });
+
+  const datasheetOptions = useMemo(
+    () =>
+      (datasheetData?.items ?? [])
+        .filter((item) => item.mimeType === 'application/pdf')
+        .filter((item) => item.status !== 'INACTIVE')
+        .filter((item) => !item.productId || item.productId === productId)
+        .map((item) => ({
+          label: `${item.title}${item.productModel ? ` · ${item.productModel}` : ''}${item.status === 'ACTIVE' ? '' : ' · 未上架'}`,
+          value: item.id,
+        })),
+    [datasheetData, productId],
+  );
   // Sort by sortOrder; exclude fixed fields (model/series/status/advantages) rendered as dedicated form items
   const FIXED_FIELD_KEYS = new Set(['model', 'series', 'status', 'advantages']);
   const fieldConfigs = useMemo(
@@ -125,6 +150,7 @@ export function ProductFormModal({
         model: existing.model,
         series: existing.series,
         status: existing.status,
+        datasheetMaterialId: existing.datasheetMaterialId ?? undefined,
         advantages: (existing.advantages ?? []).join(', '),
         ...paramValues,
       });
@@ -144,6 +170,8 @@ export function ProductFormModal({
     onSuccess: () => {
       message.success('产品创建成功');
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-materials'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-product-datasheets'] });
       onClose();
     },
     onError: (err: unknown) => {
@@ -158,6 +186,8 @@ export function ProductFormModal({
       message.success('产品更新成功');
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       queryClient.invalidateQueries({ queryKey: ['admin-product'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-materials'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-product-datasheets'] });
       onClose();
     },
     onError: (err: unknown) => {
@@ -185,6 +215,7 @@ export function ProductFormModal({
         model: values.model,
         series: values.series,
         status: values.status,
+        datasheetMaterialId: values.datasheetMaterialId ?? null,
         params,
         advantages,
       };
@@ -199,7 +230,7 @@ export function ProductFormModal({
   };
 
   const isLoading = createMutation.isPending || updateMutation.isPending;
-  const contentLoading = (mode === 'edit' && detailLoading) || fieldsLoading;
+  const contentLoading = (mode === 'edit' && detailLoading) || fieldsLoading || datasheetsLoading;
 
   return (
     <Modal
@@ -247,6 +278,16 @@ export function ProductFormModal({
               <Radio value="ACTIVE">上架</Radio>
               <Radio value="INACTIVE">下架</Radio>
             </Radio.Group>
+          </Form.Item>
+
+          <Form.Item label="产品规格书（PDF）" name="datasheetMaterialId">
+            <Select
+              options={datasheetOptions}
+              placeholder="选择产品规格书 PDF"
+              allowClear
+              showSearch
+              optionFilterProp="label"
+            />
           </Form.Item>
 
           {fieldConfigs && fieldConfigs.length > 0 && (

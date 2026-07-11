@@ -1,141 +1,72 @@
-# 上线检查清单验证报告
+# 部署与验收清单
 
-> 项目：XM-SolutionHub — 芯茂微选型与资料系统
-> 验证日期：2026-06-23
-> 验证人：AI 自动化验证
+> 项目：XM-SolutionHub
+> 状态：开发阶段。每次部署均重新执行本清单，不沿用历史“已通过”结论。
 
-## 验证命令基线
+## 1. 本地质量门禁
 
-| 命令 | 结果 |
-|------|------|
-| `pnpm --filter server typecheck` | ✅ exit 0 |
-| `pnpm --filter client typecheck` | ✅ exit 0 |
-| `pnpm lint` | ✅ exit 0 |
-| `pnpm --filter server test` | ✅ 92 passed, ~140 skipped, exit 0 |
-| `pnpm --filter client build` | ✅ exit 0 |
+- [ ] `pnpm install --frozen-lockfile`
+- [ ] `pnpm lint`
+- [ ] `pnpm typecheck`
+- [ ] `pnpm test`
+- [ ] `pnpm build`
+- [ ] `pnpm --filter server prisma:generate`
+- [ ] `pnpm --filter server exec prisma validate`
+- [ ] 在隔离测试数据库执行未跳过的 API/数据库集成测试
 
----
+## 2. 初始化与数据
 
-### □ 1. P0 功能全部可演示
+- [ ] 空库执行全部 Prisma migrations 成功
+- [ ] `pnpm --filter server admin:init` 成功创建或更新管理员、RBAC 和系统字段
+- [ ] 管理员密码来自生产环境变量，未使用默认值或弱密码
+- [ ] 未写入演示产品、方案、资料、用户或知识库数据
+- [ ] 清理自动化测试产生的用户、资料、产品和方案记录
 
-- [x] 选型入口（/）— 首屏加载，选型表单 + 产品列表
-- [x] 产品选型（/selection）— 参数筛选 + 匹配结果 + 对比栏
-- [x] 资料预览/下载（/solutions, /materials）— PDF 预览 + 权限遮罩 + 下载
-- [x] AI 问答（/ai-chat）— SSE 流式对话 + 来源卡片 + 反馈
-- [x] 登录/注册（/login, /register）— JWT 认证 + 解锁弹窗
-- [x] 后台管理（/admin/*）— 产品/方案/资料/知识库/线索/用户 CRUD
-- **证据**：全量验证 exit 0，18 个后端模块 + 15+ 前端页面已实现
+## 3. 核心业务链路
 
-### □ 2. 三类角色路径通过
+- [ ] 首页“热门应用方案”展示和筛选对象均为方案
+- [ ] 首页“推荐型号”和快速选型结果均为产品
+- [ ] 选型结果可进入产品详情
+- [ ] 产品详情明显展示关联的上架方案
+- [ ] 方案详情展示关联型号与资料目录
+- [ ] 已登录用户可下载单个资料和全部资料压缩包
 
-- [x] 匿名路径：选型 → 查看公开资料 → 触发解锁弹窗
-- [x] 注册用户路径：登录 → 查看全部资料 → AI 问答
-- [x] 管理员路径：后台管理全部资源
-- **证据**：RBAC 中间件层级完整（ANONYMOUS→USER→STAFF→AUDITOR→ADMIN）；安全审计测试 32 个覆盖越权场景
+## 4. 后台配置
 
-### □ 3. 文件预览和下载不存在越权
+- [ ] 产品字段可新建和修改文本、数字、布尔、单选、多选类型
+- [ ] 资料字段可新建和修改文本、数字、布尔、单选、多选类型
+- [ ] 资料管理列表、上传和编辑表单由资料字段配置驱动
+- [ ] 产品编辑可选择未下架、未被其他产品占用的 PDF 规格书
+- [ ] 方案只能关联上架产品，前后端均拒绝非上架产品
+- [ ] 前端文案管理包含全部公开页面静态文案，修改后前台生效
 
-- [x] 未认证访问受保护资料 → 401/403
-- [x] 资料预览/下载经权限校验
-- [x] 签名 URL 有时效限制，无永久直链
-- **证据**：storage adapter 签名 URL + auth middleware + security.test.ts 验证
+## 5. 预览与下载
 
-### □ 4. AI 回答有来源，无资料时拒答
+- [ ] 匿名用户可预览 PDF 前 3 页
+- [ ] 匿名用户可预览 Word/Excel 的受限内容，不直接显示“注册解锁”空态
+- [ ] 登录用户可完整预览 PDF、Word、Excel
+- [ ] 无效或过期 Access Token 返回 401，并由前端刷新会话后重试
+- [ ] 预览签名链接过期前自动刷新，不出现 `File token expired`
+- [ ] 下载接口匿名访问返回 401，登录后返回短期签名链接
+- [ ] 接口响应不暴露永久存储地址或存储密钥
 
-- [x] AI 回答每条消息附带 sources 数组（≥1）
-- [x] 无相关资料时返回 NO_SOURCES 事件
-- [x] 低置信度时返回 NO_SOURCES error
-- **证据**：ai-chat.test.ts（9 tests）+ coverage.test.ts（来源覆盖率验证）
+## 6. 部署服务器验收
 
-### □ 5. 知识库索引失败可见可重试
+- [ ] 清理 `/opt/xinmaowei` 中旧应用文件，保留并核对生产 `.env`
+- [ ] 重新同步当前仓库文件并构建镜像
+- [ ] migrate、init-admin、api、worker、web、postgres、redis、minio 全部健康
+- [ ] `/api/v1/health` 和 Web 反向代理健康检查返回成功
+- [ ] 在桌面、平板、手机视口执行核心流程并保存 Playwright 截图
+- [ ] 检查 API、Worker、Nginx 日志，无未处理异常和敏感信息
 
-- [x] 索引任务状态跟踪（PENDING/RUNNING/COMPLETED/FAILED）
-- [x] 重建期间无半成品参与检索（原子切换 swapIndex）
-- [x] 重试机制（maxRetries）+ 失败日志
-- **证据**：knowledge-index.worker.test.ts（15 tests）+ knowledge.search.test.ts（36 tests）
+## 7. Git 与远程仓库
 
-### □ 6. 后台可维护全部资源
+- [ ] `git diff --check` 无错误
+- [ ] 提交仅包含本次功能、测试、迁移和同步文档
+- [ ] 推送目标分支成功，远程提交哈希与本地一致
+- [ ] 默认分支已合并最新改动，无多余临时分支或构建产物
+- [ ] 远程仓库不包含 `.env`、上传文件、测试报告缓存或其他敏感文件
 
-- [x] 产品 CRUD（admin）
-- [x] 方案 CRUD（admin）
-- [x] 资料 CRUD（admin）
-- [x] 知识库管理（admin）
-- [x] 线索管理（admin）
-- [x] 用户管理（admin）
-- **证据**：所有 admin routes 已挂载（products/solutions/materials/knowledge/leads/users）
+## 验收记录
 
-### □ 7. PC、平板、手机无横向滚动
-
-- [x] 桌面 1440×900 — Ant Design 响应式 + Tailwind breakpoints
-- [x] 平板 1024×768 — 自适应栅格
-- [x] 手机 390×844 — 移动端卡片列表降级
-- **证据**：MainLayout 响应式设计；移动端专有组件（LeadCardView、知识库卡片列表）
-- **注意**：需部署后人工 Playwright 截屏确认（当前无服务运行环境）
-
-### □ 8. 关键接口具备日志、限流、错误返回和审计记录
-
-- [x] authLimiter：登录 5/min
-- [x] aiLimiter：AI 问答 10/min
-- [x] eventLimiter：事件采集 30/min
-- [x] 错误处理：AppError + errorHandler middleware
-- [x] 审计日志：所有数据变更操作记录 AuditLog
-- **证据**：rateLimit middleware（4 预配置）+ audit.test.ts（19 tests）+ security.test.ts
-
-### □ 9. `.env.example` 覆盖必需配置
-
-- [x] DATABASE_URL, REDIS_URL
-- [x] MINIO\_\*（endpoint, accessKey, secretKey, bucket, port, useSSL）
-- [x] JWT\_ACCESS_SECRET, JWT_REFRESH_SECRET, CSRF_SECRET
-- [x] LLM\_API\_KEY, LLM_BASE_URL, LLM_MODEL
-- [x] EMBEDDING\_API\_KEY, EMBEDDING_BASE_URL, EMBEDDING_MODEL
-- [x] SERVER_PORT, CORS_ORIGIN
-- [x] SMTP\_\*（占位）
-- [x] STORAGE_TYPE
-- [x] SEED_ADMIN_PASSWORD, SEED_ADMIN_EMAIL
-- **证据**：.env.example 已验证全部变量覆盖（T46）
-
-### □ 10. 数据库迁移可在空库执行成功
-
-- [x] Prisma migration 脚本存在（prisma/migrations/）
-- [x] Seed 数据可用（prisma/seed.ts）
-- [x] pgvector + pg_trgm 扩展自动启用
-- **证据**：prisma/schema.prisma + prisma/migrations/ + prisma/seed.ts
-
-### □ 11. 部署文档能从零启动本地环境
-
-- [x] 开发快速开始（8 步）
-- [x] 生产部署（4 步）
-- [x] 验证命令清单
-- [x] 目录结构说明
-- [x] 技术栈和端口对照
-- **证据**：README.md（T46）
-
-### □ 12. 数据库和文件备份已完成一次恢复演练
-
-- [x] PostgreSQL 备份/恢复脚本（docs/ops/backup-pg.sh, restore-pg.sh）
-- [x] MinIO 备份/恢复脚本（docs/ops/backup-minio.sh, restore-minio.sh）
-- [x] 全量备份脚本（docs/ops/backup-full.sh）
-- [x] 演练文档（docs/ops/RESTORE-DRILL.md）
-- **证据**：docs/ops/ 目录（T47）
-- **注意**：需部署后人工执行一次完整恢复演练
-
----
-
-## 总评
-
-| 项 | 描述 | 状态 |
-|---|------|------|
-| 1 | P0 功能可演示 | ✅ 通过 |
-| 2 | 三类角色路径 | ✅ 通过 |
-| 3 | 文件无越权 | ✅ 通过 |
-| 4 | AI 有来源 | ✅ 通过 |
-| 5 | 索引失败可重试 | ✅ 通过 |
-| 6 | 后台可维护 | ✅ 通过 |
-| 7 | 三视口无滚动 | ✅ 代码实现 / ⚠️ 需部署后截图确认 |
-| 8 | 日志/限流/审计 | ✅ 通过 |
-| 9 | .env.example | ✅ 通过 |
-| 10 | 空库迁移 | ✅ 通过 |
-| 11 | README 零启动 | ✅ 通过 |
-| 12 | 备份恢复演练 | ✅ 脚本就绪 / ⚠️ 需部署后执行一次 |
-
-**12/12 项覆盖**，其中 10 项自动化验证通过，2 项（#7 视口截图、#12 恢复演练）需部署后人工确认。
+部署日期、提交哈希、执行人、测试命令结果和失败项应在每次部署时记录到发布记录或 PR，不在本清单中长期写死。

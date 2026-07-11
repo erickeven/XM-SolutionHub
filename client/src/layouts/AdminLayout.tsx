@@ -33,6 +33,7 @@ import {
   SettingOutlined,
   UnorderedListOutlined,
   ApiOutlined,
+  FontSizeOutlined,
   FolderOutlined,
   TeamOutlined as TeamIcon,
 } from '@ant-design/icons';
@@ -84,6 +85,7 @@ const ADMIN_MENU_GROUPS: (AdminRouteDef | AdminMenuGroup)[] = [
     children: [
       { path: '/admin/product-fields', label: '产品字段', icon: <UnorderedListOutlined />, roles: ['ADMIN'] },
       { path: '/admin/material-fields', label: '资料字段', icon: <UnorderedListOutlined />, roles: ['ADMIN'] },
+      { path: '/admin/ui-content', label: '前端文案', icon: <FontSizeOutlined />, roles: ['ADMIN'] },
       { path: '/admin/roles', label: '角色权限', icon: <SafetyCertificateOutlined />, roles: ['ADMIN'] },
       { path: '/admin/ai-settings', label: 'AI及模型', icon: <ApiOutlined />, roles: ['ADMIN'] },
     ],
@@ -134,6 +136,7 @@ export function AdminLayout() {
     '/admin/solutions': 'solutions.read',
     '/admin/materials': 'materials.read',
     '/admin/material-fields': 'materials.write',
+    '/admin/ui-content': 'settings.ui.read',
     '/admin/knowledge': 'knowledge.read',
     '/admin/leads': 'leads.read',
     '/admin/users': 'users.read',

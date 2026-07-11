@@ -4,6 +4,7 @@ import { RobotOutlined, UserOutlined } from '@ant-design/icons';
 import { SourceCard } from './SourceCard';
 import { FeedbackButtons } from './FeedbackButtons';
 import type { ChatMessage, MessageFeedback } from '../../types/ai-chat';
+import { useUiContent } from '../../api/ui-content';
 
 interface ChatMessageListProps {
   messages: ChatMessage[];
@@ -19,6 +20,7 @@ export function ChatMessageList({
   onFeedback,
 }: ChatMessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const { text } = useUiContent();
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -27,7 +29,7 @@ export function ChatMessageList({
   if (messages.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center text-slate-500">
-        <Empty description="输入您的问题开始对话" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        <Empty description={text('ai.empty', '输入您的问题开始对话')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
       </div>
     );
   }
@@ -107,6 +109,7 @@ interface MessageMetaProps {
 }
 
 function MessageMeta({ message, isStreaming, onFeedback }: MessageMetaProps) {
+  const { text } = useUiContent();
   const hasSources = message.sources.length > 0;
   const showLowConfidence = message.status === 'complete' && !hasSources;
   const showError = message.status === 'error';
@@ -116,14 +119,14 @@ function MessageMeta({ message, isStreaming, onFeedback }: MessageMetaProps) {
       {message.status === 'pending' && (
         <div className="flex items-center gap-2 text-xs text-slate-500">
           <Spin size="small" />
-          <span>正在检索资料...</span>
+          <span>{text('ai.searching', '正在检索资料...')}</span>
         </div>
       )}
 
       {message.status === 'streaming' && isStreaming && (
         <div className="flex items-center gap-2 text-xs text-slate-500">
           <Spin size="small" />
-          <span>回答生成中...</span>
+          <span>{text('ai.generating', '回答生成中...')}</span>
         </div>
       )}
 
@@ -131,7 +134,7 @@ function MessageMeta({ message, isStreaming, onFeedback }: MessageMetaProps) {
         <Alert
           type="info"
           showIcon
-          message="暂无相关资料支持该问题"
+          message={text('ai.noSources', '暂无相关资料支持该问题')}
           className="!my-2 !border-slate-200 !bg-slate-50 !py-1 !text-xs"
         />
       )}
@@ -140,7 +143,7 @@ function MessageMeta({ message, isStreaming, onFeedback }: MessageMetaProps) {
         <Alert
           type="warning"
           showIcon
-          message="生成失败，请重试"
+          message={text('ai.error.retry', '生成失败，请重试')}
           className="!my-2 !py-1 !text-xs"
         />
       )}
@@ -148,7 +151,7 @@ function MessageMeta({ message, isStreaming, onFeedback }: MessageMetaProps) {
       {hasSources && (
         <div className="mt-2 space-y-2">
           <Typography.Text className="!block !text-xs !font-medium !text-slate-500">
-            来源依据
+            {text('ai.sources.evidence', '来源依据')}
           </Typography.Text>
           {message.sources.map((source, index) => (
             <SourceCard key={`${source.docId}-${index}`} source={source} />

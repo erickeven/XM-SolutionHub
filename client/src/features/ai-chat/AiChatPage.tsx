@@ -11,6 +11,7 @@ import { ChatInput } from './ChatInput';
 import { SessionList } from './SessionList';
 import { SourcePanel } from './SourcePanel';
 import type { ChatMessage } from '../../types/ai-chat';
+import { useUiContent } from '../../api/ui-content';
 
 type TabKey = 'history' | 'chat' | 'sources';
 
@@ -24,6 +25,7 @@ export function AiChatPage() {
   const { isAuthenticated } = useAuth();
   const accessToken = useAuthStore((state) => state.accessToken);
   const queryClient = useQueryClient();
+  const { text } = useUiContent();
 
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
   const [streamingContent, setStreamingContent] = useState('');
@@ -87,10 +89,10 @@ export function AiChatPage() {
             : msg,
         ),
       );
-      message.success('反馈已提交');
+      message.success(text('ai.feedback.success', '反馈已提交'));
     },
     onError: () => {
-      message.error('反馈提交失败');
+      message.error(text('ai.feedback.failed', '反馈提交失败'));
     },
   });
 
@@ -197,7 +199,7 @@ export function AiChatPage() {
               setLocalMessages((prev) =>
                 prev.map((msg) =>
                   msg.id === assistantId
-                    ? { ...msg, status: 'error', content: msg.content || '生成失败' }
+                    ? { ...msg, status: 'error', content: msg.content || text('ai.error.generate', '生成失败') }
                     : msg,
                 ),
               );
@@ -211,7 +213,7 @@ export function AiChatPage() {
           setStreamingContent('');
           setLocalMessages((prev) =>
             prev.map((msg) =>
-              msg.id === assistantId ? { ...msg, status: 'error', content: '已停止生成' } : msg,
+              msg.id === assistantId ? { ...msg, status: 'error', content: text('ai.stopped', '已停止生成') } : msg,
             ),
           );
           return;
@@ -219,17 +221,17 @@ export function AiChatPage() {
         setIsStreaming(false);
         setStreamingContent('');
         setPendingQuery(query.trim());
-        setErrorMessage(err instanceof Error ? err.message : '请求失败');
+        setErrorMessage(err instanceof Error ? err.message : text('ai.error.request', '请求失败'));
         setLocalMessages((prev) =>
           prev.map((msg) =>
-            msg.id === assistantId ? { ...msg, status: 'error', content: '生成失败' } : msg,
+            msg.id === assistantId ? { ...msg, status: 'error', content: text('ai.error.generate', '生成失败') } : msg,
           ),
         );
       } finally {
         abortControllerRef.current = null;
       }
     },
-    [accessToken, sessionId, navigate, queryClient],
+    [accessToken, sessionId, navigate, queryClient, text],
   );
 
   const handleRetry = useCallback(() => {
@@ -287,7 +289,7 @@ export function AiChatPage() {
                 key: 'history',
                 label: (
                   <span onClick={() => setLeftDrawerOpen(true)}>
-                    <HistoryOutlined /> 历史
+                    <HistoryOutlined /> {text('ai.history.short', '历史')}
                   </span>
                 ),
               },
@@ -296,7 +298,7 @@ export function AiChatPage() {
                 key: 'sources',
                 label: (
                   <span onClick={() => setRightDrawerOpen(true)}>
-                    <FileTextOutlined /> 来源
+                    <FileTextOutlined /> {text('ai.sources.short', '来源')}
                   </span>
                 ),
               },
@@ -356,7 +358,7 @@ export function AiChatPage() {
 
       {/* Mobile drawers */}
       <Drawer
-        title="历史会话"
+        title={text('ai.history.title', '历史会话')}
         placement="left"
         open={leftDrawerOpen}
         onClose={() => setLeftDrawerOpen(false)}
@@ -375,7 +377,7 @@ export function AiChatPage() {
       </Drawer>
 
       <Drawer
-        title="引用来源"
+        title={text('ai.sources.title', '引用来源')}
         placement="right"
         open={rightDrawerOpen}
         onClose={() => setRightDrawerOpen(false)}

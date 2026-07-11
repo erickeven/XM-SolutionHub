@@ -8,6 +8,7 @@ import { MainLayout } from './layouts/MainLayout';
 import { AdminLayout } from './layouts/AdminLayout';
 import { HomePage } from './features/selection/HomePage';
 import { RouteGuard } from './components/RouteGuard';
+import { useUiContent } from './api/ui-content';
 
 // Public pages (lazy)
 const SelectionPage = lazy(() =>
@@ -81,6 +82,11 @@ const AiSettingsPage = lazy(() =>
     default: m.AiSettingsPage,
   })),
 );
+const UiContentSettingsPage = lazy(() =>
+  import('./features/admin/ui-content/UiContentSettingsPage').then((m) => ({
+    default: m.UiContentSettingsPage,
+  })),
+);
 
 function AdminNotFoundPage() {
   return (
@@ -99,6 +105,11 @@ function AdminNotFoundPage() {
       />
     </div>
   );
+}
+
+function PublicNotFoundPage() {
+  const { text } = useUiContent();
+  return <Result status="404" title={text('common.notFound', '页面不存在')} />;
 }
 
 const queryClient = new QueryClient({
@@ -159,7 +170,7 @@ export default function App() {
                     </RouteGuard>
                   }
                 />
-                <Route path="*" element={<Result status="404" title="页面不存在" />} />
+                <Route path="*" element={<PublicNotFoundPage />} />
               </Route>
 
               {/* Admin layout */}
@@ -260,6 +271,14 @@ export default function App() {
                   element={
                     <RouteGuard permissions={['audit.read']}>
                       <AuditLogPage />
+                    </RouteGuard>
+                  }
+                />
+                <Route
+                  path="ui-content"
+                  element={
+                    <RouteGuard permissions={['settings.ui.read']}>
+                      <UiContentSettingsPage />
                     </RouteGuard>
                   }
                 />

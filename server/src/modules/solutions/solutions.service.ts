@@ -10,6 +10,19 @@ import type {
   SolutionDetail,
 } from './solutions.types';
 
+async function assertAllProductsActive(productIds?: string[]): Promise<void> {
+  if (!productIds || productIds.length === 0) return;
+
+  const uniqueIds = Array.from(new Set(productIds));
+  const activeCount = await prisma.product.count({
+    where: { id: { in: uniqueIds }, status: 'ACTIVE' },
+  });
+
+  if (activeCount !== uniqueIds.length) {
+    throw new AppError(3003, 'Solutions can only be associated with active products', 400);
+  }
+}
+
 export async function listSolutions(
   query: SolutionQuery,
 ): Promise<SolutionPaginatedResult> {
@@ -92,6 +105,8 @@ export async function createSolution(
   input: CreateSolutionInput,
   actorId: string | null,
 ): Promise<SolutionDetail> {
+  await assertAllProductsActive(input.productIds);
+
   const solution = await repository.create(input);
 
   if (input.productIds && input.productIds.length > 0) {
@@ -125,6 +140,7 @@ export async function updateSolution(
   }
 
   const { productIds, materialIds, ...updateData } = input;
+  await assertAllProductsActive(productIds);
   await repository.update(id, updateData);
 
   if (productIds !== undefined) {
@@ -157,6 +173,7 @@ export async function getAllProductOptions(): Promise<
   { id: string; model: string; series: string; status: string }[]
 > {
   return prisma.product.findMany({
+    where: { status: 'ACTIVE' },
     select: { id: true, model: true, series: true, status: true },
     orderBy: { model: 'asc' },
   });

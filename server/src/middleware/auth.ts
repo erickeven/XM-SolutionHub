@@ -58,7 +58,6 @@ export async function optionalAuth(
     };
     next();
   } catch {
-    req.user = null;
-    next();
+    next(new AppError(2001, 'Invalid or expired token', 401));
   }
 }

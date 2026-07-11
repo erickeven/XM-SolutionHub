@@ -108,7 +108,7 @@ model Product {
   status              RecordStatus @default(DRAFT)
   params              Json
   advantages          String[]
-  datasheetMaterialId String?
+  datasheetMaterialId String?      @unique
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
 
@@ -447,4 +447,18 @@ model AiPromptSetting {
   updatedAt DateTime @updatedAt @map("updatedAt")
 
   @@map("ai_prompt_settings")
+}
+
+model UiContentSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  group     String
+  label     String
+  value     String   @db.Text
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("createdAt")
+  updatedAt DateTime @updatedAt @map("updatedAt")
+
+  @@index([group])
+  @@map("ui_content_settings")
 }

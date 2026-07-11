@@ -1,6 +1,7 @@
-import { LockOutlined, UnlockOutlined, FileTextOutlined } from '@ant-design/icons';
-import { Empty } from 'antd';
+import { EyeOutlined, UnlockOutlined, FileTextOutlined } from '@ant-design/icons';
+import { Empty, Tag } from 'antd';
 import type { Material } from '../../types/solution';
+import { useUiText } from '../../api/ui-content';
 
 interface MaterialListProps {
   materials: Material[];
@@ -10,10 +11,13 @@ interface MaterialListProps {
 }
 
 export function MaterialList({ materials, selectedId, onSelect, isAuthenticated }: MaterialListProps) {
+  const emptyText = useUiText('solution.material.empty', '资料整理中');
+  const anonymousTag = useUiText('solution.material.previewTag', '前3页');
+
   if (materials.length === 0) {
     return (
       <div className="flex h-full items-center justify-center p-4">
-        <Empty description="资料整理中" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        <Empty description={emptyText} image={Empty.PRESENTED_IMAGE_SIMPLE} />
       </div>
     );
   }
@@ -23,7 +27,6 @@ export function MaterialList({ materials, selectedId, onSelect, isAuthenticated 
       <ul className="space-y-1 p-2">
         {materials.map((material) => {
           const isActive = material.id === selectedId;
-          const isLocked = !isAuthenticated;
           return (
             <li key={material.id}>
               <button
@@ -36,11 +39,14 @@ export function MaterialList({ materials, selectedId, onSelect, isAuthenticated 
               >
                 <FileTextOutlined className="shrink-0 text-slate-400" />
                 <span className="flex-1 truncate">{material.title}</span>
-                {isLocked ? (
-                  <LockOutlined className="shrink-0 text-slate-400" />
+                {!isAuthenticated ? (
+                  <Tag color="blue" className="!m-0 shrink-0">
+                    {anonymousTag}
+                  </Tag>
                 ) : (
                   <UnlockOutlined className="shrink-0 text-green-500" />
                 )}
+                {!isAuthenticated && <EyeOutlined className="shrink-0 text-blue-500" />}
               </button>
             </li>
           );

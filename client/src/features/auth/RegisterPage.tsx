@@ -1,20 +1,23 @@
+import { useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, Input, Button, message, Typography, Checkbox } from 'antd';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeftOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { useAuth } from '../../hooks/useAuth';
-import { registerSchema } from './authSchema';
+import { createRegisterSchema } from './authSchema';
 import type { RegisterSchema } from './authSchema';
+import { useUiContent } from '../../api/ui-content';
 
 const { Text } = Typography;
 
 function PasswordStrength({ password }: { password: string }) {
+  const { text } = useUiContent();
   const checks = [
-    { label: '至少 8 个字符', ok: password.length >= 8 },
-    { label: '大写字母', ok: /[A-Z]/.test(password) },
-    { label: '小写字母', ok: /[a-z]/.test(password) },
-    { label: '数字', ok: /[0-9]/.test(password) },
+    { label: text('auth.password.length', '至少 8 个字符'), ok: password.length >= 8 },
+    { label: text('auth.password.uppercase', '大写字母'), ok: /[A-Z]/.test(password) },
+    { label: text('auth.password.lowercase', '小写字母'), ok: /[a-z]/.test(password) },
+    { label: text('auth.password.number', '数字'), ok: /[0-9]/.test(password) },
   ];
   return (
     <div className="mt-1 flex flex-col gap-1">
@@ -33,6 +36,8 @@ export function RegisterPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { register: registerUser } = useAuth();
+  const { text } = useUiContent();
+  const validationSchema = useMemo(() => createRegisterSchema(text), [text]);
 
   const {
     control,
@@ -40,7 +45,7 @@ export function RegisterPage() {
     watch,
     formState: { errors, isSubmitting },
   } = useForm<RegisterSchema>({
-    resolver: zodResolver(registerSchema),
+    resolver: zodResolver(validationSchema),
     defaultValues: { email: '', password: '', confirmPassword: '', privacyAccepted: false },
   });
 
@@ -54,12 +59,12 @@ export function RegisterPage() {
         password: data.password,
         privacyAccepted: data.privacyAccepted,
       });
-      message.success('注册成功');
+      message.success(text('auth.register.success', '注册成功'));
       const redirect = searchParams.get('redirect') || localStorage.getItem('redirectAfterAuth');
       localStorage.removeItem('redirectAfterAuth');
       navigate(redirect || '/');
     } catch (err) {
-      const msg = err instanceof Error ? err.message : '注册失败，请重试';
+      const msg = err instanceof Error ? err.message : text('auth.register.failed', '注册失败，请重试');
       message.error(msg);
     }
   };
@@ -69,33 +74,33 @@ export function RegisterPage() {
       <div className="grid w-full max-w-[980px] gap-6 md:grid-cols-[1fr_440px] md:items-center">
         <div className="hidden text-white md:block">
           <Link to="/" className="inline-flex items-center gap-2 text-sm text-slate-300 hover:text-white">
-            <ArrowLeftOutlined /> 返回首页
+            <ArrowLeftOutlined /> {text('auth.backHome', '返回首页')}
           </Link>
-          <div className="mt-10 section-kicker text-copper-400">CREATE ACCOUNT</div>
+          <div className="mt-10 section-kicker text-copper-400">{text('auth.register.kicker', 'CREATE ACCOUNT')}</div>
           <h1 className="mt-3 text-[34px] font-bold leading-tight">
-            注册后查看完整方案资料
+            {text('auth.register.heroTitle', '注册后查看完整方案资料')}
           </h1>
           <p className="mt-4 max-w-md text-sm leading-7 text-slate-300">
-            账户用于资料预览、下载审计、AI 问答与线索跟进，敏感令牌通过服务端 Cookie 策略保护。
+            {text('auth.register.heroSubtitle', '账户用于资料预览、下载审计、AI 问答与线索跟进，敏感令牌通过服务端 Cookie 策略保护。')}
           </p>
           <div className="mt-6 inline-flex items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-200">
             <SafetyCertificateOutlined className="text-copper-400" />
-            注册即记录隐私版本和同意时间
+            {text('auth.register.privacyHint', '注册即记录隐私版本和同意时间')}
           </div>
         </div>
 
         <div className="surface-card w-full p-7 shadow-soft md:p-8">
           <div className="mb-6">
             <Link to="/" className="text-xl font-bold text-navy-950 md:hidden">
-              芯茂微
+              {text('brand.name', '芯茂微')}
             </Link>
-            <h2 className="mt-3 text-2xl font-bold text-slate-900 md:mt-0">注册</h2>
-            <p className="mt-1 text-sm text-slate-500">创建新账户解锁完整资料下载与 AI 问答</p>
+            <h2 className="mt-3 text-2xl font-bold text-slate-900 md:mt-0">{text('auth.register', '注册')}</h2>
+            <p className="mt-1 text-sm text-slate-500">{text('auth.register.subtitle', '创建新账户解锁完整资料下载与 AI 问答')}</p>
           </div>
 
           <Form layout="vertical" onFinish={handleSubmit(onSubmit)} autoComplete="off">
           <Form.Item
-            label="邮箱"
+            label={text('auth.field.email', '邮箱')}
             validateStatus={errors.email ? 'error' : ''}
             help={errors.email?.message}
           >
@@ -115,7 +120,7 @@ export function RegisterPage() {
           </Form.Item>
 
           <Form.Item
-            label="密码"
+            label={text('auth.field.password', '密码')}
             validateStatus={errors.password ? 'error' : ''}
             help={errors.password?.message}
           >
@@ -127,7 +132,7 @@ export function RegisterPage() {
                   {...field}
                   size="large"
                   style={{ minHeight: 44 }}
-                  placeholder="至少 8 个字符"
+                  placeholder={text('auth.password.length', '至少 8 个字符')}
                 />
               )}
             />
@@ -135,7 +140,7 @@ export function RegisterPage() {
           </Form.Item>
 
           <Form.Item
-            label="确认密码"
+            label={text('auth.field.confirmPassword', '确认密码')}
             validateStatus={errors.confirmPassword ? 'error' : ''}
             help={errors.confirmPassword?.message}
           >
@@ -147,7 +152,7 @@ export function RegisterPage() {
                   {...field}
                   size="large"
                   style={{ minHeight: 44 }}
-                  placeholder="再次输入密码"
+                  placeholder={text('auth.field.confirmPassword.placeholder', '再次输入密码')}
                 />
               )}
             />
@@ -166,7 +171,7 @@ export function RegisterPage() {
                   onBlur={field.onBlur}
                   onChange={(event) => field.onChange(event.target.checked)}
                 >
-                  <Text className="text-sm">我已阅读并同意《隐私政策》</Text>
+                  <Text className="text-sm">{text('auth.privacy.accept', '我已阅读并同意《隐私政策》')}</Text>
                 </Checkbox>
               )}
             />
@@ -182,16 +187,16 @@ export function RegisterPage() {
               disabled={!privacyAccepted}
               style={{ minHeight: 44 }}
             >
-              注册
+              {text('auth.register', '注册')}
             </Button>
           </Form.Item>
           </Form>
 
           <div className="text-center">
             <Text className="text-sm text-slate-500">
-              已有账户？{' '}
+              {text('auth.register.hasAccount', '已有账户？')}{' '}
               <Link to="/login" className="text-blue-600">
-                立即登录
+                {text('auth.register.loginNow', '立即登录')}
               </Link>
             </Text>
           </div>

@@ -10,7 +10,10 @@ import auditRoutes from './modules/audit/audit.routes';
 import productsRoutes from './modules/products/products.routes';
 import productsPublicRoutes from './modules/products/products.public.routes';
 import selectionRoutes from './modules/selection/selection.routes';
-import { fieldConfigRouter } from './modules/products/field-config.routes';
+import {
+  fieldConfigRouter,
+  publicFieldConfigRouter,
+} from './modules/products/field-config.routes';
 import { adminRoutes as solutionAdminRoutes, publicRoutes as solutionPublicRoutes } from './modules/solutions/solutions.routes';
 import { adminRoutes as materialAdminRoutes, publicRoutes as materialPublicRoutes, materialPublicRoutes as materialPreviewRoutes } from './modules/materials/materials.routes';
 import { materialFieldConfigRouter } from './modules/materials/field-config.routes';
@@ -23,6 +26,7 @@ import filesRoutes from './modules/files/files.routes';
 import dashboardRoutes from './modules/dashboard/dashboard.routes';
 import rbacRoutes from './modules/rbac/rbac.routes';
 import aiSettingsRoutes, { promptRouter as aiPromptRoutes } from './modules/ai-settings/ai-settings.routes';
+import { adminUiContentRoutes, publicUiContentRoutes } from './modules/ui-content/ui-content.routes';
 import { errorHandler } from './middleware/errorHandler';
 
 const app: Express = express();
@@ -82,6 +86,9 @@ app.use('/api/v1/admin/product-fields', fieldConfigRouter);
 
 // 13. Products public routes (no auth required)
 app.use('/api/v1/products', productsPublicRoutes);
+app.use('/api/v1/product-fields', publicFieldConfigRouter);
+
+app.use('/api/v1/ui-content', publicUiContentRoutes);
 
 // 13. Solutions admin routes (admin only)
 app.use('/api/v1/admin/solutions', solutionAdminRoutes);
@@ -127,6 +134,8 @@ app.use('/api/v1/admin/ai-settings', aiSettingsRoutes);
 
 // 26. AI Prompts (ADMIN)
 app.use('/api/v1/admin/ai-prompts', aiPromptRoutes);
+
+app.use('/api/v1/admin/ui-content', adminUiContentRoutes);
 
 // 27. Error handler (last)
 app.use(errorHandler);

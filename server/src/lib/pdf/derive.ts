@@ -6,7 +6,7 @@ export interface DeriveResult {
   pageCount: number;
 }
 
-// ponytail: using pdf-lib for page count instead of pdfjs-dist.
+// pdf-lib provides page counts without requiring PDF.js browser shims.
 // pdfjs-dist requires canvas/worker setup in Node.js; pdf-lib's getPageCount()
 // is sufficient for our needs (count + page extraction). Switch to pdfjs-dist
 // only if text extraction or rendering becomes necessary.

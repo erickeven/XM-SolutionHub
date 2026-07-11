@@ -1,5 +1,6 @@
 import { Tag, Typography } from 'antd';
 import type { ChatSource } from '../../types/ai-chat';
+import { useUiContent } from '../../api/ui-content';
 
 const { Text } = Typography;
 
@@ -8,6 +9,7 @@ interface SourceCardProps {
 }
 
 export function SourceCard({ source }: SourceCardProps) {
+  const { text } = useUiContent();
   const handleClick = () => {
     if (source.docId) {
       window.open(`/solutions/${source.docId}`, '_blank', 'noopener,noreferrer');
@@ -24,7 +26,7 @@ export function SourceCard({ source }: SourceCardProps) {
         <span className="block h-4 w-1 rounded-full bg-copper-500" />
         <Text className="!text-sm !font-medium !text-navy-900 line-clamp-1">{source.title}</Text>
         {source.page !== undefined && (
-          <Text className="!text-xs !text-slate-500">第 {source.page} 页</Text>
+          <Text className="!text-xs !text-slate-500">{text('ai.source.pagePrefix', '第')} {source.page} {text('ai.source.pageSuffix', '页')}</Text>
         )}
       </div>
 
@@ -32,15 +34,15 @@ export function SourceCard({ source }: SourceCardProps) {
 
       <div className="flex flex-wrap gap-1">
         <Tag color="blue" className="!m-0 !text-xs">
-          相关型号/参数
+          {text('ai.source.models', '相关型号/参数')}
         </Tag>
         <span className="text-xs text-slate-400">→</span>
         <Tag color="cyan" className="!m-0 !text-xs">
-          关联事项
+          {text('ai.source.events', '关联事项')}
         </Tag>
         <span className="text-xs text-slate-400">→</span>
         <Tag color="orange" className="!m-0 !text-xs">
-          来源片段
+          {text('ai.source.snippet', '来源片段')}
         </Tag>
         {source.entities.map((entity) => (
           <Tag key={entity} className="!m-0 !text-xs !text-slate-600">

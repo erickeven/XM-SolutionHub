@@ -36,7 +36,11 @@ const TYPE_OPTIONS: { label: string; value: MaterialType }[] = [
   { label: '其他', value: 'other' },
 ];
 
-const FIXED_FIELD_KEYS = new Set(['title', 'type', 'status']);
+const FIXED_FIELD_KEYS = new Set(['file', 'title', 'type', 'status', 'solutionId', 'productId']);
+
+function getCoreFieldLabel(fields: FieldConfigItem[] | undefined, fieldKey: string, fallback: string) {
+  return fields?.find((field) => field.fieldKey === fieldKey)?.label ?? fallback;
+}
 
 function buildRules(field: FieldConfigItem) {
   const rules: Array<{ required?: boolean; message?: string }> = [];
@@ -132,6 +136,11 @@ export function MaterialUploadModal({ open, onClose }: MaterialUploadModalProps)
   );
 
   const { data: fieldConfigsRaw, isLoading: fieldsLoading } = useFieldConfigs(true);
+  const fileLabel = getCoreFieldLabel(fieldConfigsRaw, 'file', '文件');
+  const titleLabel = getCoreFieldLabel(fieldConfigsRaw, 'title', '标题');
+  const typeLabel = getCoreFieldLabel(fieldConfigsRaw, 'type', '资料类型');
+  const solutionLabel = getCoreFieldLabel(fieldConfigsRaw, 'solutionId', '所属方案');
+  const productLabel = getCoreFieldLabel(fieldConfigsRaw, 'productId', '关联产品');
   const fieldConfigs = useMemo(
     () =>
       [...(fieldConfigsRaw ?? [])]
@@ -169,7 +178,7 @@ export function MaterialUploadModal({ open, onClose }: MaterialUploadModalProps)
     multiple: false,
     maxCount: 1,
     beforeUpload: () => false, // manual upload via form submit
-    accept: '.pdf,.docx',
+    accept: '.pdf,.doc,.docx,.xls,.xlsx',
   };
 
   const handleSubmit = async () => {
@@ -219,9 +228,9 @@ export function MaterialUploadModal({ open, onClose }: MaterialUploadModalProps)
     >
       <Form form={form} layout="vertical" className="mt-4">
         <Form.Item
-          label="文件"
+          label={fileLabel}
           name="file"
-          rules={[{ required: true, message: '请选择文件' }]}
+          rules={[{ required: true, message: `请选择${fileLabel}` }]}
           valuePropName="file"
           getValueFromEvent={(e) => (Array.isArray(e) ? { fileList: e } : e && { fileList: e.fileList })}
         >
@@ -231,13 +240,13 @@ export function MaterialUploadModal({ open, onClose }: MaterialUploadModalProps)
             </p>
             <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
             <p className="ant-upload-hint">
-              支持 PDF / DOCX 格式，单个文件不超过 50MB
+              支持 PDF / Word / Excel 格式，单个文件不超过 50MB
             </p>
           </Dragger>
         </Form.Item>
 
         <Form.Item
-          label="资料类型"
+          label={typeLabel}
           name="type"
           rules={[{ required: true, message: '请选择类型' }]}
         >
@@ -245,9 +254,9 @@ export function MaterialUploadModal({ open, onClose }: MaterialUploadModalProps)
         </Form.Item>
 
         <Form.Item
-          label="标题"
+          label={titleLabel}
           name="title"
-          rules={[{ required: true, message: '请输入标题' }]}
+          rules={[{ required: true, message: `请输入${titleLabel}` }]}
         >
           <Input placeholder="例如 LP9961 数据手册 Rev.1.2" />
         </Form.Item>
@@ -277,7 +286,7 @@ export function MaterialUploadModal({ open, onClose }: MaterialUploadModalProps)
           })}
         </div>
 
-        <Form.Item label="所属方案" name="solutionId">
+        <Form.Item label={solutionLabel} name="solutionId">
           <Select
             options={solutionOptions}
             placeholder="选择方案（可选）"
@@ -288,7 +297,7 @@ export function MaterialUploadModal({ open, onClose }: MaterialUploadModalProps)
           />
         </Form.Item>
 
-        <Form.Item label="关联产品" name="productId">
+        <Form.Item label={productLabel} name="productId">
           <Select
             options={productOptions}
             placeholder="选择产品（可选）"

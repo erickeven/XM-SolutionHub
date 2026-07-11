@@ -8,6 +8,7 @@ import type { SelectionInput, MatchResult } from '../../types/selection';
 import { SelectionCard } from './SelectionCard';
 import { FilterPanel } from './FilterPanel';
 import { CompareBar } from './CompareBar';
+import { useUiContent } from '../../api/ui-content';
 
 const DEFAULT_FILTER: SelectionInput = {
   inputVoltageMin: 0,
@@ -79,6 +80,7 @@ export function SelectionPage() {
   const [compareItems, setCompareItems] = useState<MatchResult[]>([]);
   const [compareOpen, setCompareOpen] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>('score');
+  const { text } = useUiContent();
 
   const canMatch = useMemo(() => hasRequiredElectrical(debouncedFilter), [debouncedFilter]);
 
@@ -149,7 +151,7 @@ export function SelectionPage() {
         return prev.filter((item) => item.productId !== id);
       }
       if (prev.length >= 3) {
-        message.warning('最多选择3个产品进行对比');
+        message.warning(text('selection.compare.max', '最多选择3个产品进行对比'));
         return prev;
       }
       const result = results?.find((r) => r.productId === id);
@@ -158,7 +160,7 @@ export function SelectionPage() {
       }
       return prev;
     });
-  }, [results]);
+  }, [results, text]);
 
   const handleCompareRemove = useCallback((id: string) => {
     setCompareItems((prev) => prev.filter((item) => item.productId !== id));
@@ -190,7 +192,7 @@ export function SelectionPage() {
       <aside className="hidden w-80 shrink-0 border-r border-slate-200 bg-white p-4 md:block md:overflow-y-auto">
         <div className="mb-3 flex items-center gap-2 text-base font-semibold text-slate-900">
           <FilterOutlined />
-          筛选条件
+          {text('selection.filters.title', '筛选条件')}
         </div>
         <FilterPanel
           values={filter}
@@ -208,8 +210,8 @@ export function SelectionPage() {
           <Alert
             type="info"
             showIcon
-            message="补充参数获取精准推荐"
-            description="当前展示热门产品，请填写输入电压、输出电压和输出电流以获取精准匹配结果。"
+            message={text('selection.hint.title', '补充参数获取精准推荐')}
+            description={text('selection.hint.subtitle', '当前展示热门产品，请填写输入电压、输出电压和输出电流以获取精准匹配结果。')}
             className="!mb-4"
           />
         )}
@@ -220,14 +222,14 @@ export function SelectionPage() {
             <div className="text-sm text-slate-500">
               {filter.applicationType && (
                 <span className="mr-2">
-                  应用: <span className="font-medium text-slate-900">{filter.applicationType}</span>
+                  {text('selection.summary.application', '应用')}: <span className="font-medium text-slate-900">{filter.applicationType}</span>
                 </span>
               )}
               <span>
-                输入: <span className="font-medium text-slate-900">{filter.inputVoltageMin}-{filter.inputVoltageMax}V</span>
+                {text('selection.summary.input', '输入')}: <span className="font-medium text-slate-900">{filter.inputVoltageMin}-{filter.inputVoltageMax}V</span>
               </span>
               <span className="ml-2">
-                输出: <span className="font-medium text-slate-900">{filter.outputVoltage}V/{filter.outputCurrent}A</span>
+                {text('selection.summary.output', '输出')}: <span className="font-medium text-slate-900">{filter.outputVoltage}V/{filter.outputCurrent}A</span>
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -235,8 +237,8 @@ export function SelectionPage() {
                 value={sortMode}
                 onChange={(v) => setSortMode(v as SortMode)}
                 options={[
-                  { label: '按匹配度', value: 'score' },
-                  { label: '按型号', value: 'model' },
+                  { label: text('selection.sort.score', '按匹配度'), value: 'score' },
+                  { label: text('selection.sort.model', '按型号'), value: 'model' },
                 ]}
               />
               {/* Mobile filter button */}
@@ -245,7 +247,7 @@ export function SelectionPage() {
                 onClick={() => setDrawerOpen(true)}
                 className="md:!hidden"
               >
-                筛选
+                {text('selection.filters.action', '筛选')}
               </Button>
             </div>
           </div>
@@ -255,7 +257,7 @@ export function SelectionPage() {
         {!canMatch && (
           <div className="mb-4 flex justify-end md:hidden">
             <Button icon={<FilterOutlined />} onClick={() => setDrawerOpen(true)}>
-              筛选
+              {text('selection.filters.action', '筛选')}
             </Button>
           </div>
         )}
@@ -264,7 +266,7 @@ export function SelectionPage() {
         {!canMatch && (
           <>
             <div className="mb-3 text-sm text-slate-500">
-              热门产品
+              {text('selection.popular.title', '热门产品')}
             </div>
             {popularLoading && (
               <div className="space-y-4">
@@ -284,7 +286,7 @@ export function SelectionPage() {
             )}
             {popularProducts && popularProducts.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16">
-                <Empty description="暂无热门产品" />
+                <Empty description={text('selection.popular.empty', '暂无热门产品')} />
               </div>
             )}
           </>
@@ -305,26 +307,26 @@ export function SelectionPage() {
 
             {isError && (
               <div className="flex flex-col items-center justify-center py-16">
-                <Empty description="查询失败，请重试" />
+                <Empty description={text('selection.error', '查询失败，请重试')} />
                 <Button icon={<ReloadOutlined />} onClick={() => refetch()} className="!mt-4">
-                  重试
+                  {text('common.retry', '重试')}
                 </Button>
               </div>
             )}
 
             {!isLoading && !isError && sortedResults.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16">
-                <Empty description="暂无匹配结果" />
+                <Empty description={text('selection.results.empty', '暂无匹配结果')} />
                 <div className="mt-4 max-w-md text-center text-sm text-slate-500">
-                  <p>建议调整以下参数后重试：</p>
+                  <p>{text('selection.results.suggestion', '建议调整以下参数后重试：')}</p>
                   <ul className="mt-2 list-inside list-disc">
-                    <li>放宽输入电压范围</li>
-                    <li>降低输出电流要求</li>
-                    <li>减少认证筛选条件</li>
-                    <li>更换应用类型</li>
+                    <li>{text('selection.results.tip.input', '放宽输入电压范围')}</li>
+                    <li>{text('selection.results.tip.current', '降低输出电流要求')}</li>
+                    <li>{text('selection.results.tip.certification', '减少认证筛选条件')}</li>
+                    <li>{text('selection.results.tip.application', '更换应用类型')}</li>
                   </ul>
                   <Button icon={<ReloadOutlined />} onClick={handleReset} className="!mt-4">
-                    重置条件
+                    {text('selection.filters.reset', '重置条件')}
                   </Button>
                 </div>
               </div>
@@ -333,7 +335,7 @@ export function SelectionPage() {
             {!isLoading && !isError && sortedResults.length > 0 && (
               <>
                 <div className="mb-3 text-sm text-slate-500">
-                  共 <span className="font-medium text-slate-900">{sortedResults.length}</span> 个匹配结果
+                  {text('selection.results.prefix', '共')} <span className="font-medium text-slate-900">{sortedResults.length}</span> {text('selection.results.suffix', '个匹配结果')}
                 </div>
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                   {sortedResults.map((result) => (
@@ -353,7 +355,7 @@ export function SelectionPage() {
 
       {/* Mobile: filter drawer */}
       <Drawer
-        title="筛选条件"
+        title={text('selection.filters.title', '筛选条件')}
         placement="left"
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
@@ -379,7 +381,7 @@ export function SelectionPage() {
       />
 
       <Modal
-        title="产品参数对比"
+        title={text('selection.compare.title', '产品参数对比')}
         open={compareOpen}
         onCancel={() => setCompareOpen(false)}
         footer={null}
@@ -391,7 +393,7 @@ export function SelectionPage() {
             style={{ gridTemplateColumns: `150px repeat(${Math.max(compareItems.length, 1)}, minmax(160px, 1fr))` }}
           >
             <div className="bg-slate-50 px-3 py-3 text-sm font-medium text-slate-500">
-              对比项
+              {text('selection.compare.item', '对比项')}
             </div>
             {compareItems.map((item) => (
               <div key={item.productId} className="bg-slate-50 px-3 py-3">
@@ -401,30 +403,34 @@ export function SelectionPage() {
             ))}
 
             {[
-              { label: '匹配度', render: (item: MatchResult) => `${item.score}%` },
+              { label: text('selection.compare.score', '匹配度'), render: (item: MatchResult) => `${item.score}%` },
               {
-                label: '匹配等级',
+                label: text('selection.compare.level', '匹配等级'),
                 render: (item: MatchResult) => (
                   <Tag color={item.matchLevel === 'exact' ? 'green' : item.matchLevel === 'approximate' ? 'gold' : 'default'}>
-                    {item.matchLevel === 'exact' ? '精确匹配' : item.matchLevel === 'approximate' ? '近似匹配' : '备选方案'}
+                    {item.matchLevel === 'exact'
+                      ? text('selection.match.exact', '精确匹配')
+                      : item.matchLevel === 'approximate'
+                        ? text('selection.match.approximate', '近似匹配')
+                        : text('selection.match.fallback', '备选方案')}
                   </Tag>
                 ),
               },
-              { label: '输入范围', render: formatInputRange },
-              { label: '输出能力', render: formatOutput },
-              { label: '能效等级', render: (item: MatchResult) => readParam(item, 'efficiencyLevel') },
-              { label: '认证', render: (item: MatchResult) => readParam(item, 'certifications') },
+              { label: text('selection.compare.input', '输入范围'), render: formatInputRange },
+              { label: text('selection.compare.output', '输出能力'), render: formatOutput },
+              { label: text('selection.compare.efficiency', '能效等级'), render: (item: MatchResult) => readParam(item, 'efficiencyLevel') },
+              { label: text('selection.compare.certification', '认证'), render: (item: MatchResult) => readParam(item, 'certifications') },
               {
-                label: '主要理由',
+                label: text('selection.compare.reasons', '主要理由'),
                 render: (item: MatchResult) => item.reasons.slice(0, 2).join('；') || '-',
               },
               {
-                label: '差异点',
-                render: (item: MatchResult) => item.diffs.slice(0, 2).join('；') || '无明显差异',
+                label: text('selection.compare.diffs', '差异点'),
+                render: (item: MatchResult) => item.diffs.slice(0, 2).join('；') || text('selection.compare.noDiff', '无明显差异'),
               },
               {
-                label: '资料状态',
-                render: (item: MatchResult) => (item.datasheetMaterialId ? '资料完整' : '资料整理中'),
+                label: text('selection.compare.material', '资料状态'),
+                render: (item: MatchResult) => (item.datasheetMaterialId ? text('product.material.complete', '资料完整') : text('product.material.preparing', '资料整理中')),
               },
             ].map((row) => (
               <Fragment key={row.label}>

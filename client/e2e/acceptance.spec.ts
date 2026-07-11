@@ -10,7 +10,7 @@ const SCREENSHOT_DIR = path.resolve(__dirname, 'screenshots');
 const ADMIN_EMAIL = 'admin@xinmaowei.com';
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? '';
 
-// ponytail: sidebar menu label → page slug mapping from AdminLayout.tsx
+// Sidebar menu label to page slug mapping from AdminLayout.tsx.
 const SIDEBAR_LABELS: Record<string, string> = {
   '驾驶舱': 'dashboard',
   '产品管理': 'products',
@@ -18,6 +18,7 @@ const SIDEBAR_LABELS: Record<string, string> = {
   '方案管理': 'solutions',
   '资料管理': 'materials',
   '资料字段': 'material-fields',
+  '前端文案': 'ui-content',
   '知识库': 'knowledge',
   '线索': 'leads',
   '用户': 'users',
@@ -105,7 +106,7 @@ test.describe('admin', () => {
     await page.waitForTimeout(1000);
   }
 
-  test('all admin pages (12/12)', async ({ browser }) => {
+  test('all admin pages (13/13)', async ({ browser }) => {
     test.skip(!ADMIN_PASSWORD, 'E2E_ADMIN_PASSWORD not set');
     test.setTimeout(180000);
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
@@ -126,7 +127,7 @@ test.describe('admin', () => {
     // Dashboard plus all sidebar pages in AdminLayout order
     const sidebarOrder = [
       '产品管理', '产品字段', '方案管理',
-      '资料管理', '资料字段', '知识库',
+      '资料管理', '资料字段', '前端文案', '知识库',
       '线索', '用户', '角色权限', '审计', 'AI及模型',
     ];
     let passed = 1;
@@ -137,12 +138,12 @@ test.describe('admin', () => {
       await p.screenshot({ path: path.join(SCREENSHOT_DIR, `admin-${slug}.png`), fullPage: true });
       expect(
         p.url(),
-        `${label} (${slug}) must not redirect to /login (passed=${passed}/12)`,
+        `${label} (${slug}) must not redirect to /login (passed=${passed}/13)`,
       ).not.toContain('/login');
       passed++;
     }
 
-    expect(passed, `Admin pages loaded: ${passed}/12`).toBe(12);
+    expect(passed, `Admin pages loaded: ${passed}/13`).toBe(13);
     expect(consoleErrors, 'No unexpected console errors').toEqual([]);
     await ctx.close();
   });

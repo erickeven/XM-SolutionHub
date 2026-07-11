@@ -24,7 +24,7 @@ function toProviderItem(p: AiProviderRaw): AiProviderItem {
       const plaintext = decryptApiKey(p.apiKeyEncrypted);
       apiKeyMasked = maskApiKey(plaintext);
     } catch {
-      // ponytail: decrypt failed → return null, don't leak encrypted value
+      // Do not leak encrypted values when decryption fails.
       apiKeyMasked = null;
     }
   }
@@ -59,7 +59,7 @@ export async function updateProvider(
   const existing = await repository.findProviderById(id);
   if (!existing) throw new AppError(4201, 'AI provider not found', 404);
 
-  // ponytail: if setting isDefault, unset other defaults for same type
+  // A prompt type can have only one default setting.
   if (input.isDefault) {
     const allProviders = await repository.findAllProviders();
     for (const p of allProviders) {

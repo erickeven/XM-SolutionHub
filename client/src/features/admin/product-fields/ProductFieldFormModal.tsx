@@ -91,8 +91,9 @@ export function ProductFieldFormModal({
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
+      const options = values.options ?? [];
       const optionsJson: FieldOption[] | null =
-        values.options.length > 0 ? values.options : null;
+        isSelectType && options.length > 0 ? options : null;
       const validationJson = buildValidation(values);
 
       if (mode === 'create') {
@@ -123,8 +124,8 @@ export function ProductFieldFormModal({
         message.success('字段更新成功');
       }
       onClose();
-    } catch {
-      // validation errors
+    } catch (error) {
+      if (error instanceof Error) message.error(error.message);
     }
   };
 

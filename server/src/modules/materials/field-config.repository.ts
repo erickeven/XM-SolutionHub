@@ -1,5 +1,5 @@
 import prisma from '../../lib/prisma';
-import type { MaterialFieldConfig } from '@prisma/client';
+import { Prisma, type MaterialFieldConfig } from '@prisma/client';
 import type { CreateFieldConfigInput, UpdateFieldConfigInput } from './field-config.types';
 
 export async function findAll(enabledOnly?: boolean): Promise<MaterialFieldConfig[]> {
@@ -44,10 +44,14 @@ export async function update(id: string, data: UpdateFieldConfigInput): Promise<
   if (data.label !== undefined) updateData.label = data.label;
   if (data.fieldType !== undefined) updateData.fieldType = data.fieldType;
   if (data.required !== undefined) updateData.required = data.required;
-  if (data.optionsJson !== undefined) updateData.optionsJson = data.optionsJson;
+  if (data.optionsJson !== undefined) {
+    updateData.optionsJson = data.optionsJson === null ? Prisma.DbNull : data.optionsJson;
+  }
   if (data.sortOrder !== undefined) updateData.sortOrder = data.sortOrder;
   if (data.enabled !== undefined) updateData.enabled = data.enabled;
-  if (data.validationJson !== undefined) updateData.validationJson = data.validationJson;
+  if (data.validationJson !== undefined) {
+    updateData.validationJson = data.validationJson === null ? Prisma.DbNull : data.validationJson;
+  }
 
   return prisma.materialFieldConfig.update({
     where: { id },

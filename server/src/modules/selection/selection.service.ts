@@ -171,7 +171,7 @@ function scoreEfficiency(
 
   if (input.standbyPowerMax !== undefined) {
     hasRequirement = true;
-    const pStandby = getNum(params, 'standbyPower');
+    const pStandby = getNum(params, 'standbyPowerMax');
     if (pStandby !== undefined) {
       if (pStandby <= input.standbyPowerMax) {
         score += 7;

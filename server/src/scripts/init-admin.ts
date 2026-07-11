@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -15,6 +15,17 @@ interface RoleDef {
   description: string;
   isSystem: boolean;
   perms: readonly string[];
+}
+
+interface FieldConfigDef {
+  resourceType: string;
+  fieldKey: string;
+  label: string;
+  fieldType: string;
+  required: boolean;
+  optionsJson?: Prisma.InputJsonValue;
+  sortOrder: number;
+  enabled: boolean;
 }
 
 const permissionDefs = [
@@ -34,6 +45,8 @@ const permissionDefs = [
   { code: 'leads.write', description: '管理线索', resourceGroup: 'leads', action: 'write' },
   { code: 'settings.ai.read', description: '查看AI设置', resourceGroup: 'settings', action: 'read' },
   { code: 'settings.ai.write', description: '管理AI设置', resourceGroup: 'settings', action: 'write' },
+  { code: 'settings.ui.read', description: '查看前端文案', resourceGroup: 'settings', action: 'read' },
+  { code: 'settings.ui.write', description: '管理前端文案', resourceGroup: 'settings', action: 'write' },
 ] as const satisfies readonly PermissionDef[];
 
 const roleDefs = [
@@ -77,6 +90,74 @@ const roleDefs = [
     perms: [],
   },
 ] as const satisfies readonly RoleDef[];
+
+const materialFieldDefs = [
+  {
+    resourceType: 'material',
+    fieldKey: 'file',
+    label: '文件',
+    fieldType: 'text',
+    required: true,
+    sortOrder: 1,
+    enabled: true,
+  },
+  {
+    resourceType: 'material',
+    fieldKey: 'title',
+    label: '标题',
+    fieldType: 'text',
+    required: true,
+    sortOrder: 2,
+    enabled: true,
+  },
+  {
+    resourceType: 'material',
+    fieldKey: 'type',
+    label: '资料类型',
+    fieldType: 'single_select',
+    required: true,
+    optionsJson: [
+      { label: '数据手册', value: 'datasheet' },
+      { label: 'Demo 报告', value: 'demo_report' },
+      { label: '应用笔记', value: 'application_note' },
+      { label: '其他', value: 'other' },
+    ],
+    sortOrder: 3,
+    enabled: true,
+  },
+  {
+    resourceType: 'material',
+    fieldKey: 'status',
+    label: '状态',
+    fieldType: 'single_select',
+    required: true,
+    optionsJson: [
+      { label: '草稿', value: 'DRAFT' },
+      { label: '上架', value: 'ACTIVE' },
+      { label: '下架', value: 'INACTIVE' },
+    ],
+    sortOrder: 4,
+    enabled: true,
+  },
+  {
+    resourceType: 'material',
+    fieldKey: 'solutionId',
+    label: '所属方案',
+    fieldType: 'text',
+    required: false,
+    sortOrder: 5,
+    enabled: true,
+  },
+  {
+    resourceType: 'material',
+    fieldKey: 'productId',
+    label: '关联产品',
+    fieldType: 'text',
+    required: false,
+    sortOrder: 6,
+    enabled: true,
+  },
+] as const satisfies readonly FieldConfigDef[];
 
 function getAdminPassword(): string {
   const password = process.env.SEED_ADMIN_PASSWORD;
@@ -153,6 +234,28 @@ async function main() {
           },
         });
       }
+    }
+
+    for (const fieldDef of materialFieldDefs) {
+      await tx.materialFieldConfig.upsert({
+        where: {
+          resourceType_fieldKey: {
+            resourceType: fieldDef.resourceType,
+            fieldKey: fieldDef.fieldKey,
+          },
+        },
+        update: {},
+        create: {
+          resourceType: fieldDef.resourceType,
+          fieldKey: fieldDef.fieldKey,
+          label: fieldDef.label,
+          fieldType: fieldDef.fieldType,
+          required: fieldDef.required,
+          optionsJson: 'optionsJson' in fieldDef ? fieldDef.optionsJson : undefined,
+          sortOrder: fieldDef.sortOrder,
+          enabled: fieldDef.enabled,
+        },
+      });
     }
 
     const adminUser = await tx.user.upsert({

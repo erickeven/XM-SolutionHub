@@ -54,7 +54,7 @@ xinmaowei-selection/
 ├── server/
 │   ├── prisma/
 │   │   ├── schema.prisma
-│   │   └── seed.ts
+│   │   └── migrations/
 │   ├── src/
 │   │   ├── app.ts
 │   │   ├── index.ts
@@ -194,7 +194,7 @@ enum ChatMessageStatus { STREAMING COMPLETED INTERRUPTED FAILED }
 | `Product` | `id`, `model`, `series`, `status`, `params`, `advantages`, `datasheetMaterialId`, `createdAt`, `updatedAt` |
 | `Solution` | `id`, `name`, `description`, `status`, `createdAt`, `updatedAt` |
 | `ProductSolution` | `id`, `productId`, `solutionId`, `createdAt` |
-| `Material` | `id`, `solutionId?`, `type`, `title`, `originalStorageKey`, `previewStorageKey`, `mimeType`, `pageCount`, `previewPages`, `status` |
+| `Material` | `id`, `solutionId?`, `productId?`, `type`, `title`, `originalStorageKey`, `previewStorageKey`, `mimeType`, `pageCount`, `previewPages`, `metadata`, `status` |
 | `KnowledgeDoc` | `id`, `materialId`, `title`, `sourceType`, `status`, `indexVersion`, `indexedAt`, `errorMessage` |
 | `KnowledgeIndexJob` | `id`, `docId`, `indexVersion`, `status`, `attempts`, `errorMessage`, `startedAt`, `finishedAt`, `createdAt` |
 | `KnowledgeChunk` | `id`, `docId`, `indexVersion`, `content`, `page`, `contentHash`, `embedding` |
@@ -207,6 +207,8 @@ enum ChatMessageStatus { STREAMING COMPLETED INTERRUPTED FAILED }
 | `ChatSession` | `id`, `userId`, `title`, `createdAt`, `updatedAt` |
 | `ChatMessage` | `id`, `sessionId`, `role`, `status`, `content`, `sources`, `feedback`, `createdAt` |
 | `AuditLog` | `id`, `actorId`, `action`, `targetType`, `targetId`, `payload`, `createdAt` |
+| `ProductFieldConfig` / `MaterialFieldConfig` | `resourceType`, `fieldKey`, `label`, `fieldType`, `required`, `optionsJson`, `sortOrder`, `enabled`, `validationJson` |
+| `UiContentSetting` | `key`, `group`, `label`, `value`, `enabled`, `createdAt`, `updatedAt` |
 
 关系要求：
 
@@ -319,10 +321,21 @@ export interface StorageAdapter {
 2. 下载接口只返回短时签名链接。
 3. PDF 水印在下载前生成临时文件或走流式处理。
 4. 每次下载写入 `LeadEvent` 和 `AuditLog`。
-5. 上传 PDF 后异步生成独立的匿名预览件，仅包含允许页；匿名接口只能签发该派生对象，不能签发原文件后依靠前端隐藏页面。
-6. 原文件、预览件和水印件分别记录 `storageKey`、文件哈希与生成状态；派生失败时资料不可上架。
-7. 上传接口限制配置化的文件大小与类型白名单，同时校验扩展名、声明 MIME 和文件签名字节；对象默认存入私有桶且状态为草稿。
-8. 非预览类型一律使用 `Content-Disposition: attachment`，响应补充 `X-Content-Type-Options: nosniff`；文件名由服务端安全生成，不接受路径片段。
+5. 上传 PDF 后生成独立匿名预览件，仅包含允许页；匿名接口只能签发该派生对象，不能签发原文件后依靠前端隐藏页面。
+6. 上传 DOCX/XLSX 时生成匿名限量文本预览件和登录完整文本预览件；登录下载仍签发原文件。旧版 DOC/XLS 可上传并尽力抽取文本，无法可靠抽取时提供说明型预览。
+7. 原文件、预览件和水印件分别记录 `storageKey`、文件哈希与生成状态；PDF 预览派生失败时资料不可上架。
+8. 上传接口限制配置化的文件大小与类型白名单，同时校验扩展名、声明 MIME 和文件签名字节；对象默认存入私有桶且状态为草稿。
+9. 非预览类型一律使用 `Content-Disposition: attachment`，响应补充 `X-Content-Type-Options: nosniff`；文件名由服务端安全生成，不接受路径片段。
+10. 可选鉴权仅在请求未携带 Bearer Token 时视为匿名；携带无效或过期 Token 必须返回 401，让客户端刷新 Access Token 后重试。
+
+### 6.2 后台可配置项
+
+1. 产品字段设置控制产品参数字段，字段类型支持文本、数字、单选、多选、布尔；`optionsJson` 仅在单选/多选时必填，其他类型允许数据库空值。字段选项及数值、长度、正则校验必须由服务端执行。
+2. 资料字段设置控制资料核心字段标签与 `Material.metadata` 扩展字段；扩展字段支持文本、数字、单选、多选、布尔并由上传、编辑、列表共同消费。标题、类型、状态、文件、所属方案、关联产品为系统字段，不可删除，其底层类型仍受业务模型约束。
+3. 前端文案设置通过 `UiContentSetting` 维护全部公开路由的导航、标题、字段标签、按钮、状态提示、空态和错误文案；服务首次读取时幂等补齐内置文案目录，停用或缺失时显示代码内 fallback。
+4. 产品详情通过公开 `/api/v1/product-fields` 读取已启用产品字段，后台新增文本、数字、布尔、单选或多选字段后无需改页面代码即可展示。
+5. 管理员初始化只创建/更新管理员账号、RBAC 权限角色和系统字段配置；开发阶段不灌演示产品、方案或资料数据。
+6. `Product.datasheetMaterialId` 唯一；设置、替换或清空规格书时，必须在同一事务内同步 `Material.productId`。
 
 ## 7. SAG 知识库与 AI 问答
 
@@ -520,7 +533,7 @@ STORAGE_DRIVER=local
 STORAGE_LOCAL_DIR=./uploads
 MINIO_ENDPOINT=http://localhost:9000
 MINIO_ACCESS_KEY=minio
-MINIO_SECRET_KEY=minio123
+MINIO_SECRET_KEY=replace_me
 MINIO_BUCKET=xinmaowei
 STORAGE_SIGNING_SECRET=replace_with_at_least_32_random_characters
 
@@ -561,15 +574,11 @@ pnpm --filter client dev
 
 `prisma:migrate` 必须执行版本化 migration，其中包含 `CREATE EXTENSION IF NOT EXISTS vector`、`pg_trgm`、向量列与索引 SQL，不额外维护未定义的 `prisma:vector` 命令。`admin:init` 只初始化管理员、角色和权限，不清业务数据；生产 Compose 在 migrate 成功后自动运行一次。API、知识库 Worker 和前端开发服务分别在独立终端运行；生产 Compose 同样将 API 与 Worker 定义为两个服务，但复用同一镜像。
 
-必须提供种子数据：
+开发阶段只提供系统初始化数据：
 
 1. 管理员账号由 `admin:init` 提供，账号默认 `admin@xinmaowei.com`，密码来自 `SEED_ADMIN_PASSWORD`。
-2. 至少 5 个产品。
-3. 至少 2 个方案。
-4. 至少 1 份可预览 PDF。
-5. 至少 2 份知识库文档、10 条片段，并生成可覆盖单跳与多跳样例的 chunk、event、entity、event-entity 关联。
-
-`prisma:seed` 仅用于开发和演示数据，会重置示例产品、资料、知识库等数据，禁止在已有生产数据上作为管理员初始化手段执行。
+2. `admin:init` 同步角色、权限、管理员角色绑定和资料系统字段，不清业务数据；前端文案目录由 UI Content 服务幂等补齐。
+3. `prisma:seed` 当前兼容为同一管理员初始化入口，不再写入演示产品、方案、资料或知识库样例。
 
 ## 11. 测试策略
 
@@ -592,7 +601,7 @@ pnpm --filter client dev
 ## 12. 开发顺序
 
 1. 初始化工程、Lint、TypeScript、Docker、CI。
-2. 建库和迁移，写 seed。
+2. 建库和版本化迁移，初始化管理员与 RBAC。
 3. 实现认证、RBAC、错误处理、日志。
 4. 实现产品、方案、资料后台 CRUD。
 5. 实现选型算法和选型页面。

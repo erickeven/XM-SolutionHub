@@ -38,6 +38,15 @@ describe.skipIf(!process.env.DATABASE_URL)('Users Admin API', () => {
     return res.body.data.accessToken as string;
   }
 
+  function extractCookie(setCookie: string | string[] | undefined, name: string): string {
+    const cookies = Array.isArray(setCookie) ? setCookie : setCookie ? [setCookie] : [];
+    for (const cookie of cookies) {
+      const match = cookie.match(new RegExp(`^${name}=([^;]+)`));
+      if (match) return `${name}=${match[1]}`;
+    }
+    return '';
+  }
+
   function uniqueEmail(): string {
     return `user-mgmt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
   }
@@ -113,12 +122,9 @@ describe.skipIf(!process.env.DATABASE_URL)('Users Admin API', () => {
         .post('/api/v1/auth/login')
         .send({ email, password: 'TestPass123' });
 
-      // The refresh token is in the cookie
-      const setCookie = loginRes.headers['set-cookie'];
-      const cookieHeader = Array.isArray(setCookie) ? setCookie[0] : setCookie;
-      const refreshToken = cookieHeader
-        ? cookieHeader.split(';')[0]?.split('=')[1]
-        : null;
+      const refreshCookie = extractCookie(loginRes.headers['set-cookie'], 'refreshToken');
+      const csrfCookie = extractCookie(loginRes.headers['set-cookie'], 'csrf-token');
+      const csrfToken = csrfCookie.split('=')[1] ?? '';
 
       // Disable the user
       const disableRes = await request
@@ -130,11 +136,11 @@ describe.skipIf(!process.env.DATABASE_URL)('Users Admin API', () => {
       expect(disableRes.body.data.status).toBe('INACTIVE');
 
       // Attempt to refresh the token — should fail (revoked)
-      if (refreshToken) {
+      if (refreshCookie && csrfCookie) {
         const refreshRes = await request
           .post('/api/v1/auth/refresh')
-          .set('Cookie', `refreshToken=${refreshToken}`)
-          .send({ csrfToken: '' });
+          .set('Cookie', `${refreshCookie}; ${csrfCookie}`)
+          .set('x-csrf-token', csrfToken);
 
         expect(refreshRes.status).toBe(401);
       }

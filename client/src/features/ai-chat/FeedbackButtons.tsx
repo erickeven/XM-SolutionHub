@@ -1,6 +1,7 @@
 import { Button, Space } from 'antd';
 import { LikeOutlined, LikeFilled, DislikeOutlined, DislikeFilled } from '@ant-design/icons';
 import type { MessageFeedback } from '../../types/ai-chat';
+import { useUiContent } from '../../api/ui-content';
 
 interface FeedbackButtonsProps {
   messageId: string;
@@ -9,6 +10,7 @@ interface FeedbackButtonsProps {
 }
 
 export function FeedbackButtons({ messageId, currentFeedback, onFeedback }: FeedbackButtonsProps) {
+  const { text } = useUiContent();
   const isHelpful = currentFeedback?.helpful === true;
   const isUnhelpful = currentFeedback?.helpful === false;
 
@@ -21,7 +23,7 @@ export function FeedbackButtons({ messageId, currentFeedback, onFeedback }: Feed
         className={isHelpful ? '!text-blue-600' : '!text-slate-500'}
         onClick={() => onFeedback(messageId, true)}
       >
-        有帮助
+        {text('ai.feedback.helpful', '有帮助')}
       </Button>
       <Button
         type="text"
@@ -30,7 +32,7 @@ export function FeedbackButtons({ messageId, currentFeedback, onFeedback }: Feed
         className={isUnhelpful ? '!text-blue-600' : '!text-slate-500'}
         onClick={() => onFeedback(messageId, false)}
       >
-        无帮助
+        {text('ai.feedback.unhelpful', '无帮助')}
       </Button>
     </Space>
   );

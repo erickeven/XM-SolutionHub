@@ -1,5 +1,6 @@
 import { AppError } from '../../lib/errors';
 import * as repository from './field-config.repository';
+import { invalidateProductParamsSchemaCache } from './products.schema';
 import type {
   FieldConfigListItem,
   FieldOption,
@@ -42,6 +43,7 @@ export async function listFields(enabledOnly?: boolean): Promise<FieldConfigList
 export async function createField(input: CreateFieldConfigInput): Promise<FieldConfigListItem> {
   try {
     const raw = await repository.create(input);
+    invalidateProductParamsSchemaCache();
     return toListItem(raw);
   } catch (err: unknown) {
     if (err instanceof Error && 'code' in err && (err as { code: string }).code === 'P2002') {
@@ -57,7 +59,18 @@ export async function updateField(id: string, input: UpdateFieldConfigInput): Pr
     throw new AppError(4001, 'Field config not found', 404);
   }
 
+  const nextType = input.fieldType ?? existing.fieldType;
+  const nextOptions =
+    input.optionsJson !== undefined ? input.optionsJson : normalizeOptions(existing.optionsJson);
+  if (
+    (nextType === 'single_select' || nextType === 'multi_select') &&
+    (!Array.isArray(nextOptions) || nextOptions.length === 0)
+  ) {
+    throw new AppError(1002, 'Select fields require at least one option', 400);
+  }
+
   const raw = await repository.update(id, input);
+  invalidateProductParamsSchemaCache();
   return toListItem(raw);
 }
 
@@ -68,6 +81,7 @@ export async function toggleField(id: string, enabled: boolean): Promise<FieldCo
   }
 
   const raw = await repository.updateEnabled(id, enabled);
+  invalidateProductParamsSchemaCache();
   return toListItem(raw);
 }
 
@@ -82,4 +96,5 @@ export async function deleteField(id: string): Promise<void> {
   }
 
   await repository.remove(id);
+  invalidateProductParamsSchemaCache();
 }

@@ -260,7 +260,7 @@ describe.skipIf(!process.env.DATABASE_URL)('Source Coverage & Recommendation Acc
 
       // If products exist in DB, the top result should be an exact or approximate match
       if (res.status === 200 && res.body.code === 0) {
-        const items = res.body.data.items as Array<{ matchLevel: string }>;
+        const items = res.body.data as Array<{ matchLevel: string }>;
         if (items.length > 0) {
           // Top result should be exact or approximate (not fallback) when matching products exist
           const topResult = items[0];
@@ -284,7 +284,7 @@ describe.skipIf(!process.env.DATABASE_URL)('Source Coverage & Recommendation Acc
         });
 
       if (res.status === 200 && res.body.code === 0) {
-        const items = res.body.data.items as Array<{ matchLevel: string; score: number }>;
+        const items = res.body.data as Array<{ matchLevel: string; score: number }>;
         if (items.length > 1) {
           const levels = items.map((i) => i.matchLevel);
           const levelOrder: Record<string, number> = { exact: 0, approximate: 1, fallback: 2 };
@@ -314,7 +314,7 @@ describe.skipIf(!process.env.DATABASE_URL)('Source Coverage & Recommendation Acc
         });
 
       if (res.status === 200 && res.body.code === 0) {
-        const items = res.body.data.items as Array<{
+        const items = res.body.data as Array<{
           reasons: string[];
           diffs: string[];
         }>;

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authMiddleware } from '../../middleware/auth';
+import { authMiddleware, optionalAuth } from '../../middleware/auth';
 import { permissionGuard } from '../../middleware/permissionGuard';
 import { apiLimiter } from '../../middleware/rateLimit';
 import * as controller from './materials.controller';
@@ -22,14 +22,16 @@ adminRoutes.delete('/:id', controller.adminDeleteHandler);
 adminRoutes.delete('/:id/permanent', controller.adminHardDeleteHandler);
 
 // Public routes — mounted at /api/v1/solutions/:id/materials
-const publicRoutes: Router = Router();
+const publicRoutes: Router = Router({ mergeParams: true });
 publicRoutes.use(apiLimiter);
+publicRoutes.post('/download-all', authMiddleware, controller.downloadSolutionArchiveHandler);
 publicRoutes.get('/', controller.publicListBySolutionHandler);
 
 // Material preview/download routes — mounted at /api/v1/materials
 const materialPublicRoutes: Router = Router();
 materialPublicRoutes.use(apiLimiter);
-materialPublicRoutes.get('/:id/preview', controller.previewHandler);
+materialPublicRoutes.get('/:id/preview-url', optionalAuth, controller.previewUrlHandler);
+materialPublicRoutes.get('/:id/preview', optionalAuth, controller.previewHandler);
 materialPublicRoutes.post(
   '/:id/download',
   authMiddleware,

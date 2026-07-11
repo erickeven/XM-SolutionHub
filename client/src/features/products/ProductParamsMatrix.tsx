@@ -1,85 +1,90 @@
 import { Tag } from 'antd';
+import type { FieldConfigItem } from '../../api/admin-product-fields';
+import { usePublicProductFields } from '../../api/product-fields';
+import { useUiContent } from '../../api/ui-content';
 
 interface ProductParamsMatrixProps {
   params: Record<string, unknown>;
 }
 
-function getNumber(params: Record<string, unknown>, key: string): number | undefined {
-  const v = params[key];
-  return typeof v === 'number' ? v : undefined;
-}
+const CORE_FIELDS = new Set(['model', 'series', 'status', 'advantages']);
+const UNIT_BY_FIELD: Record<string, string> = {
+  inputVoltageMin: 'V',
+  inputVoltageMax: 'V',
+  outputVoltage: 'V',
+  outputCurrent: 'A',
+  standbyPower: 'W',
+  standbyPowerMax: 'W',
+  operatingTempMin: '°C',
+  operatingTempMax: '°C',
+};
 
-function getString(params: Record<string, unknown>, key: string): string | undefined {
-  const v = params[key];
-  return typeof v === 'string' ? v : undefined;
-}
+function formatValue(
+  value: unknown,
+  field: FieldConfigItem | undefined,
+  text: (key: string, fallback: string) => string,
+): string {
+  if (value === undefined || value === null || value === '') return '-';
+  if (typeof value === 'boolean') {
+    return value ? text('common.yes', '是') : text('common.no', '否');
+  }
 
-function getStringArray(params: Record<string, unknown>, key: string): string[] {
-  const v = params[key];
-  if (!Array.isArray(v)) return [];
-  return v.filter((x): x is string => typeof x === 'string');
-}
+  const optionLabel = (raw: unknown) =>
+    field?.optionsJson?.find((option) => option.value === String(raw))?.label ?? String(raw);
+  if (Array.isArray(value)) {
+    return value.map(optionLabel).join('、') || '-';
+  }
 
-function formatRange(min: number | undefined, max: number | undefined, separator: string): string | undefined {
-  if (min === undefined && max === undefined) return undefined;
-  const parts: string[] = [];
-  if (min !== undefined) parts.push(String(min));
-  if (max !== undefined) parts.push(String(max));
-  return parts.length > 0 ? parts.join(separator) : undefined;
+  const unit = field ? UNIT_BY_FIELD[field.fieldKey] : undefined;
+  const formatted = field?.fieldType === 'single_select' ? optionLabel(value) : String(value);
+  return unit ? `${formatted} ${unit}` : formatted;
 }
 
 export function ProductParamsMatrix({ params }: ProductParamsMatrixProps) {
-  const inputMin = getNumber(params, 'inputVoltageMin');
-  const inputMax = getNumber(params, 'inputVoltageMax');
-  const outputVoltage = getNumber(params, 'outputVoltage');
-  const outputCurrent = getNumber(params, 'outputCurrent');
-  const efficiency = getString(params, 'efficiencyLevel');
-  const tempMin = getNumber(params, 'operatingTempMin');
-  const tempMax = getNumber(params, 'operatingTempMax');
-  const packageSize = getString(params, 'packageSize');
-  const certs = getStringArray(params, 'certifications');
+  const { data: configuredFields } = usePublicProductFields();
+  const { text } = useUiContent();
+  const fields = [...(configuredFields ?? [])]
+    .filter((field) => !CORE_FIELDS.has(field.fieldKey) && field.fieldKey !== 'certifications')
+    .sort((left, right) => left.sortOrder - right.sortOrder);
+  const configuredKeys = new Set(fields.map((field) => field.fieldKey));
+  const entries = fields
+    .filter((field) => params[field.fieldKey] !== undefined)
+    .map((field) => ({
+      key: field.fieldKey,
+      label: field.label,
+      value: formatValue(params[field.fieldKey], field, text),
+    }));
 
-  const entries: { label: string; value: string }[] = [];
-
-  const inputRange = formatRange(inputMin, inputMax, '-');
-  if (inputRange) entries.push({ label: '输入电压', value: `${inputRange} V` });
-
-  if (outputVoltage !== undefined) {
-    entries.push({ label: '输出电压', value: `${outputVoltage} V` });
+  for (const [key, value] of Object.entries(params)) {
+    if (configuredKeys.has(key) || value === undefined || value === null || key === 'certifications') {
+      continue;
+    }
+    entries.push({ key, label: key, value: formatValue(value, undefined, text) });
   }
 
-  if (outputCurrent !== undefined) {
-    entries.push({ label: '输出电流', value: `${outputCurrent} A` });
-  }
-
-  if (efficiency) {
-    entries.push({ label: '效率', value: efficiency });
-  }
-
-  const tempRange = formatRange(tempMin, tempMax, '~');
-  if (tempRange) entries.push({ label: '工作温度范围', value: `${tempRange} °C` });
-
-  if (packageSize) {
-    entries.push({ label: '封装', value: packageSize });
-  }
+  const certifications = Array.isArray(params.certifications)
+    ? params.certifications.filter((value): value is string => typeof value === 'string')
+    : [];
 
   return (
     <div>
-      <div className="grid grid-cols-2 gap-px bg-slate-200 border border-slate-200 rounded-lg overflow-hidden md:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-slate-200 bg-slate-200 md:grid-cols-3 lg:grid-cols-4">
         {entries.map((entry) => (
-          <div key={entry.label} className="bg-white p-4">
-            <div className="text-xs text-slate-500 mb-1">{entry.label}</div>
-            <div className="text-lg font-bold text-slate-900">{entry.value}</div>
+          <div key={entry.key} className="bg-white p-4">
+            <div className="mb-1 text-xs text-slate-500">{entry.label}</div>
+            <div className="break-words text-base font-bold text-slate-900">{entry.value}</div>
           </div>
         ))}
       </div>
-      {certs.length > 0 && (
+      {certifications.length > 0 && (
         <div className="mt-4">
-          <div className="text-xs text-slate-500 mb-2">认证</div>
+          <div className="mb-2 text-xs text-slate-500">
+            {text('selection.card.certification', '认证')}
+          </div>
           <div className="flex flex-wrap gap-2">
-            {certs.map((cert) => (
-              <Tag key={cert} color="blue">
-                {cert}
+            {certifications.map((certification) => (
+              <Tag key={certification} color="blue">
+                {text(`selection.certification.${certification.toLowerCase()}`, certification)}
               </Tag>
             ))}
           </div>

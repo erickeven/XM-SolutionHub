@@ -174,7 +174,7 @@ export async function getRecentTraces(
   const doc = await prisma.knowledgeDoc.findUnique({ where: { id: docId } });
   if (!doc) return [];
 
-  // ponytail: simple text match on query; steps JSON match is best-effort
+  // Query text matching is exact; matching inside steps JSON is best effort.
   return prisma.searchTrace.findMany({
     where: {
       OR: [

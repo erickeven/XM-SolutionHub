@@ -7,7 +7,7 @@ import type {
   UpdateFieldConfigInput,
 } from './field-config.types';
 
-const CORE_FIELDS = ['title', 'type', 'status'];
+const CORE_FIELDS = ['file', 'title', 'type', 'status', 'solutionId', 'productId'];
 
 function normalizeOptions(raw: unknown): FieldOption[] | null {
   if (!raw) return null;
@@ -68,6 +68,16 @@ export async function updateField(id: string, input: UpdateFieldConfigInput): Pr
   const existing = await repository.findById(id);
   if (!existing) {
     throw new AppError(4001, 'Field config not found', 404);
+  }
+
+  const nextType = input.fieldType ?? existing.fieldType;
+  const nextOptions =
+    input.optionsJson !== undefined ? input.optionsJson : normalizeOptions(existing.optionsJson);
+  if (
+    (nextType === 'single_select' || nextType === 'multi_select') &&
+    (!Array.isArray(nextOptions) || nextOptions.length === 0)
+  ) {
+    throw new AppError(1002, 'Select fields require at least one option', 400);
   }
 
   const raw = await repository.update(id, input);

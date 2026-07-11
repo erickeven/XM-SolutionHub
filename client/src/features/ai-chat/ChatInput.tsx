@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Input, Button, Space } from 'antd';
 import type { TextAreaRef } from 'antd/es/input/TextArea';
 import { SendOutlined, StopOutlined, RedoOutlined } from '@ant-design/icons';
+import { useUiContent } from '../../api/ui-content';
 
 interface ChatInputProps {
   onSend: (query: string) => void;
@@ -22,6 +23,7 @@ export function ChatInput({
 }: ChatInputProps) {
   const [value, setValue] = useState('');
   const inputRef = useRef<TextAreaRef>(null);
+  const { text } = useUiContent();
 
   useEffect(() => {
     if (pendingQuery !== undefined) {
@@ -58,7 +60,7 @@ export function ChatInput({
           value={value}
           onChange={(event) => setValue(event.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="输入您的问题，Enter 发送，Shift+Enter 换行"
+          placeholder={text('ai.input.placeholder', '输入您的问题，Enter 发送，Shift+Enter 换行')}
           autoSize={{ minRows: 1, maxRows: 4 }}
           disabled={disabled}
           className="!resize-none"
@@ -70,7 +72,7 @@ export function ChatInput({
               onClick={onStop}
               danger
               className="!h-10 !w-10"
-              title="停止生成"
+              title={text('ai.input.stop', '停止生成')}
             />
           ) : pendingQuery ? (
             <Button
@@ -79,7 +81,7 @@ export function ChatInput({
               type="primary"
               disabled={!canSend}
               className="!h-10 !w-10"
-              title="重试"
+              title={text('common.retry', '重试')}
             />
           ) : (
             <Button
@@ -88,13 +90,13 @@ export function ChatInput({
               type="primary"
               disabled={!canSend}
               className="!h-10 !w-10"
-              title="发送"
+              title={text('ai.input.send', '发送')}
             />
           )}
         </Space>
       </div>
       <div className="mx-auto max-w-4xl pt-1 text-right text-xs text-slate-400">
-        Enter 发送 · Shift+Enter 换行
+        {text('ai.input.hint', 'Enter 发送 · Shift+Enter 换行')}
       </div>
     </div>
   );

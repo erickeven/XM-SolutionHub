@@ -88,7 +88,7 @@ export async function updateRole(
     permissionIds: input.permissionIds,
   };
 
-  // ponytail: isSystem roles can't change name/description, only permissions
+  // System roles keep their identity; only their permission assignments can change.
   if (!existing.isSystem) {
     if (input.name !== undefined) {
       const nameTaken = await repository.findRoleByName(input.name);

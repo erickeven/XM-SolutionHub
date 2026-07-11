@@ -2,7 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { AppError } from '../lib/errors';
 import prisma from '../lib/prisma';
 
-// ponytail: simple in-memory cache with TTL, add Redis if this becomes a bottleneck
+// Permission lookups use a short in-memory TTL; Redis can replace this if needed at scale.
 const cache = new Map<string, { expires: number; permissions: Set<string> }>();
 const CACHE_TTL_MS = 60_000;
 
@@ -50,6 +50,7 @@ const ALL_PERMISSIONS: Record<string, string[]> = {
     'audit.read',
     'leads.read', 'leads.write',
     'settings.ai.read', 'settings.ai.write',
+    'settings.ui.read', 'settings.ui.write',
   ],
   AUDITOR: [
     'admin.dashboard.read',

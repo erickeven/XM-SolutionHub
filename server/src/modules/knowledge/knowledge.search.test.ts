@@ -334,7 +334,7 @@ describe('Degradation: LLM unavailable', () => {
       { id: 'c2', content: 'content2' },
     ];
 
-    // ponytail: when both LLM and rerank unavailable, use vector scores
+    // When both LLM extraction and reranking are unavailable, use vector scores.
     const results = documents.map((d) => ({
       id: d.id,
       score: fallbackScores.get(d.id) ?? 0.5,

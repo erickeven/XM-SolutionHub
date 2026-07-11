@@ -23,7 +23,7 @@ import { MaterialFieldFormModal } from './MaterialFieldFormModal';
 
 const { Text } = Typography;
 
-const CORE_FIELDS = new Set(['title', 'type', 'status']);
+const CORE_FIELDS = new Set(['file', 'title', 'type', 'status', 'solutionId', 'productId']);
 
 const FIELD_TYPE_LABEL: Record<string, string> = {
   text: '文本',

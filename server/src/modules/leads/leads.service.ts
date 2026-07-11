@@ -153,7 +153,7 @@ export { mergeAnonymousLeadToUser };
 export async function getLeadsExport(
   query: LeadListQuery,
 ): Promise<LeadAggregated[]> {
-  // ponytail: large page size for export, add streaming if this becomes a bottleneck
+  // Export uses a large page; switch to streaming if volume makes this a bottleneck.
   const exportQuery: LeadListQuery = {
     ...query,
     page: 1,

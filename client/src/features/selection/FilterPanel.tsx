@@ -1,6 +1,7 @@
 import { InputNumber, Select, Checkbox, Button, Divider } from 'antd';
 import { CloseOutlined, RedoOutlined, SearchOutlined } from '@ant-design/icons';
 import type { SelectionInput } from '../../types/selection';
+import { useUiContent } from '../../api/ui-content';
 
 const APPLICATION_TYPES = [
   { label: '适配器', value: '适配器' },
@@ -20,6 +21,14 @@ const EFFICIENCY_LEVELS = [
 ];
 
 const CERTIFICATIONS = ['CE', 'FCC', 'RoHS', 'UL', 'CCC', 'TUV'];
+const APPLICATION_CONTENT_KEYS: Record<string, string> = {
+  适配器: 'adapter',
+  充电器: 'charger',
+  LED驱动: 'led',
+  服务器电源: 'server',
+  PFC: 'pfc',
+  工业电源: 'industrial',
+};
 
 const FIELD_LABELS: Record<keyof SelectionInput, string> = {
   inputVoltageMin: '输入电压下限',
@@ -48,42 +57,56 @@ export function FilterPanel({
   onReset,
   compact = false,
 }: FilterPanelProps) {
+  const { text } = useUiContent();
+  const fieldLabel = (field: keyof SelectionInput, fallback: string) =>
+    text(`selection.field.${field}`, fallback);
+  const applicationOptions = APPLICATION_TYPES.map((option) => ({
+    ...option,
+    label: text(
+      `selection.application.${APPLICATION_CONTENT_KEYS[option.value] ?? option.value}`,
+      option.label,
+    ),
+  }));
+  const efficiencyOptions = EFFICIENCY_LEVELS.map((option) => ({
+    ...option,
+    label: text(`selection.efficiency.${option.value.toLowerCase()}`, option.label),
+  }));
   const activeChips: { field: string; label: string; value: string }[] = [];
 
   if (values.inputVoltageMin !== undefined && values.inputVoltageMin !== null && values.inputVoltageMin > 0) {
     activeChips.push({
       field: 'inputVoltageMin',
-      label: '输入电压下限',
+      label: fieldLabel('inputVoltageMin', '输入电压下限'),
       value: `${values.inputVoltageMin}V`,
     });
   }
   if (values.inputVoltageMax !== undefined && values.inputVoltageMax !== null && values.inputVoltageMax > 0) {
     activeChips.push({
       field: 'inputVoltageMax',
-      label: '输入电压上限',
+      label: fieldLabel('inputVoltageMax', '输入电压上限'),
       value: `${values.inputVoltageMax}V`,
     });
   }
   if (values.outputVoltage !== undefined && values.outputVoltage !== null && values.outputVoltage > 0) {
-    activeChips.push({ field: 'outputVoltage', label: '输出电压', value: `${values.outputVoltage}V` });
+    activeChips.push({ field: 'outputVoltage', label: fieldLabel('outputVoltage', '输出电压'), value: `${values.outputVoltage}V` });
   }
   if (values.outputCurrent !== undefined && values.outputCurrent !== null && values.outputCurrent > 0) {
     activeChips.push({
       field: 'outputCurrent',
-      label: '输出电流',
+      label: fieldLabel('outputCurrent', '输出电流'),
       value: `${values.outputCurrent}A`,
     });
   }
   if (values.applicationType) {
-    activeChips.push({ field: 'applicationType', label: '应用类型', value: values.applicationType });
+    activeChips.push({ field: 'applicationType', label: fieldLabel('applicationType', '应用类型'), value: values.applicationType });
   }
   if (values.efficiencyLevel) {
-    activeChips.push({ field: 'efficiencyLevel', label: '能效等级', value: values.efficiencyLevel });
+    activeChips.push({ field: 'efficiencyLevel', label: fieldLabel('efficiencyLevel', '能效等级'), value: values.efficiencyLevel });
   }
   if (values.certifications && values.certifications.length > 0) {
     activeChips.push({
       field: 'certifications',
-      label: '认证',
+      label: fieldLabel('certifications', '认证'),
       value: values.certifications.join(', '),
     });
   }
@@ -113,10 +136,10 @@ export function FilterPanel({
 
       {/* Electrical params */}
       <div className="mb-4">
-        <div className="mb-2 text-sm font-medium text-slate-900">电气参数</div>
+        <div className="mb-2 text-sm font-medium text-slate-900">{text('selection.group.electrical', '电气参数')}</div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-xs text-slate-500">输入电压下限 (V)</label>
+            <label className="mb-1 block text-xs text-slate-500">{fieldLabel('inputVoltageMin', '输入电压下限')} (V)</label>
             <InputNumber
               value={values.inputVoltageMin}
               onChange={(v) => onChange({ inputVoltageMin: v ?? 0 })}
@@ -126,7 +149,7 @@ export function FilterPanel({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-slate-500">输入电压上限 (V)</label>
+            <label className="mb-1 block text-xs text-slate-500">{fieldLabel('inputVoltageMax', '输入电压上限')} (V)</label>
             <InputNumber
               value={values.inputVoltageMax}
               onChange={(v) => onChange({ inputVoltageMax: v ?? 0 })}
@@ -136,7 +159,7 @@ export function FilterPanel({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-slate-500">输出电压 (V)</label>
+            <label className="mb-1 block text-xs text-slate-500">{fieldLabel('outputVoltage', '输出电压')} (V)</label>
             <InputNumber
               value={values.outputVoltage}
               onChange={(v) => onChange({ outputVoltage: v ?? 0 })}
@@ -146,7 +169,7 @@ export function FilterPanel({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-slate-500">输出电流 (A)</label>
+            <label className="mb-1 block text-xs text-slate-500">{fieldLabel('outputCurrent', '输出电流')} (A)</label>
             <InputNumber
               value={values.outputCurrent}
               onChange={(v) => onChange({ outputCurrent: v ?? 0 })}
@@ -160,33 +183,33 @@ export function FilterPanel({
 
       {/* Application type */}
       <div className="mb-4">
-        <div className="mb-2 text-sm font-medium text-slate-900">应用类型</div>
+        <div className="mb-2 text-sm font-medium text-slate-900">{fieldLabel('applicationType', '应用类型')}</div>
         <Select
           value={values.applicationType || undefined}
           onChange={(v) => onChange({ applicationType: v })}
           className="!w-full"
-          placeholder="选择应用类型"
-          options={APPLICATION_TYPES}
+          placeholder={text('selection.field.application.placeholder.short', '选择应用类型')}
+          options={applicationOptions}
           allowClear
         />
       </div>
 
       {/* Performance */}
       <div className="mb-4">
-        <div className="mb-2 text-sm font-medium text-slate-900">性能参数</div>
+        <div className="mb-2 text-sm font-medium text-slate-900">{text('selection.group.performance', '性能参数')}</div>
         <Select
           value={values.efficiencyLevel || undefined}
           onChange={(v) => onChange({ efficiencyLevel: v })}
           className="!w-full"
-          placeholder="能效等级"
-          options={EFFICIENCY_LEVELS}
+          placeholder={fieldLabel('efficiencyLevel', '能效等级')}
+          options={efficiencyOptions}
           allowClear
         />
       </div>
 
       {/* Compliance */}
       <div className="mb-4">
-        <div className="mb-2 text-sm font-medium text-slate-900">合规参数</div>
+        <div className="mb-2 text-sm font-medium text-slate-900">{text('selection.group.compliance', '合规参数')}</div>
         <Checkbox.Group
           value={values.certifications || []}
           onChange={(v) => onChange({ certifications: v as string[] })}
@@ -194,7 +217,7 @@ export function FilterPanel({
         >
           {CERTIFICATIONS.map((cert) => (
             <Checkbox key={cert} value={cert} className="!text-sm">
-              {cert}
+              {text(`selection.certification.${cert.toLowerCase()}`, cert)}
             </Checkbox>
           ))}
         </Checkbox.Group>
@@ -210,10 +233,10 @@ export function FilterPanel({
           onClick={onSubmit}
           className="!flex-1"
         >
-          开始选型
+          {text('home.quick.submit', '开始选型')}
         </Button>
         <Button icon={<RedoOutlined />} onClick={onReset}>
-          重置
+          {text('selection.filters.reset', '重置')}
         </Button>
       </div>
 

@@ -47,7 +47,7 @@ export async function updatePrompt(
   id: string,
   data: { title?: string; content?: string; enabled?: boolean },
 ): Promise<AiPromptDetail> {
-  // ponytail: increment version on any content update
+  // Increment the version whenever prompt content changes.
   const upd: Record<string, unknown> = { ...data };
   if (data.content !== undefined) {
     upd.version = { increment: 1 } as unknown as number;

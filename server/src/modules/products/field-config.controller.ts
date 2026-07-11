@@ -81,3 +81,16 @@ export async function deleteHandler(
     next(err);
   }
 }
+
+export async function listEnabledHandler(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const fields = await service.listFields(true);
+    res.status(200).json(successResponse(fields));
+  } catch (err) {
+    next(err);
+  }
+}

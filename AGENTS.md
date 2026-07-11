@@ -1,6 +1,6 @@
 # XM-SolutionHub — 芯茂微选型与资料系统
 
-> **状态**: 已完成主体实现；本轮已同步 UI 重构、选型契约修复、Hook 顺序修复、管理员初始化和文档更新。AI 外部服务配置与数据库依赖集成验证仍需在目标环境补齐。
+> **状态**: 开发阶段持续重构中；业务主链路为“选型推荐产品 → 产品详情 → 关联方案 → 方案资料预览/下载”。初始化仅保留管理员/RBAC，不再灌演示产品、方案、资料数据。
 
 ## 项目定位
 
@@ -34,7 +34,6 @@ docs/            — PRD, design, tech（已定稿）
 ```bash
 pnpm install
 docker compose up -d postgres redis minio
-pnpm --filter server prisma:migrate
 pnpm --filter server admin:init
 pnpm --filter server dev
 pnpm --filter server worker:knowledge
@@ -94,10 +93,10 @@ rsync -avz --exclude '.git' --exclude '.env.local' --exclude 'node_modules' \
 ssh root@172.16.172.85
 cd /opt/xinmaowei
 docker compose up -d
-pnpm install && pnpm --filter server prisma:migrate && pnpm --filter server admin:init && pnpm build
+pnpm install && pnpm --filter server admin:init && pnpm build
 # Nginx 反代配置见宝塔面板
 ```
 
 ## 依赖服务
 
-本地开发依赖 `docker compose` 启动 PostgreSQL + Redis + MinIO，并由版本化 migration 在 PostgreSQL 中启用 pgvector 与 pg_trgm。数据库迁移与 seed 数据是首个可验证步骤。
+本地开发依赖 `docker compose` 启动 PostgreSQL + Redis + MinIO。开发阶段不再执行演示 seed；初始化只创建/更新管理员、角色和权限。需要重建 schema 时再按当前 Prisma schema 选择迁移或同步策略。

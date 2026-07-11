@@ -1,6 +1,6 @@
 FROM node:20-alpine
 
-RUN apk add --no-cache libc6-compat openssl wget && npm install -g pnpm@9
+RUN apk add --no-cache libc6-compat openssl wget python3 make g++ && npm install -g pnpm@9
 
 WORKDIR /app
 

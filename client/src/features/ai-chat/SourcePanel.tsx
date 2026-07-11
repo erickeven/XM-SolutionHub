@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { SourceCard } from './SourceCard';
 import { useAuth } from '../../hooks/useAuth';
 import type { ChatSource } from '../../types/ai-chat';
+import { useUiContent } from '../../api/ui-content';
 
 interface SourcePanelProps {
   sources: ChatSource[];
@@ -11,6 +12,7 @@ interface SourcePanelProps {
 
 export function SourcePanel({ sources }: SourcePanelProps) {
   const { user } = useAuth();
+  const { text } = useUiContent();
   const isAdmin = user?.role === 'ADMIN';
   const traceDocId = sources[0]?.docId;
   return (
@@ -18,7 +20,7 @@ export function SourcePanel({ sources }: SourcePanelProps) {
       <div className="border-b border-slate-200 px-4 py-3">
         <Typography.Text strong className="!text-sm !text-slate-700">
           <FileTextOutlined className="!mr-2" />
-          本轮引用来源
+          {text('ai.sources.current', '本轮引用来源')}
         </Typography.Text>
       </div>
 
@@ -26,7 +28,7 @@ export function SourcePanel({ sources }: SourcePanelProps) {
         {sources.length === 0 ? (
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description="本次回答暂无引用来源"
+            description={text('ai.sources.empty', '本次回答暂无引用来源')}
             className="mt-8"
           />
         ) : (
@@ -44,7 +46,7 @@ export function SourcePanel({ sources }: SourcePanelProps) {
         <div className="border-t border-slate-200 p-3">
           <Link to={`/admin/trace/${traceDocId}`}>
             <Button icon={<BugOutlined />} size="small" block>
-              查看检索追踪
+              {text('ai.sources.trace', '查看检索追踪')}
             </Button>
           </Link>
         </div>

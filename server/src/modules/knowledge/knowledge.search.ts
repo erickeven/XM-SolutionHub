@@ -90,7 +90,7 @@ async function rerank(
   fallbackScores: Map<string, number>,
 ): Promise<RerankResult[]> {
   if (!env.RERANK_API_KEY || !env.RERANK_BASE_URL) {
-    // ponytail: fallback to vector similarity scores when rerank unavailable
+    // Fall back to vector similarity scores when reranking is unavailable.
     logger.warn({ query }, 'Rerank API not configured, using vector similarity fallback');
     return documents.map((d) => ({
       id: d.id,
@@ -193,7 +193,7 @@ async function buildCandidateDocIds(userRole: string | null): Promise<string[]> 
     select: { id: true },
   });
 
-  // ponytail: visibilityLevel is a no-op filter now — no internal flag in schema yet.
+  // visibilityLevel is currently a no-op until the schema gains an internal flag.
   // When added, the where clause above will use it to exclude internal-only docs for PUBLIC.
   void visibilityLevel;
 

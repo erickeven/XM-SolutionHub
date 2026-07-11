@@ -33,6 +33,7 @@ export interface CreateProductInput {
   series: string;
   params: Record<string, unknown>;
   advantages: string[];
+  datasheetMaterialId?: string | null;
   status?: 'DRAFT' | 'ACTIVE' | 'INACTIVE';
 }
 
@@ -41,6 +42,7 @@ export interface UpdateProductInput {
   series?: string;
   params?: Record<string, unknown>;
   advantages?: string[];
+  datasheetMaterialId?: string | null;
   status?: 'DRAFT' | 'ACTIVE' | 'INACTIVE';
 }
 

@@ -30,7 +30,11 @@ const STATUS_OPTIONS: { label: string; value: MaterialStatus }[] = [
   { label: '下架', value: 'INACTIVE' },
 ];
 
-const FIXED_FIELD_KEYS = new Set(['title', 'type', 'status']);
+const FIXED_FIELD_KEYS = new Set(['file', 'title', 'type', 'status', 'solutionId', 'productId']);
+
+function getCoreFieldLabel(fields: FieldConfigItem[] | undefined, fieldKey: string, fallback: string) {
+  return fields?.find((field) => field.fieldKey === fieldKey)?.label ?? fallback;
+}
 
 function buildRules(field: FieldConfigItem) {
   const rules: Array<{ required?: boolean; message?: string }> = [];
@@ -136,6 +140,11 @@ export function MaterialEditModal({
   );
 
   const { data: fieldConfigsRaw, isLoading: fieldsLoading } = useFieldConfigs(true);
+  const titleLabel = getCoreFieldLabel(fieldConfigsRaw, 'title', '标题');
+  const typeLabel = getCoreFieldLabel(fieldConfigsRaw, 'type', '类型');
+  const statusLabel = getCoreFieldLabel(fieldConfigsRaw, 'status', '状态');
+  const solutionLabel = getCoreFieldLabel(fieldConfigsRaw, 'solutionId', '所属方案');
+  const productLabel = getCoreFieldLabel(fieldConfigsRaw, 'productId', '关联产品');
   const fieldConfigs = useMemo(
     () =>
       [...(fieldConfigsRaw ?? [])]
@@ -208,7 +217,7 @@ export function MaterialEditModal({
           status: values.status,
           solutionId: values.solutionId,
           productId: values.productId,
-          metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+          metadata,
         },
       });
     } catch {
@@ -229,13 +238,13 @@ export function MaterialEditModal({
       destroyOnClose
     >
       <Form form={form} layout="vertical" className="mt-4">
-        <Form.Item label="标题" name="title" rules={[{ required: true }]}>
+        <Form.Item label={titleLabel} name="title" rules={[{ required: true }]}>
           <Input />
         </Form.Item>
-        <Form.Item label="类型" name="type" rules={[{ required: true }]}>
+        <Form.Item label={typeLabel} name="type" rules={[{ required: true }]}>
           <Select options={TYPE_OPTIONS} />
         </Form.Item>
-        <Form.Item label="状态" name="status" rules={[{ required: true }]}>
+        <Form.Item label={statusLabel} name="status" rules={[{ required: true }]}>
           <Select options={STATUS_OPTIONS} />
         </Form.Item>
 
@@ -264,10 +273,10 @@ export function MaterialEditModal({
           })}
         </div>
 
-        <Form.Item label="所属方案" name="solutionId">
+        <Form.Item label={solutionLabel} name="solutionId">
           <Select options={solutionOptions} allowClear showSearch optionFilterProp="label" />
         </Form.Item>
-        <Form.Item label="关联产品" name="productId">
+        <Form.Item label={productLabel} name="productId">
           <Select
             options={productOptions}
             allowClear

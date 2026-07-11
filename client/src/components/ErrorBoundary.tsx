@@ -3,6 +3,9 @@ import { Result, Button } from 'antd';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
+  title?: string;
+  unknownError?: string;
+  retryText?: string;
 }
 
 interface ErrorBoundaryState {
@@ -33,11 +36,11 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       return (
         <Result
           status="error"
-          title="页面发生错误"
-          subTitle={this.state.error?.message || '未知错误'}
+          title={this.props.title ?? '页面发生错误'}
+          subTitle={this.state.error?.message || this.props.unknownError || '未知错误'}
           extra={
             <Button type="primary" onClick={this.handleRetry}>
-              重试
+              {this.props.retryText ?? '重试'}
             </Button>
           }
         />

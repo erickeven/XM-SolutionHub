@@ -38,7 +38,6 @@ export function SolutionFormModal({
     queryKey: ['admin-solutions', 'product-options'],
     queryFn: () => getSolutionProductOptions(),
     enabled: open,
-    staleTime: 5 * 60 * 1000,
   });
 
   const { data: materialData, isLoading: materialsLoading } = useQuery({

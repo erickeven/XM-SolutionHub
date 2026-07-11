@@ -43,15 +43,45 @@ describe.skipIf(!process.env.DATABASE_URL)('Products Admin API', () => {
       model: `TEST-PROD-${Date.now()}${modelSuffix}`,
       series: 'TEST-SERIES',
       params: {
+        type: 'PFC控制器',
         inputVoltageMin: 90,
         inputVoltageMax: 264,
         outputVoltage: 5,
         outputCurrent: 2,
-        applicationType: 'adapter',
+        applicationType: '适配器',
+        efficiencyLevel: 'CoC Tier 2',
       },
       advantages: ['高效率', '低待机功耗'],
     };
   }
+
+  const minimalPdf = Buffer.from(
+    '%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\nxref\n0 3\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \ntrailer\n<< /Size 3 /Root 1 0 R >>\nstartxref\n109\n%%EOF',
+  );
+
+  describe('Product field configuration', () => {
+    it('updates a select field to text with nullable options and validation', async () => {
+      const token = await loginAdmin();
+      const createRes = await request
+        .post('/api/v1/admin/product-fields')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          fieldKey: `testTextField${Date.now()}`,
+          label: 'Test select field',
+          fieldType: 'single_select',
+          optionsJson: [{ label: 'Option', value: 'option' }],
+        });
+      expect(createRes.status).toBe(201);
+
+      const updateRes = await request
+        .patch(`/api/v1/admin/product-fields/${createRes.body.data.id as string}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ fieldType: 'text', optionsJson: null, validationJson: null });
+      expect(updateRes.status).toBe(200);
+      expect(updateRes.body.data.fieldType).toBe('text');
+      expect(updateRes.body.data.optionsJson).toBeNull();
+    });
+  });
 
   describe('GET /api/v1/admin/products', () => {
     it('should return 401 without authentication', async () => {
@@ -137,6 +167,54 @@ describe.skipIf(!process.env.DATABASE_URL)('Products Admin API', () => {
       expect(res.body.code).toBe(0);
       expect(res.body.data.series).toBe('UPDATED-SERIES');
       expect(res.body.data.status).toBe('ACTIVE');
+    });
+
+    it('synchronizes the datasheet owner and prevents reuse by another product', async () => {
+      const token = await loginAdmin();
+      const uploadRes = await request
+        .post('/api/v1/admin/materials')
+        .set('Authorization', `Bearer ${token}`)
+        .field('type', 'datasheet')
+        .field('title', `Product Datasheet ${Date.now()}`)
+        .attach('file', minimalPdf, 'product-datasheet.pdf');
+      expect(uploadRes.status).toBe(201);
+      const datasheetMaterialId = uploadRes.body.data.id as string;
+
+      const firstProductRes = await request
+        .post('/api/v1/admin/products')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          ...validProductPayload('-datasheet-owner'),
+          datasheetMaterialId,
+        });
+      expect(firstProductRes.status).toBe(201);
+      const firstProductId = firstProductRes.body.data.id as string;
+
+      const materialRes = await request
+        .get(`/api/v1/admin/materials/${datasheetMaterialId}`)
+        .set('Authorization', `Bearer ${token}`);
+      expect(materialRes.body.data.productId).toBe(firstProductId);
+
+      const duplicateRes = await request
+        .post('/api/v1/admin/products')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          ...validProductPayload('-datasheet-duplicate'),
+          datasheetMaterialId,
+        });
+      expect(duplicateRes.status).toBe(409);
+      expect(duplicateRes.body.code).toBe(3004);
+
+      const clearRes = await request
+        .patch(`/api/v1/admin/products/${firstProductId}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ datasheetMaterialId: null });
+      expect(clearRes.status).toBe(200);
+
+      const clearedMaterialRes = await request
+        .get(`/api/v1/admin/materials/${datasheetMaterialId}`)
+        .set('Authorization', `Bearer ${token}`);
+      expect(clearedMaterialRes.body.data.productId).toBeNull();
     });
   });
 

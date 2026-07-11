@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { AppError } from '../../lib/errors';
 import { successResponse } from '../../lib/response';
-import { optionalAuth, type AuthUser } from '../../middleware/auth';
+import type { AuthUser } from '../../middleware/auth';
 import {
   materialQuerySchema,
   createMaterialSchema,
@@ -54,7 +54,11 @@ export async function adminUploadHandler(
     // Parse metadata from FormData string
     const body = { ...req.body };
     if (typeof body.metadata === 'string') {
-      try { body.metadata = JSON.parse(body.metadata); } catch { delete body.metadata; }
+      try {
+        body.metadata = JSON.parse(body.metadata);
+      } catch {
+        throw new AppError(1002, 'metadata must be valid JSON', 400);
+      }
     }
 
     const input = createMaterialSchema.parse(body);
@@ -153,15 +157,8 @@ export async function publicListBySolutionHandler(
 ): Promise<void> {
   try {
     const solutionId = requireId(req);
-    // Use optionalAuth to determine if user is authenticated
-    await optionalAuth(req, res, async () => {
-      const isAuthenticated = req.user !== null;
-      const materials = await service.getPublicMaterialsBySolution(
-        solutionId,
-        isAuthenticated,
-      );
-      res.status(200).json(successResponse({ items: materials }));
-    });
+    const materials = await service.getPublicMaterialsBySolution(solutionId);
+    res.status(200).json(successResponse({ items: materials }));
   } catch (err) {
     next(err);
   }
@@ -174,11 +171,22 @@ export async function previewHandler(
 ): Promise<void> {
   try {
     const id = requireId(req);
-    await optionalAuth(req, res, async () => {
-      const isAuthenticated = req.user !== null;
-      const result = await service.getPreviewUrl(id, isAuthenticated);
-      res.redirect(302, result.url);
-    });
+    const result = await service.getPreviewUrl(id, req.user !== null);
+    res.redirect(302, result.url);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function previewUrlHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const id = requireId(req);
+    const result = await service.getPreviewUrl(id, req.user !== null);
+    res.status(200).json(successResponse(result));
   } catch (err) {
     next(err);
   }
@@ -194,6 +202,22 @@ export async function downloadHandler(
     const user = req.user as AuthUser;
     const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ?? req.ip ?? undefined;
     const result = await service.getDownloadUrl(id, user, ip);
+    res.status(200).json(successResponse(result));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function downloadSolutionArchiveHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const solutionId = requireId(req);
+    const user = req.user as AuthUser;
+    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ?? req.ip ?? undefined;
+    const result = await service.getSolutionArchiveDownloadUrl(solutionId, user, ip);
     res.status(200).json(successResponse(result));
   } catch (err) {
     next(err);

@@ -47,3 +47,12 @@ export interface MaterialPaginatedResult {
   page: number;
   limit: number;
 }
+
+export interface UpdateMaterialInput {
+  title?: string;
+  type?: MaterialType;
+  solutionId?: string | null;
+  productId?: string | null;
+  status?: 'DRAFT' | 'ACTIVE' | 'INACTIVE';
+  metadata?: Record<string, unknown>;
+}

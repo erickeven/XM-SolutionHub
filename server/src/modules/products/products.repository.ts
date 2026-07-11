@@ -39,14 +39,24 @@ export async function findByModel(model: string): Promise<Product | null> {
 }
 
 export async function create(data: CreateProductInput): Promise<Product> {
-  return prisma.product.create({
-    data: {
-      model: data.model,
-      series: data.series,
-      status: data.status ?? 'DRAFT',
-      params: data.params as never,
-      advantages: data.advantages,
-    },
+  return prisma.$transaction(async (tx) => {
+    const product = await tx.product.create({
+      data: {
+        model: data.model,
+        series: data.series,
+        status: data.status ?? 'DRAFT',
+        params: data.params as never,
+        advantages: data.advantages,
+        datasheetMaterialId: data.datasheetMaterialId ?? null,
+      },
+    });
+    if (data.datasheetMaterialId) {
+      await tx.material.update({
+        where: { id: data.datasheetMaterialId },
+        data: { productId: product.id },
+      });
+    }
+    return product;
   });
 }
 
@@ -59,9 +69,37 @@ export async function update(
   if (data.series !== undefined) updateData.series = data.series;
   if (data.params !== undefined) updateData.params = data.params as never;
   if (data.advantages !== undefined) updateData.advantages = data.advantages;
+  if (data.datasheetMaterialId !== undefined)
+    updateData.datasheetMaterialId = data.datasheetMaterialId;
   if (data.status !== undefined) updateData.status = data.status;
 
-  return prisma.product.update({ where: { id }, data: updateData as never });
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.product.findUniqueOrThrow({
+      where: { id },
+      select: { datasheetMaterialId: true },
+    });
+    const product = await tx.product.update({ where: { id }, data: updateData as never });
+
+    if (
+      data.datasheetMaterialId !== undefined &&
+      existing.datasheetMaterialId !== data.datasheetMaterialId
+    ) {
+      if (existing.datasheetMaterialId) {
+        await tx.material.updateMany({
+          where: { id: existing.datasheetMaterialId, productId: id },
+          data: { productId: null },
+        });
+      }
+      if (data.datasheetMaterialId) {
+        await tx.material.update({
+          where: { id: data.datasheetMaterialId },
+          data: { productId: id },
+        });
+      }
+    }
+
+    return product;
+  });
 }
 
 export async function softDelete(id: string): Promise<Product> {
@@ -120,4 +158,18 @@ export async function findByIdActive(id: string) {
       },
     },
   });
+}
+
+export async function findActiveDatasheetIds(ids: string[]): Promise<Set<string>> {
+  if (ids.length === 0) return new Set();
+  const rows = await prisma.material.findMany({
+    where: {
+      id: { in: ids },
+      status: 'ACTIVE',
+      type: 'datasheet',
+      mimeType: 'application/pdf',
+    },
+    select: { id: true },
+  });
+  return new Set(rows.map((row) => row.id));
 }

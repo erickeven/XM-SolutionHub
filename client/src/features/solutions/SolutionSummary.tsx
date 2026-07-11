@@ -1,13 +1,15 @@
 import { Link } from 'react-router-dom';
 import { Tag, message } from 'antd';
 import type { Solution, ProductSolution } from '../../types/solution';
-import { DownloadButton } from './DownloadButton';
+import { DownloadAllButton, DownloadButton } from './DownloadButton';
+import { useUiContent } from '../../api/ui-content';
 
 interface SolutionSummaryProps {
   solution: Solution;
   products: ProductSolution[];
   selectedMaterialId: string | null;
   isAuthenticated: boolean;
+  hasMaterials: boolean;
 }
 
 export function SolutionSummary({
@@ -15,7 +17,9 @@ export function SolutionSummary({
   products,
   selectedMaterialId,
   isAuthenticated,
+  hasMaterials,
 }: SolutionSummaryProps) {
+  const { text } = useUiContent();
   return (
     <div className="flex h-full flex-col gap-4 p-4">
       <div>
@@ -25,13 +29,15 @@ export function SolutionSummary({
 
       <div>
         <Tag color={solution.status === 'ACTIVE' ? 'green' : 'gold'}>
-          {solution.status === 'ACTIVE' ? '已发布' : '整理中'}
+          {solution.status === 'ACTIVE'
+            ? text('solution.status.active', '已发布')
+            : text('solution.status.preparing', '整理中')}
         </Tag>
       </div>
 
       {products.length > 0 && (
         <div>
-          <h3 className="mb-2 text-sm font-medium text-slate-700">关联型号</h3>
+          <h3 className="mb-2 text-sm font-medium text-slate-700">{text('solution.tabs.products', '关联型号')}</h3>
           <ul className="space-y-1">
             {products.map((p) => (
               <li key={p.id}>
@@ -47,14 +53,19 @@ export function SolutionSummary({
         </div>
       )}
 
-      <div className="mt-auto">
+      <div className="mt-auto space-y-2">
         <DownloadButton
           materialId={selectedMaterialId}
           isAuthenticated={isAuthenticated}
+          onError={(msg) => message.error(msg)}
+        />
+        <DownloadAllButton
+          solutionId={solution.id}
+          isAuthenticated={isAuthenticated}
+          disabled={!hasMaterials}
           onError={(msg) => message.error(msg)}
         />
       </div>
     </div>
   );
 }
-
