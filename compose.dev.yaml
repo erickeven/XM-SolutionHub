@@ -1,0 +1,11 @@
+services:
+  mysql:
+    ports:
+      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
+  redis:
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+  storage:
+    ports:
+      - "127.0.0.1:${S3_PORT:-8333}:8333"
+      - "127.0.0.1:${STORAGE_ADMIN_PORT:-23646}:23646"

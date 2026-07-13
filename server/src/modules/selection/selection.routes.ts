@@ -1,10 +1,9 @@
-import { Router } from 'express';
-import { apiLimiter } from '../../middleware/rateLimit';
-import { matchHandler, popularHandler } from './selection.controller';
+import { Router } from "express";
+import { asyncHandler } from "../../shared/http/async-handler.js";
+import type { SelectionController } from "./selection.controller.js";
 
-const router: Router = Router();
-
-router.post('/match', apiLimiter, matchHandler);
-router.get('/popular', apiLimiter, popularHandler);
-
-export default router;
+export function createSelectionRouter(controller: SelectionController): Router {
+  const router = Router();
+  router.post("/match", asyncHandler(controller.match));
+  return router;
+}

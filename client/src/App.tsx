@@ -1,301 +1,61 @@
-import { lazy, Suspense } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
-import { ConfigProvider, Result, Spin, Button } from 'antd';
-import { ArrowLeftOutlined } from '@ant-design/icons';
-import { antdTheme } from './styles/theme';
-import { MainLayout } from './layouts/MainLayout';
-import { AdminLayout } from './layouts/AdminLayout';
-import { HomePage } from './features/selection/HomePage';
-import { RouteGuard } from './components/RouteGuard';
-import { useUiContent } from './api/ui-content';
+import { useState } from "react";
+import { DiscoveryPage } from "./features/discovery/DiscoveryPage.js";
+import { AuthPanel } from "./features/iam/AuthPanel.js";
+import type { SessionResult } from "./api/client.js";
+import { CustomerWorkspace } from "./features/customer/CustomerWorkspace.js";
+import { InternalWorkbench } from "./features/internal/InternalWorkbench.js";
+import "./styles.css";
 
-// Public pages (lazy)
-const SelectionPage = lazy(() =>
-  import('./features/selection/SelectionPage').then((m) => ({ default: m.SelectionPage })),
-);
-const ProductDetailPage = lazy(() =>
-  import('./features/products/ProductDetailPage').then((m) => ({ default: m.ProductDetailPage })),
-);
-const LoginPage = lazy(() =>
-  import('./features/auth/LoginPage').then((m) => ({ default: m.LoginPage })),
-);
-const RegisterPage = lazy(() =>
-  import('./features/auth/RegisterPage').then((m) => ({ default: m.RegisterPage })),
-);
-const SolutionDetailPage = lazy(() =>
-  import('./features/solutions/SolutionDetailPage').then((m) => ({ default: m.SolutionDetailPage })),
-);
-const SolutionsPage = lazy(() =>
-  import('./features/solutions/SolutionsPage').then((m) => ({ default: m.SolutionsPage })),
-);
-const AiChatPage = lazy(() =>
-  import('./features/ai-chat/AiChatPage').then((m) => ({ default: m.AiChatPage })),
-);
-const ProfilePage = lazy(() =>
-  import('./features/profile/ProfilePage').then((m) => ({ default: m.ProfilePage })),
-);
+type Surface = "external" | "customer" | "internal";
 
-// Admin pages (lazy)
-const DashboardPage = lazy(() =>
-  import('./features/admin/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })),
-);
-const ProductListPage = lazy(() =>
-  import('./features/admin/products/ProductListPage').then((m) => ({ default: m.ProductListPage })),
-);
-const SolutionListPage = lazy(() =>
-  import('./features/admin/solutions/SolutionListPage').then((m) => ({ default: m.SolutionListPage })),
-);
-const MaterialListPage = lazy(() =>
-  import('./features/admin/materials/MaterialListPage').then((m) => ({ default: m.MaterialListPage })),
-);
-const TraceDebugPage = lazy(() =>
-  import('./features/admin/trace/TraceDebugPage').then((m) => ({ default: m.TraceDebugPage })),
-);
-const KnowledgeListPage = lazy(() =>
-  import('./features/admin/knowledge/KnowledgeListPage').then((m) => ({ default: m.KnowledgeListPage })),
-);
-const UserListPage = lazy(() =>
-  import('./features/admin/users/UserListPage').then((m) => ({ default: m.UserListPage })),
-);
-const AuditLogPage = lazy(() =>
-  import('./features/admin/audit/AuditLogPage').then((m) => ({ default: m.AuditLogPage })),
-);
-const LeadsListPage = lazy(() =>
-  import('./features/admin/leads/LeadsListPage').then((m) => ({ default: m.LeadsListPage })),
-);
-const ProductFieldSettingsPage = lazy(() =>
-  import('./features/admin/product-fields/ProductFieldSettingsPage').then((m) => ({
-    default: m.ProductFieldSettingsPage,
-  })),
-);
-const RoleListPage = lazy(() =>
-  import('./features/admin/roles/RoleListPage').then((m) => ({ default: m.RoleListPage })),
-);
-const MaterialFieldSettingsPage = lazy(() =>
-  import('./features/admin/material-fields/MaterialFieldSettingsPage').then((m) => ({
-    default: m.MaterialFieldSettingsPage,
-  })),
-);
-const AiSettingsPage = lazy(() =>
-  import('./features/admin/ai-settings/AiSettingsPage').then((m) => ({
-    default: m.AiSettingsPage,
-  })),
-);
-const UiContentSettingsPage = lazy(() =>
-  import('./features/admin/ui-content/UiContentSettingsPage').then((m) => ({
-    default: m.UiContentSettingsPage,
-  })),
-);
-
-function AdminNotFoundPage() {
+export default function App() {
+  const [surface, setSurface] = useState<Surface>("external");
+  const [authOpen, setAuthOpen] = useState(false);
+  const [session, setSession] = useState<SessionResult | null>(null);
   return (
-    <div className="flex min-h-[400px] items-center justify-center">
-      <Result
-        status="404"
-        title="页面不存在"
-        subTitle="您访问的后台页面不存在"
-        extra={
-          <Link to="/admin">
-            <Button type="primary" icon={<ArrowLeftOutlined />}>
-              返回驾驶舱
-            </Button>
-          </Link>
-        }
-      />
+    <div className="app-frame">
+      <a className="skip-link" href="#main-content">跳到主要内容</a>
+      <header className="topbar">
+        <div className="brand"><span className="brand-mark" aria-hidden="true">XM</span><div><strong>芯茂微</strong><small>DESIGN-IN PLATFORM</small></div></div>
+        <nav aria-label="界面切换">
+          <button aria-current={surface === "external" ? "page" : undefined} onClick={() => setSurface("external")}>工程发现</button>
+          <button aria-current={surface === "customer" ? "page" : undefined} onClick={() => setSurface("customer")}>客户协作</button>
+          <button aria-current={surface === "internal" ? "page" : undefined} onClick={() => setSurface("internal")}>内部作业台</button>
+        </nav>
+        <button className="identity-button" type="button" onClick={() => setAuthOpen(true)}>{session === null ? "注册 / 登录" : session.subject.displayName}</button>
+      </header>
+      {surface === "external" ? (
+        <DiscoveryPage accessToken={session?.accessToken ?? null} />
+      ) : surface === "customer" && session?.subject.type === "CUSTOMER" ? (
+        <main id="main-content" className="restricted-surface customer-surface" tabIndex={-1}>
+          <CustomerWorkspace accessToken={session.accessToken} subject={session.subject} />
+        </main>
+      ) : surface === "internal" && session !== null && session.subject.type !== "CUSTOMER" ? (
+        <main id="main-content" className="restricted-surface internal-surface" tabIndex={-1}>
+          <InternalWorkbench accessToken={session.accessToken} subject={session.subject} />
+        </main>
+      ) : (
+        <main id="main-content" className="restricted-surface" tabIndex={-1}>
+          <p className="eyebrow">IDENTITY BOUNDARY</p>
+          <h1>{surface === "customer" ? "客户个人与协作工作台" : "芯茂微内部作业台"}</h1>
+          {session === null || (surface === "internal" && session.subject.type === "CUSTOMER") ? (
+            <StateBoundary surface={surface} />
+          ) : (
+            <div className="workbench-empty"><span>IDENTITY VERIFIED</span><strong>{session.subject.displayName}</strong><p>当前工作台从空事务数据开始；没有创建企业、项目或内部任务。</p></div>
+          )}
+        </main>
+      )}
+      <footer><span>芯茂微数字化 Design-in 平台</span><span>版本、来源、授权与审计优先</span></footer>
+      {authOpen ? <AuthPanel onClose={() => setAuthOpen(false)} onAuthenticated={(nextSession) => { setSession(nextSession); setAuthOpen(false); }} /> : null}
     </div>
   );
 }
 
-function PublicNotFoundPage() {
-  const { text } = useUiContent();
-  return <Result status="404" title={text('common.notFound', '页面不存在')} />;
-}
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-      staleTime: 30 * 1000,
-    },
-  },
-});
-
-export default function App() {
+function StateBoundary({ surface }: { readonly surface: Exclude<Surface, "external"> }) {
   return (
-    <ConfigProvider theme={antdTheme}>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <Suspense
-            fallback={
-              <div className="flex min-h-[50vh] items-center justify-center">
-                <Spin size="large" />
-              </div>
-            }
-          >
-            <Routes>
-              {/* Auth pages — top-level (no layout chrome) */}
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-
-              {/* Public layout */}
-              <Route element={<MainLayout />}>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/selection" element={<SelectionPage />} />
-                <Route path="/products/:id" element={<ProductDetailPage />} />
-                <Route path="/solutions" element={<SolutionsPage />} />
-                <Route path="/solutions/:id" element={<SolutionDetailPage />} />
-                <Route
-                  path="/ai-chat"
-                  element={
-                    <RouteGuard>
-                      <AiChatPage />
-                    </RouteGuard>
-                  }
-                />
-                <Route
-                  path="/ai-chat/:sessionId"
-                  element={
-                    <RouteGuard>
-                      <AiChatPage />
-                    </RouteGuard>
-                  }
-                />
-                <Route
-                  path="/profile"
-                  element={
-                    <RouteGuard>
-                      <ProfilePage />
-                    </RouteGuard>
-                  }
-                />
-                <Route path="*" element={<PublicNotFoundPage />} />
-              </Route>
-
-              {/* Admin layout */}
-              <Route
-                path="/admin"
-                element={
-                  <RouteGuard permissions={['admin.dashboard.read']}>
-                    <AdminLayout />
-                  </RouteGuard>
-                }
-              >
-                <Route index element={<DashboardPage />} />
-                <Route
-                  path="products"
-                  element={
-<RouteGuard permissions={['products.read']}>
-                    <ProductListPage />
-                  </RouteGuard>
-                  }
-                />
-                <Route
-                  path="product-fields"
-                  element={
-<RouteGuard permissions={['products.write']}>
-                    <ProductFieldSettingsPage />
-                  </RouteGuard>
-                  }
-                />
-                <Route
-                  path="solutions"
-                  element={
-<RouteGuard permissions={['solutions.read']}>
-                    <SolutionListPage />
-                  </RouteGuard>
-                  }
-                />
-                <Route
-                  path="materials"
-                  element={
-<RouteGuard permissions={['materials.read']}>
-                    <MaterialListPage />
-                  </RouteGuard>
-                  }
-                />
-                <Route
-                  path="material-fields"
-                  element={
-<RouteGuard permissions={['materials.write']}>
-                    <MaterialFieldSettingsPage />
-                  </RouteGuard>
-                  }
-                />
-                <Route
-                  path="knowledge"
-                  element={
-<RouteGuard permissions={['knowledge.read']}>
-                    <KnowledgeListPage />
-                  </RouteGuard>
-                  }
-                />
-                <Route
-                  path="knowledge/:docId/trace"
-                  element={
-                    <RouteGuard permissions={['knowledge.write']}>
-                      <TraceDebugPage />
-                    </RouteGuard>
-                  }
-                />
-                <Route
-                  path="trace/:docId"
-                  element={
-                    <RouteGuard permissions={['knowledge.write']}>
-                      <TraceDebugPage />
-                    </RouteGuard>
-                  }
-                />
-                <Route path="leads" element={<RouteGuard permissions={['leads.read']}>
-                      <LeadsListPage />
-                    </RouteGuard>} />
-                <Route
-                  path="users"
-                  element={
-                                    <RouteGuard permissions={['users.read']}>
-                      <UserListPage />
-                    </RouteGuard>
-                  }
-                />
-                <Route
-                  path="roles"
-                  element={
-                    <RouteGuard permissions={['users.write']}>
-                      <RoleListPage />
-                    </RouteGuard>
-                  }
-                />
-                <Route
-                  path="audit"
-                  element={
-                    <RouteGuard permissions={['audit.read']}>
-                      <AuditLogPage />
-                    </RouteGuard>
-                  }
-                />
-                <Route
-                  path="ui-content"
-                  element={
-                    <RouteGuard permissions={['settings.ui.read']}>
-                      <UiContentSettingsPage />
-                    </RouteGuard>
-                  }
-                />
-                <Route
-                  path="ai-settings"
-                  element={
-                    <RouteGuard permissions={['settings.ai.read']}>
-                      <AiSettingsPage />
-                    </RouteGuard>
-                  }
-                />
-                <Route path="*" element={<AdminNotFoundPage />} />
-              </Route>
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-      </QueryClientProvider>
-    </ConfigProvider>
+    <div className="boundary-panel" role="status">
+      <span>AUTH</span>
+      <div><strong>需要有效身份</strong><p>{surface === "customer" ? "注册个人可进入个人工作台；企业和项目能力按需升级。" : "仅芯茂微内部员工和系统管理员可以进入。"}</p></div>
+    </div>
   );
 }

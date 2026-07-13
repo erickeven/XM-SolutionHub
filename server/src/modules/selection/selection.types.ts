@@ -1,38 +1,12 @@
-export interface SelectionInput {
-  inputVoltageMin: number;
-  inputVoltageMax: number;
-  outputVoltage: number;
-  outputCurrent: number;
-  applicationType?: string;
-  efficiencyLevel?: string;
-  standbyPowerMax?: number;
-  maxAmbientTemp?: number;
-  pcbaSize?: { width: number; height: number };
-  certifications?: string[];
-  requiresPfc?: boolean;
+export interface SelectionCandidate {
+  readonly productCode: string;
+  readonly name: string;
+  readonly summary: string;
+  readonly orderableSkus: readonly string[];
+  readonly score: number;
+  readonly matchedEvidence: readonly string[];
 }
 
-export interface MatchResult {
-  productId: string;
-  model: string;
-  series: string;
-  params: Record<string, unknown>;
-  advantages: string[];
-  datasheetMaterialId?: string | null;
-  matchLevel: 'exact' | 'approximate' | 'fallback';
-  score: number;
-  reasons: string[];
-  diffs: string[];
+export interface SelectionRepository {
+  findPublishedCandidates(terms: readonly string[], limit: number): Promise<readonly SelectionCandidate[]>;
 }
-
-export interface ProductForMatching {
-  id: string;
-  model: string;
-  series: string;
-  status: string;
-  params: Record<string, unknown>;
-  advantages: string[];
-  datasheetMaterialId?: string | null;
-}
-
-export type MatchLevel = 'exact' | 'approximate' | 'fallback';

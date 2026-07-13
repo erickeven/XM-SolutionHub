@@ -1,143 +1,65 @@
-import express, { type Express } from 'express';
-import pinoHttp from 'pino-http';
-import { logger } from './config';
-import { helmetMiddleware } from './middleware/helmet';
-import { corsMiddleware } from './middleware/cors';
-import { requestIdMiddleware } from './middleware/requestId';
-import { authLimiter, eventLimiter } from './middleware/rateLimit';
-import authRoutes from './modules/auth/auth.routes';
-import auditRoutes from './modules/audit/audit.routes';
-import productsRoutes from './modules/products/products.routes';
-import productsPublicRoutes from './modules/products/products.public.routes';
-import selectionRoutes from './modules/selection/selection.routes';
-import {
-  fieldConfigRouter,
-  publicFieldConfigRouter,
-} from './modules/products/field-config.routes';
-import { adminRoutes as solutionAdminRoutes, publicRoutes as solutionPublicRoutes } from './modules/solutions/solutions.routes';
-import { adminRoutes as materialAdminRoutes, publicRoutes as materialPublicRoutes, materialPublicRoutes as materialPreviewRoutes } from './modules/materials/materials.routes';
-import { materialFieldConfigRouter } from './modules/materials/field-config.routes';
-import knowledgeRoutes from './modules/knowledge/knowledge.routes';
-import aiChatRoutes from './modules/ai-chat/ai-chat.routes';
-import eventsRoutes from './modules/leads/events.routes';
-import leadsAdminRoutes from './modules/leads/leads.routes';
-import usersRoutes from './modules/users/users.routes';
-import filesRoutes from './modules/files/files.routes';
-import dashboardRoutes from './modules/dashboard/dashboard.routes';
-import rbacRoutes from './modules/rbac/rbac.routes';
-import aiSettingsRoutes, { promptRouter as aiPromptRoutes } from './modules/ai-settings/ai-settings.routes';
-import { adminUiContentRoutes, publicUiContentRoutes } from './modules/ui-content/ui-content.routes';
-import { errorHandler } from './middleware/errorHandler';
+import express, { type Express } from "express";
+import type { PimController } from "./modules/pim/pim.controller.js";
+import { createPimRouter } from "./modules/pim/pim.routes.js";
+import type { SolutionAssetsController } from "./modules/solution-assets/solution-assets.controller.js";
+import { createSolutionAssetsRouter } from "./modules/solution-assets/solution-assets.routes.js";
+import type { DocumentsController } from "./modules/solution-assets/documents.controller.js";
+import { createDocumentsRouter } from "./modules/solution-assets/documents.routes.js";
+import type { SelectionController } from "./modules/selection/selection.controller.js";
+import { createSelectionRouter } from "./modules/selection/selection.routes.js";
+import type { IamController } from "./modules/iam/iam.controller.js";
+import { createIamRouter } from "./modules/iam/iam.routes.js";
+import type { RequestHandler } from "express";
+import type { FileAccessController } from "./modules/solution-assets/file-access.controller.js";
+import { createDocumentAccessRouter, createFileAccessRouter } from "./modules/solution-assets/file-access.routes.js";
+import type { ContentConfigController } from "./modules/content-config/content-config.controller.js";
+import { createContentConfigRouter } from "./modules/content-config/content-config.routes.js";
+import type { ProjectSupportController } from "./modules/project-support/project-support.controller.js";
+import { createProjectSupportRouter } from "./modules/project-support/project-support.routes.js";
+import type { SupplyQualityController } from "./modules/supply-quality/supply-quality.controller.js";
+import { createSupplyQualityRouter } from "./modules/supply-quality/supply-quality.routes.js";
+import type { AdminCatalogController } from "./modules/pim/admin-catalog.controller.js";
+import { createAdminCatalogRouter } from "./modules/pim/admin-catalog.routes.js";
+import { sendSuccess } from "./shared/http/api-response.js";
+import { errorMiddleware, notFoundMiddleware, traceMiddleware } from "./shared/http/middleware.js";
 
-const app: Express = express();
+export interface AppDependencies {
+  readonly pimController: PimController;
+  readonly solutionAssetsController: SolutionAssetsController;
+  readonly documentsController: DocumentsController;
+  readonly selectionController: SelectionController;
+  readonly iamController: IamController;
+  readonly authenticationMiddleware: RequestHandler;
+  readonly fileAccessController: FileAccessController;
+  readonly contentConfigController: ContentConfigController;
+  readonly projectSupportController: ProjectSupportController;
+  readonly supplyQualityController: SupplyQualityController;
+  readonly adminCatalogController: AdminCatalogController;
+}
 
-// 1. Security headers
-app.use(helmetMiddleware);
+export function createApp(dependencies: AppDependencies): Express {
+  const app = express();
+  app.disable("x-powered-by");
+  app.use(express.json({ limit: "1mb" }));
+  app.use(traceMiddleware);
+  app.use(dependencies.authenticationMiddleware);
 
-// 2. CORS (no wildcard)
-app.use(corsMiddleware);
+  app.get("/api/v1/health", (_request, response) => {
+    sendSuccess(response, { service: "api", status: "ok" });
+  });
+  app.use("/api/v1/products", createPimRouter(dependencies.pimController));
+  app.use("/api/v1/solutions", createSolutionAssetsRouter(dependencies.solutionAssetsController));
+  app.use("/api/v1/documents", createDocumentsRouter(dependencies.documentsController));
+  app.use("/api/v1/documents", createDocumentAccessRouter(dependencies.fileAccessController));
+  app.use("/api/v1/files", createFileAccessRouter(dependencies.fileAccessController));
+  app.use("/api/v1/selection", createSelectionRouter(dependencies.selectionController));
+  app.use("/api/v1/iam", createIamRouter(dependencies.iamController));
+  app.use("/api/v1/admin/configuration", createContentConfigRouter(dependencies.contentConfigController));
+  app.use("/api/v1/customer", createProjectSupportRouter(dependencies.projectSupportController));
+  app.use("/api/v1/internal", createSupplyQualityRouter(dependencies.supplyQualityController));
+  app.use("/api/v1/admin/catalog", createAdminCatalogRouter(dependencies.adminCatalogController));
 
-// 3. Body parsing
-app.use(express.json());
-
-// 4. Simple cookie parser (avoids adding cookie-parser dependency)
-app.use((req, _res, next) => {
-  const header = req.headers.cookie;
-  if (header) {
-    const cookies: Record<string, string> = {};
-    for (const pair of header.split(';')) {
-      const idx = pair.indexOf('=');
-      if (idx > 0) {
-        cookies[pair.slice(0, idx).trim()] = pair.slice(idx + 1).trim();
-      }
-    }
-    req.cookies = cookies;
-  }
-  next();
-});
-
-// 5. Request ID
-app.use(requestIdMiddleware);
-
-// 6. Request logging
-app.use(pinoHttp({ logger }));
-
-// 7. Healthcheck
-app.get('/api/v1/health', (_req, res) => {
-  res.json({ code: 0, message: 'ok', data: { status: 'healthy' } });
-});
-
-app.use('/api/v1/files', filesRoutes);
-
-// 8. Auth routes with rate limiting
-app.use('/api/v1/auth', authLimiter, authRoutes);
-
-// 9. Audit routes (admin only)
-app.use('/api/v1/admin/audit', auditRoutes);
-
-// 10. Selection routes (public, no auth required)
-app.use('/api/v1/selection', selectionRoutes);
-
-// 11. Products admin routes (admin only)
-app.use('/api/v1/admin/products', productsRoutes);
-
-// 12. Product field config admin routes (admin only)
-app.use('/api/v1/admin/product-fields', fieldConfigRouter);
-
-// 13. Products public routes (no auth required)
-app.use('/api/v1/products', productsPublicRoutes);
-app.use('/api/v1/product-fields', publicFieldConfigRouter);
-
-app.use('/api/v1/ui-content', publicUiContentRoutes);
-
-// 13. Solutions admin routes (admin only)
-app.use('/api/v1/admin/solutions', solutionAdminRoutes);
-
-// 14. Solutions public routes (no auth required)
-app.use('/api/v1/solutions', solutionPublicRoutes);
-
-// 15. Materials admin routes (admin only)
-app.use('/api/v1/admin/materials', materialAdminRoutes);
-
-// 15b. Material field-config routes (admin only)
-app.use('/api/v1/admin/material-fields', materialFieldConfigRouter);
-
-// 16. Public materials by solution (no auth required)
-app.use('/api/v1/solutions/:id/materials', materialPublicRoutes);
-
-// 17. Material preview and download (mounted at /api/v1/materials)
-app.use('/api/v1/materials', materialPreviewRoutes);
-
-// 18. Knowledge admin routes (admin only)
-app.use('/api/v1/admin/knowledge', knowledgeRoutes);
-
-// 19. AI chat routes (authenticated users)
-app.use('/api/v1/ai', aiChatRoutes);
-
-// 20. Events routes (public, rate limited 30/min)
-app.use('/api/v1/events', eventLimiter, eventsRoutes);
-
-// 21. User admin routes (admin only)
-app.use('/api/v1/admin/users', usersRoutes);
-
-// 22. Leads admin routes (STAFF+ with dataScope)
-app.use('/api/v1/admin/leads', leadsAdminRoutes);
-
-// 23. Dashboard snapshot (STAFF+)
-app.use('/api/v1/admin/dashboard', dashboardRoutes);
-
-// 24. RBAC role & permission management (ADMIN)
-app.use('/api/v1/admin/roles', rbacRoutes);
-
-// 25. AI Settings providers (ADMIN)
-app.use('/api/v1/admin/ai-settings', aiSettingsRoutes);
-
-// 26. AI Prompts (ADMIN)
-app.use('/api/v1/admin/ai-prompts', aiPromptRoutes);
-
-app.use('/api/v1/admin/ui-content', adminUiContentRoutes);
-
-// 27. Error handler (last)
-app.use(errorHandler);
-
-export default app;
+  app.use(notFoundMiddleware);
+  app.use(errorMiddleware);
+  return app;
+}

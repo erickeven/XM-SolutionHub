@@ -1,12 +1,14 @@
 {
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "jsx": "react-jsx",
-    "moduleResolution": "bundler",
+    "target": "ES2024",
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "module": "ESNext",
-    "noEmit": true,
-    "types": ["vite/client"]
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "jsx": "react-jsx",
+    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"],
+    "noEmit": true
   },
-  "include": ["src"]
+  "include": ["src", "vite.config.ts", "vitest.config.ts", "playwright.config.ts", "e2e"]
 }

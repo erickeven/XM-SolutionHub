@@ -1,33 +1,14 @@
-# Codegraph cache
-.codegraph/
-
-# Local deploy config (sensitive)
 .env
-.env.local
-server/.env
-
-# OpenCode run continuation
-.omo/run-continuation/
-
-# Build outputs
-client/dist/
-server/dist/
-*.tsbuildinfo
-client/e2e/test-results/
-client/playwright-report/
-client/screenshots/
-client/e2e/screenshots/
-client/e2e/admin-auth.json
-
-# OS
-Thumbs.db
-.DS_Store
-
-# Node / Python / etc (预留)
+.env.*
+!.env.example
 node_modules/
-__pycache__/
-*.pyc
-.venv/
-venv/
-
-.omo/
+.runtime/
+coverage/
+dist/
+generated/
+test-results/
+playwright-report/
+.playwright-cli/
+.codex/
+*.tsbuildinfo
+*.log

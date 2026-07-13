@@ -1,464 +1,803 @@
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "mysql"
 }
 
-// ── Enums ──────────────────────────────────────────────
+enum SubjectType {
+  CUSTOMER
+  INTERNAL
+  SYSTEM_ADMIN
+}
 
-enum Role {
-  USER
-  STAFF
-  AUDITOR
-  ADMIN
+enum CustomerLevel {
+  L1_REGISTERED
+  L2_ORGANIZATION
+  L3_PROJECT
 }
 
 enum RecordStatus {
   DRAFT
-  ACTIVE
-  INACTIVE
+  IN_REVIEW
+  PUBLISHED
+  ARCHIVED
 }
 
-enum LeadStatus {
-  NEW
-  ASSIGNED
-  FOLLOWING
-  CONVERTED
-  ABANDONED
+enum ResourceLevel {
+  PUBLIC
+  REGISTERED
+  ORG
+  PROJECT
+  NDA
 }
 
-enum KnowledgeStatus {
-  UPLOADED
-  PROCESSING
-  READY
-  FAILED
+enum FieldType {
+  TEXT
+  NUMBER
+  BOOLEAN
+  ENUM
+  DATE
+  FILE
 }
 
-enum IndexJobStatus {
+enum DerivativeType {
+  PREVIEW_PDF
+  ANONYMOUS_PREVIEW_PDF
+  PAGE_IMAGE
+  EXTRACTED_TEXT
+  ARCHIVE
+}
+
+enum JobStatus {
   PENDING
   PROCESSING
   SUCCEEDED
   FAILED
 }
 
-enum ChatMessageStatus {
-  STREAMING
-  COMPLETED
-  INTERRUPTED
-  FAILED
+enum MembershipStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  LEFT
 }
 
-// ── Models ──────────────────────────────────────────────
-
-model User {
-  id                String       @id @default(cuid())
-  email             String       @unique
-  passwordHash      String
-  role              Role         @default(USER)
-  status            RecordStatus @default(ACTIVE)
-  privacyVersion    String
-  privacyAcceptedAt DateTime
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
-
-  refreshTokens       RefreshToken[]
-  passwordResetTokens PasswordResetToken[]
-  leads               Lead[]
-  chatSessions        ChatSession[]
-  assignedLeads       Lead[]               @relation("AssignedLeads")
-  auditLogs           AuditLog[]           @relation("AuditLogActor")
-  searchTraces        SearchTrace[]
-  userRoles           UserRole[]
+enum ProjectStage {
+  DISCOVERY
+  EVALUATION
+  VALIDATION
+  DESIGN_IN
+  MASS_PRODUCTION
+  CLOSED
 }
 
-model RefreshToken {
-  id        String    @id @default(cuid())
-  userId    String
-  tokenHash String    @unique
-  familyId  String
-  expiresAt DateTime
-  revokedAt DateTime?
-  createdAt DateTime  @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([tokenHash])
+enum WorkItemStatus {
+  OPEN
+  ASSIGNED
+  IN_PROGRESS
+  WAITING_CUSTOMER
+  RESOLVED
+  CLOSED
 }
 
-model PasswordResetToken {
-  id        String    @id @default(cuid())
-  userId    String
-  tokenHash String    @unique
-  expiresAt DateTime
-  usedAt    DateTime?
-  createdAt DateTime  @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([tokenHash])
+model Subject {
+  id                      String                       @id @default(uuid()) @db.Char(36)
+  type                    SubjectType
+  email                   String                       @unique @db.VarChar(320)
+  displayName             String                       @db.VarChar(120)
+  enabled                 Boolean                      @default(true)
+  roles                   SubjectRole[]
+  auditEvents             AuditEvent[]                 @relation("AuditActor")
+  breakGlassUses          BreakGlassUse[]              @relation("BreakGlassActor")
+  organizationMemberships CustomerOrganizationMember[]
+  projectMemberships      ProjectMember[]
+  createdTickets          SupportTicket[]              @relation("SupportCreatedBy")
+  assignedTickets         SupportTicket[]              @relation("SupportAssignedTo")
+  departmentMemberships   EmployeeDepartment[]
+  customerProfile         CustomerProfile?
+  passwordCredential      PasswordCredential?
+  refreshSessions         RefreshSession[]
+  fileAccessTokens        FileAccessToken[]
+  directResourceGrants    ResourceGrant[]              @relation("ResourceGrantSubject")
+  issuedResourceGrants    ResourceGrant[]              @relation("ResourceGrantIssuer")
+  configurationVersions   ConfigurationVersion[]
+  analyticsEvents         AnalyticsEvent[]
+  createdAt               DateTime                     @default(now()) @db.DateTime(3)
+  updatedAt               DateTime                     @updatedAt @db.DateTime(3)
 }
 
-model Product {
-  id                  String       @id @default(cuid())
-  model               String       @unique
-  series              String
-  status              RecordStatus @default(DRAFT)
-  params              Json
-  advantages          String[]
-  datasheetMaterialId String?      @unique
-  createdAt           DateTime     @default(now())
-  updatedAt           DateTime     @updatedAt
-
-  productSolutions ProductSolution[]
-  materials        Material[]
-
-  @@index([model])
+model CustomerProfile {
+  subjectId String        @id @db.Char(36)
+  level     CustomerLevel @default(L1_REGISTERED)
+  subject   Subject       @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now()) @db.DateTime(3)
+  updatedAt DateTime      @updatedAt @db.DateTime(3)
 }
 
-model Solution {
-  id          String       @id @default(cuid())
-  name        String
-  description String
-  status      RecordStatus @default(DRAFT)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-
-  productSolutions ProductSolution[]
-  materials        Material[]
+model PasswordCredential {
+  subjectId    String   @id @db.Char(36)
+  passwordHash String   @db.VarChar(255)
+  changedAt    DateTime @default(now()) @db.DateTime(3)
+  subject      Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
 }
 
-model ProductSolution {
-  id         String   @id @default(cuid())
-  productId  String
-  solutionId String
-  createdAt  DateTime @default(now())
+model RefreshSession {
+  id        String    @id @default(uuid()) @db.Char(36)
+  subjectId String    @db.Char(36)
+  tokenHash String    @unique @db.Char(64)
+  expiresAt DateTime  @db.DateTime(3)
+  rotatedAt DateTime? @db.DateTime(3)
+  revokedAt DateTime? @db.DateTime(3)
+  userAgent String?   @db.VarChar(512)
+  sourceIp  String    @db.VarChar(64)
+  subject   Subject   @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now()) @db.DateTime(3)
 
-  product  Product  @relation(fields: [productId], references: [id])
-  solution Solution @relation(fields: [solutionId], references: [id])
-
-  @@unique([productId, solutionId])
+  @@index([subjectId, expiresAt, revokedAt])
 }
 
-model Material {
-  id                 String       @id @default(cuid())
-  solutionId         String?
-  productId          String?
-  type               String
-  title              String
-  originalStorageKey String
-  previewStorageKey  String?
-  mimeType           String
-  pageCount          Int?
-  previewPages       Int          @default(3)
-  metadata           Json?
-  status             RecordStatus @default(DRAFT)
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
-
-  solution     Solution?     @relation(fields: [solutionId], references: [id], onDelete: SetNull)
-  product      Product?      @relation(fields: [productId], references: [id], onDelete: SetNull)
-  knowledgeDoc KnowledgeDoc?
-
-  @@index([solutionId])
-  @@index([productId])
+model Role {
+  id          String           @id @default(uuid()) @db.Char(36)
+  code        String           @unique @db.VarChar(80)
+  name        String           @db.VarChar(120)
+  system      Boolean          @default(true)
+  subjects    SubjectRole[]
+  permissions RolePermission[]
+  createdAt   DateTime         @default(now()) @db.DateTime(3)
 }
-
-model KnowledgeDoc {
-  id           String          @id @default(cuid())
-  materialId   String          @unique
-  title        String
-  sourceType   String
-  status       KnowledgeStatus @default(UPLOADED)
-  indexVersion String?
-  indexedAt    DateTime?
-  errorMessage String?
-
-  material  Material?           @relation(fields: [materialId], references: [id])
-  indexJobs KnowledgeIndexJob[]
-  chunks    KnowledgeChunk[]
-}
-
-model KnowledgeIndexJob {
-  id           String         @id @default(cuid())
-  docId        String
-  indexVersion String
-  status       IndexJobStatus @default(PENDING)
-  attempts     Int            @default(0)
-  errorMessage String?
-  startedAt    DateTime?
-  finishedAt   DateTime?
-  createdAt    DateTime       @default(now())
-
-  doc KnowledgeDoc @relation(fields: [docId], references: [id], onDelete: Cascade)
-
-  @@unique([docId, indexVersion])
-}
-
-model KnowledgeChunk {
-  id           String                       @id @default(cuid())
-  docId        String
-  indexVersion String
-  content      String
-  page         Int?
-  contentHash  String
-  embedding    Unsupported("vector(1536)")?
-
-  doc   KnowledgeDoc    @relation(fields: [docId], references: [id], onDelete: Cascade)
-  event KnowledgeEvent?
-
-  @@unique([docId, indexVersion, contentHash])
-}
-
-model KnowledgeEvent {
-  id        String                       @id @default(cuid())
-  chunkId   String                       @unique
-  summary   String
-  eventType String
-  embedding Unsupported("vector(1536)")?
-  createdAt DateTime                     @default(now())
-
-  chunk    KnowledgeChunk         @relation(fields: [chunkId], references: [id], onDelete: Cascade)
-  entities KnowledgeEventEntity[]
-}
-
-model KnowledgeEntity {
-  id             String                       @id @default(cuid())
-  name           String
-  normalizedName String                       @unique
-  entityType     String
-  embedding      Unsupported("vector(1536)")?
-  createdAt      DateTime                     @default(now())
-
-  eventEntities KnowledgeEventEntity[]
-
-  @@index([normalizedName])
-}
-
-model KnowledgeEventEntity {
-  id       String @id @default(cuid())
-  eventId  String
-  entityId String
-  role     String
-
-  event  KnowledgeEvent  @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  entity KnowledgeEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
-
-  @@unique([eventId, entityId, role])
-}
-
-model SearchTrace {
-  id        String   @id @default(cuid())
-  userId    String?
-  query     String
-  mode      String
-  latencyMs Int
-  steps     Json?
-  createdAt DateTime @default(now())
-
-  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model Lead {
-  id           String     @id @default(cuid())
-  userId       String?
-  anonymousId  String?
-  score        Float      @default(0)
-  status       LeadStatus @default(NEW)
-  assignedTo   String?
-  lastActiveAt DateTime   @default(now())
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-
-  user          User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  assignedStaff User?       @relation("AssignedLeads", fields: [assignedTo], references: [id])
-  events        LeadEvent[]
-}
-
-model LeadEvent {
-  id        String   @id @default(cuid())
-  leadId    String
-  eventType String
-  payload   Json?
-  createdAt DateTime @default(now())
-
-  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
-}
-
-model ChatSession {
-  id        String   @id @default(cuid())
-  userId    String
-  title     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages ChatMessage[]
-}
-
-model ChatMessage {
-  id        String            @id @default(cuid())
-  sessionId String
-  role      String
-  status    ChatMessageStatus
-  content   String
-  sources   Json?
-  feedback  Json?
-  createdAt DateTime          @default(now())
-
-  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-}
-
-model AuditLog {
-  id         String   @id @default(cuid())
-  actorId    String?
-  action     String
-  targetType String
-  targetId   String?
-  payload    Json?
-  createdAt  DateTime @default(now())
-
-  actor User? @relation("AuditLogActor", fields: [actorId], references: [id], onDelete: SetNull)
-}
-
-// ── Field Configs ────────────────────────────────────────
-
-model ProductFieldConfig {
-  id             String   @id @default(uuid())
-  resourceType   String   @default("product")
-  fieldKey       String
-  label          String
-  fieldType      String
-  required       Boolean  @default(false)
-  optionsJson    Json?
-  sortOrder      Int      @default(0)
-  enabled        Boolean  @default(true)
-  validationJson Json?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  @@unique([resourceType, fieldKey])
-  @@map("product_field_configs")
-}
-
-model MaterialFieldConfig {
-  id             String   @id @default(uuid())
-  resourceType   String   @default("material")
-  fieldKey       String
-  label          String
-  fieldType      String
-  required       Boolean  @default(false)
-  optionsJson    Json?
-  sortOrder      Int      @default(0)
-  enabled        Boolean  @default(true)
-  validationJson Json?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  @@unique([resourceType, fieldKey])
-  @@map("material_field_configs")
-}
-
-// ── RBAC ──────────────────────────────────────────────────
 
 model Permission {
-  id            String   @id @default(uuid())
-  code          String   @unique
-  description   String
-  resourceGroup String
-  action        String
-  createdAt     DateTime @default(now())
+  id        String           @id @default(uuid()) @db.Char(36)
+  code      String           @unique @db.VarChar(120)
+  resource  String           @db.VarChar(80)
+  action    String           @db.VarChar(40)
+  roles     RolePermission[]
+  createdAt DateTime         @default(now()) @db.DateTime(3)
 
-  rolePermissions RolePermission[]
-
-  @@map("permissions")
+  @@unique([resource, action])
 }
 
-model RoleModel {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  description String
-  isSystem    Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model SubjectRole {
+  subjectId String   @db.Char(36)
+  roleId    String   @db.Char(36)
+  subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  grantedAt DateTime @default(now()) @db.DateTime(3)
 
-  rolePermissions RolePermission[]
-  userRoles       UserRole[]
-
-  @@map("roles")
+  @@id([subjectId, roleId])
 }
 
 model RolePermission {
-  id           String @id @default(uuid())
-  roleId       String
-  permissionId String
+  roleId       String     @db.Char(36)
+  permissionId String     @db.Char(36)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
-  role       RoleModel   @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission Permission  @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-
-  @@unique([roleId, permissionId])
-  @@index([roleId])
-  @@index([permissionId])
-  @@map("role_permissions")
+  @@id([roleId, permissionId])
 }
 
-model UserRole {
-  id     String @id @default(uuid())
-  userId String
-  roleId String
+model FieldDefinition {
+  id                     String                @id @default(uuid()) @db.Char(36)
+  entityType             String                @db.VarChar(60)
+  code                   String                @db.VarChar(80)
+  label                  String                @db.VarChar(120)
+  type                   FieldType
+  unit                   String?               @db.VarChar(40)
+  enumOptions            Json?
+  validation             Json?
+  visibility             Json
+  displayOrder           Int                   @default(0)
+  required               Boolean               @default(false)
+  configurationVersionId String                @db.Char(36)
+  configurationVersion   ConfigurationVersion @relation(fields: [configurationVersionId], references: [id], onDelete: Restrict)
+  createdAt              DateTime              @default(now()) @db.DateTime(3)
+  updatedAt              DateTime              @updatedAt @db.DateTime(3)
+  productValues          ProductFieldValue[]
+  documentValues         DocumentFieldValue[]
 
-  user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role RoleModel @relation(fields: [roleId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, roleId])
-  @@index([userId])
-  @@index([roleId])
-  @@map("user_roles")
+  @@unique([configurationVersionId, entityType, code])
+  @@index([entityType, displayOrder])
 }
 
-// ── AI Settings ──────────────────────────────────────────
+model Product {
+  id                String               @id @default(uuid()) @db.Char(36)
+  productCode       String               @unique @db.VarChar(80)
+  name              String               @db.VarChar(160)
+  summary           String               @db.Text
+  status            RecordStatus         @default(DRAFT)
+  publishedAt       DateTime?            @db.DateTime(3)
+  fieldValues       ProductFieldValue[]
+  orderableSkus     OrderableSku[]
+  solutionFits      SolutionProductFit[]
+  documentLinks     DocumentLink[]
+  createdAt         DateTime             @default(now()) @db.DateTime(3)
+  updatedAt         DateTime             @updatedAt @db.DateTime(3)
+  familyId          String?              @db.Char(36)
+  family            ProductFamily?       @relation(fields: [familyId], references: [id], onDelete: Restrict)
+  lifecycle         LifecycleRecord[]
+  pcnImpacts        PcnProductImpact[]
+  projectCandidates ProjectCandidate[]
 
-model AiProviderSetting {
-  id               String   @id @default(uuid())
-  providerType     String   // llm | embedding | rerank
-  name             String
-  baseUrl          String?
-  apiKeyEncrypted  String?
-  model            String?
-  dimensions       Int?
-  enabled          Boolean  @default(true)
-  isDefault        Boolean  @default(false)
-  createdAt        DateTime @default(now()) @map("createdAt")
-  updatedAt        DateTime @updatedAt @map("updatedAt")
-
-  @@map("ai_provider_settings")
+  @@index([status, publishedAt])
 }
 
-model AiPromptSetting {
-  id        String   @id @default(uuid())
-  key       String   @unique
-  title     String
-  content   String   @db.Text
-  enabled   Boolean  @default(true)
-  version   Int      @default(1)
-  createdAt DateTime @default(now()) @map("createdAt")
-  updatedAt DateTime @updatedAt @map("updatedAt")
+model ProductFieldValue {
+  id                String          @id @default(uuid()) @db.Char(36)
+  productId         String          @db.Char(36)
+  fieldDefinitionId String          @db.Char(36)
+  textValue         String?         @db.Text
+  numberValue       Decimal?        @db.Decimal(30, 10)
+  booleanValue      Boolean?
+  dateValue         DateTime?       @db.DateTime(3)
+  fileVersionId     String?         @db.Char(36)
+  source            String          @db.VarChar(255)
+  reviewedById      String?         @db.Char(36)
+  reviewedAt        DateTime?       @db.DateTime(3)
+  product           Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  fieldDefinition   FieldDefinition @relation(fields: [fieldDefinitionId], references: [id], onDelete: Restrict)
 
-  @@map("ai_prompt_settings")
+  @@unique([productId, fieldDefinitionId])
 }
 
-model UiContentSetting {
-  id        String   @id @default(uuid())
-  key       String   @unique
-  group     String
-  label     String
-  value     String   @db.Text
-  enabled   Boolean  @default(true)
-  createdAt DateTime @default(now()) @map("createdAt")
-  updatedAt DateTime @updatedAt @map("updatedAt")
+model OrderableSku {
+  id             String          @id @default(uuid()) @db.Char(36)
+  productId      String          @db.Char(36)
+  orderCode      String          @unique @db.VarChar(100)
+  packageCode    String          @db.VarChar(80)
+  status         RecordStatus    @default(DRAFT)
+  product        Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
+  createdAt      DateTime        @default(now()) @db.DateTime(3)
+  updatedAt      DateTime        @updatedAt @db.DateTime(3)
+  sampleRequests SampleRequest[]
+  rfqRequests    RfqRequest[]
 
-  @@index([group])
-  @@map("ui_content_settings")
+  @@index([productId, status])
+}
+
+model Solution {
+  id           String            @id @default(uuid()) @db.Char(36)
+  solutionCode String            @unique @db.VarChar(80)
+  name         String            @db.VarChar(180)
+  summary      String            @db.Text
+  versions     SolutionVersion[]
+  createdAt    DateTime          @default(now()) @db.DateTime(3)
+  updatedAt    DateTime          @updatedAt @db.DateTime(3)
+}
+
+model SolutionVersion {
+  id                String               @id @default(uuid()) @db.Char(36)
+  solutionId        String               @db.Char(36)
+  version           Int
+  status            RecordStatus         @default(DRAFT)
+  conditions        Json
+  evidence          Json
+  resourceLevel     ResourceLevel
+  effectiveAt       DateTime?            @db.DateTime(3)
+  expiresAt         DateTime?            @db.DateTime(3)
+  solution          Solution             @relation(fields: [solutionId], references: [id], onDelete: Restrict)
+  productFits       SolutionProductFit[]
+  documentLinks     DocumentLink[]
+  bomLines          BomLine[]
+  testEvidence      TestEvidence[]
+  verificationTasks VerificationTask[]
+  createdAt         DateTime             @default(now()) @db.DateTime(3)
+  projectCandidates ProjectCandidate[]
+
+  @@unique([solutionId, version])
+  @@index([status, effectiveAt, expiresAt])
+}
+
+model SolutionProductFit {
+  solutionVersionId String          @db.Char(36)
+  productId         String          @db.Char(36)
+  fitRules          Json
+  evidenceSource    String          @db.VarChar(255)
+  solutionVersion   SolutionVersion @relation(fields: [solutionVersionId], references: [id], onDelete: Cascade)
+  product           Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@id([solutionVersionId, productId])
+}
+
+model Document {
+  id           String               @id @default(uuid()) @db.Char(36)
+  documentCode String               @unique @db.VarChar(100)
+  title        String               @db.VarChar(255)
+  versions     DocumentVersion[]
+  links        DocumentLink[]
+  createdAt    DateTime             @default(now()) @db.DateTime(3)
+  updatedAt    DateTime             @updatedAt @db.DateTime(3)
+  fieldValues  DocumentFieldValue[]
+}
+
+model DocumentVersion {
+  id                String              @id @default(uuid()) @db.Char(36)
+  documentId        String              @db.Char(36)
+  version           Int
+  status            RecordStatus        @default(DRAFT)
+  resourceLevel     ResourceLevel
+  language          String              @db.VarChar(20)
+  mimeType          String              @db.VarChar(120)
+  originalObjectKey String              @unique @db.VarChar(512)
+  sha256            String              @db.Char(64)
+  pageCount         Int?
+  effectiveAt       DateTime?           @db.DateTime(3)
+  expiresAt         DateTime?           @db.DateTime(3)
+  document          Document            @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  derivatives       FileDerivative[]
+  accessTokens      FileAccessToken[]
+  createdAt         DateTime            @default(now()) @db.DateTime(3)
+  knowledgeEvidence KnowledgeEvidence[]
+
+  @@unique([documentId, version])
+  @@index([status, resourceLevel, effectiveAt, expiresAt])
+}
+
+model DocumentLink {
+  id                String           @id @default(uuid()) @db.Char(36)
+  documentId        String           @db.Char(36)
+  productId         String?          @db.Char(36)
+  solutionVersionId String?          @db.Char(36)
+  relationType      String           @db.VarChar(40)
+  document          Document         @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  product           Product?         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  solutionVersion   SolutionVersion? @relation(fields: [solutionVersionId], references: [id], onDelete: Cascade)
+
+  @@index([productId, relationType])
+  @@index([solutionVersionId, relationType])
+}
+
+model FileDerivative {
+  id                String          @id @default(uuid()) @db.Char(36)
+  documentVersionId String          @db.Char(36)
+  type              DerivativeType
+  inputSha256       String          @db.Char(64)
+  objectKey         String          @unique @db.VarChar(512)
+  status            JobStatus       @default(PENDING)
+  failureReason     String?         @db.Text
+  documentVersion   DocumentVersion @relation(fields: [documentVersionId], references: [id], onDelete: Cascade)
+  createdAt         DateTime        @default(now()) @db.DateTime(3)
+  updatedAt         DateTime        @updatedAt @db.DateTime(3)
+
+  @@unique([documentVersionId, type, inputSha256])
+}
+
+model FileAccessToken {
+  id                String          @id @default(uuid()) @db.Char(36)
+  tokenHash         String          @unique @db.Char(64)
+  documentVersionId String          @db.Char(36)
+  subjectId         String?         @db.Char(36)
+  action            String          @db.VarChar(20)
+  maxPreviewPages   Int?
+  expiresAt         DateTime        @db.DateTime(3)
+  consumedAt        DateTime?       @db.DateTime(3)
+  documentVersion   DocumentVersion @relation(fields: [documentVersionId], references: [id], onDelete: Cascade)
+  subject           Subject?        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  createdAt         DateTime        @default(now()) @db.DateTime(3)
+
+  @@index([documentVersionId, expiresAt])
+}
+
+model ConfigurationVersion {
+  id               String            @id @default(uuid()) @db.Char(36)
+  version          Int               @unique
+  status           RecordStatus      @default(DRAFT)
+  payload          Json
+  changeSummary    String            @db.Text
+  publishedAt      DateTime?         @db.DateTime(3)
+  rolledBackFromId String?           @db.Char(36)
+  createdById      String            @db.Char(36)
+  createdAt        DateTime          @default(now()) @db.DateTime(3)
+  fieldDefinitions FieldDefinition[]
+  createdBy        Subject           @relation(fields: [createdById], references: [id], onDelete: Restrict)
+}
+
+model AuditEvent {
+  id                  String   @id @default(uuid()) @db.Char(36)
+  actorId             String?  @db.Char(36)
+  action              String   @db.VarChar(80)
+  targetType          String   @db.VarChar(80)
+  targetId            String   @db.VarChar(80)
+  beforeValue         Json?
+  afterValue          Json?
+  sourceIp            String   @db.VarChar(64)
+  traceId             String   @db.VarChar(64)
+  authorizationResult String   @db.VarChar(40)
+  actor               Subject? @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  createdAt           DateTime @default(now()) @db.DateTime(3)
+
+  @@index([targetType, targetId, createdAt])
+  @@index([actorId, createdAt])
+}
+
+model BreakGlassUse {
+  id                  String   @id @default(uuid()) @db.Char(36)
+  actorId             String   @db.Char(36)
+  reason              String   @db.Text
+  targetType          String   @db.VarChar(80)
+  targetId            String   @db.VarChar(80)
+  beforeValue         Json?
+  afterValue          Json?
+  sourceIp            String   @db.VarChar(64)
+  notificationTargets Json
+  recoveryPoint       String   @db.VarChar(255)
+  actor               Subject  @relation("BreakGlassActor", fields: [actorId], references: [id], onDelete: Restrict)
+  createdAt           DateTime @default(now()) @db.DateTime(3)
+
+  @@index([actorId, createdAt])
+  @@index([targetType, targetId, createdAt])
+}
+
+model OutboxEvent {
+  id             String    @id @default(uuid()) @db.Char(36)
+  aggregateType  String    @db.VarChar(80)
+  aggregateId    String    @db.Char(36)
+  eventType      String    @db.VarChar(120)
+  payload        Json
+  idempotencyKey String    @unique @db.VarChar(160)
+  attempts       Int       @default(0)
+  availableAt    DateTime  @default(now()) @db.DateTime(3)
+  processedAt    DateTime? @db.DateTime(3)
+  lastError      String?   @db.Text
+  createdAt      DateTime  @default(now()) @db.DateTime(3)
+
+  @@index([processedAt, availableAt])
+}
+
+model ProductFamily {
+  id          String       @id @default(uuid()) @db.Char(36)
+  familyCode  String       @unique @db.VarChar(80)
+  name        String       @db.VarChar(160)
+  description String       @db.Text
+  status      RecordStatus @default(DRAFT)
+  products    Product[]
+  createdAt   DateTime     @default(now()) @db.DateTime(3)
+  updatedAt   DateTime     @updatedAt @db.DateTime(3)
+}
+
+model DocumentFieldValue {
+  id                String          @id @default(uuid()) @db.Char(36)
+  documentId        String          @db.Char(36)
+  fieldDefinitionId String          @db.Char(36)
+  textValue         String?         @db.Text
+  numberValue       Decimal?        @db.Decimal(30, 10)
+  booleanValue      Boolean?
+  dateValue         DateTime?       @db.DateTime(3)
+  fileVersionId     String?         @db.Char(36)
+  source            String          @db.VarChar(255)
+  reviewedById      String?         @db.Char(36)
+  reviewedAt        DateTime?       @db.DateTime(3)
+  document          Document        @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  fieldDefinition   FieldDefinition @relation(fields: [fieldDefinitionId], references: [id], onDelete: Restrict)
+
+  @@unique([documentId, fieldDefinitionId])
+}
+
+model BomLine {
+  id                String          @id @default(uuid()) @db.Char(36)
+  solutionVersionId String          @db.Char(36)
+  lineNumber        Int
+  partNumber        String          @db.VarChar(120)
+  manufacturer      String?         @db.VarChar(160)
+  quantity          Decimal         @db.Decimal(18, 6)
+  unit              String          @db.VarChar(30)
+  source            String          @db.VarChar(255)
+  solutionVersion   SolutionVersion @relation(fields: [solutionVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([solutionVersionId, lineNumber])
+}
+
+model TestEvidence {
+  id                String          @id @default(uuid()) @db.Char(36)
+  solutionVersionId String          @db.Char(36)
+  testCode          String          @db.VarChar(100)
+  title             String          @db.VarChar(200)
+  environment       Json
+  resultSummary     Json
+  source            String          @db.VarChar(255)
+  reviewedById      String?         @db.Char(36)
+  reviewedAt        DateTime?       @db.DateTime(3)
+  solutionVersion   SolutionVersion @relation(fields: [solutionVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([solutionVersionId, testCode])
+}
+
+model CustomerOrganization {
+  id            String                       @id @default(uuid()) @db.Char(36)
+  orgCode       String                       @unique @db.VarChar(80)
+  name          String                       @db.VarChar(200)
+  status        MembershipStatus             @default(ACTIVE)
+  members       CustomerOrganizationMember[]
+  projects      Project[]
+  grants        ResourceGrant[]
+  ndaAgreements NdaAgreement[]
+  createdAt     DateTime                     @default(now()) @db.DateTime(3)
+  updatedAt     DateTime                     @updatedAt @db.DateTime(3)
+}
+
+model CustomerOrganizationMember {
+  organizationId String               @db.Char(36)
+  subjectId      String               @db.Char(36)
+  customerRole   String               @db.VarChar(60)
+  status         MembershipStatus     @default(INVITED)
+  organization   CustomerOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  subject        Subject              @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  joinedAt       DateTime?            @db.DateTime(3)
+  createdAt      DateTime             @default(now()) @db.DateTime(3)
+
+  @@id([organizationId, subjectId])
+  @@index([subjectId, status])
+}
+
+model InternalDepartment {
+  id        String               @id @default(uuid()) @db.Char(36)
+  code      String               @unique @db.VarChar(80)
+  name      String               @db.VarChar(120)
+  members   EmployeeDepartment[]
+  createdAt DateTime             @default(now()) @db.DateTime(3)
+}
+
+model EmployeeDepartment {
+  departmentId String             @db.Char(36)
+  subjectId    String             @db.Char(36)
+  title        String             @db.VarChar(100)
+  manager      Boolean            @default(false)
+  department   InternalDepartment @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  subject      Subject            @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@id([departmentId, subjectId])
+}
+
+model NdaAgreement {
+  id             String               @id @default(uuid()) @db.Char(36)
+  organizationId String               @db.Char(36)
+  agreementCode  String               @unique @db.VarChar(100)
+  effectiveAt    DateTime             @db.DateTime(3)
+  expiresAt      DateTime?            @db.DateTime(3)
+  status         RecordStatus         @default(PUBLISHED)
+  organization   CustomerOrganization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  grants         ResourceGrant[]
+  createdAt      DateTime             @default(now()) @db.DateTime(3)
+
+  @@index([organizationId, status, expiresAt])
+}
+
+model ResourceGrant {
+  id             String                @id @default(uuid()) @db.Char(36)
+  subjectId      String?               @db.Char(36)
+  organizationId String?               @db.Char(36)
+  projectId      String?               @db.Char(36)
+  ndaAgreementId String?               @db.Char(36)
+  resourceType   String                @db.VarChar(80)
+  resourceId     String                @db.VarChar(80)
+  resourceLevel  ResourceLevel
+  action         String                @db.VarChar(40)
+  expiresAt      DateTime?             @db.DateTime(3)
+  grantedById    String                @db.Char(36)
+  reason         String                @db.Text
+  organization   CustomerOrganization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project        Project?              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  ndaAgreement   NdaAgreement?         @relation(fields: [ndaAgreementId], references: [id], onDelete: Cascade)
+  subject        Subject?              @relation("ResourceGrantSubject", fields: [subjectId], references: [id], onDelete: Cascade)
+  grantedBy      Subject               @relation("ResourceGrantIssuer", fields: [grantedById], references: [id], onDelete: Restrict)
+  createdAt      DateTime              @default(now()) @db.DateTime(3)
+
+  @@index([resourceType, resourceId, action, expiresAt])
+  @@index([subjectId, organizationId, projectId])
+}
+
+model Project {
+  id                  String                      @id @default(uuid()) @db.Char(36)
+  organizationId      String                      @db.Char(36)
+  projectCode         String                      @unique @db.VarChar(100)
+  name                String                      @db.VarChar(200)
+  stage               ProjectStage                @default(DISCOVERY)
+  customerConfirmedAt DateTime?                   @db.DateTime(3)
+  organization        CustomerOrganization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  members             ProjectMember[]
+  requirements        ProjectRequirementVersion[]
+  candidates          ProjectCandidate[]
+  supportTickets      SupportTicket[]
+  grants              ResourceGrant[]
+  sampleRequests      SampleRequest[]
+  rfqRequests         RfqRequest[]
+  qualityEvents       QualityEvent[]
+  verificationTasks   VerificationTask[]
+  createdAt           DateTime                    @default(now()) @db.DateTime(3)
+  updatedAt           DateTime                    @updatedAt @db.DateTime(3)
+
+  @@index([organizationId, stage])
+}
+
+model ProjectMember {
+  projectId   String           @db.Char(36)
+  subjectId   String           @db.Char(36)
+  projectRole String           @db.VarChar(60)
+  status      MembershipStatus @default(INVITED)
+  project     Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  subject     Subject          @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  createdAt   DateTime         @default(now()) @db.DateTime(3)
+
+  @@id([projectId, subjectId])
+}
+
+model ProjectRequirementVersion {
+  id           String             @id @default(uuid()) @db.Char(36)
+  projectId    String             @db.Char(36)
+  version      Int
+  requirements Json
+  source       String             @db.VarChar(255)
+  confirmedAt  DateTime?          @db.DateTime(3)
+  project      Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  candidates   ProjectCandidate[]
+  createdAt    DateTime           @default(now()) @db.DateTime(3)
+
+  @@unique([projectId, version])
+}
+
+model ProjectCandidate {
+  id                   String                    @id @default(uuid()) @db.Char(36)
+  projectId            String                    @db.Char(36)
+  requirementVersionId String                    @db.Char(36)
+  productId            String                    @db.Char(36)
+  solutionVersionId    String?                   @db.Char(36)
+  decision             String                    @db.VarChar(40)
+  explanation          Json
+  project              Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  requirementVersion   ProjectRequirementVersion @relation(fields: [requirementVersionId], references: [id], onDelete: Restrict)
+  product              Product                   @relation(fields: [productId], references: [id], onDelete: Restrict)
+  solutionVersion      SolutionVersion?          @relation(fields: [solutionVersionId], references: [id], onDelete: SetNull)
+  createdAt            DateTime                  @default(now()) @db.DateTime(3)
+
+  @@unique([projectId, requirementVersionId, productId])
+}
+
+model SupportTicket {
+  id           String         @id @default(uuid()) @db.Char(36)
+  ticketCode   String         @unique @db.VarChar(100)
+  projectId    String?        @db.Char(36)
+  createdById  String         @db.Char(36)
+  assignedToId String?        @db.Char(36)
+  title        String         @db.VarChar(220)
+  description  String         @db.Text
+  status       WorkItemStatus @default(OPEN)
+  slaDueAt     DateTime?      @db.DateTime(3)
+  conclusion   Json?
+  project      Project?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  createdBy    Subject        @relation("SupportCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  assignedTo   Subject?       @relation("SupportAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdAt    DateTime       @default(now()) @db.DateTime(3)
+  updatedAt    DateTime       @updatedAt @db.DateTime(3)
+
+  @@index([assignedToId, status, slaDueAt])
+  @@index([projectId, status])
+}
+
+model SampleRequest {
+  id             String         @id @default(uuid()) @db.Char(36)
+  projectId      String         @db.Char(36)
+  orderableSkuId String         @db.Char(36)
+  quantity       Int
+  status         WorkItemStatus @default(OPEN)
+  source         String         @db.VarChar(255)
+  project        Project        @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  orderableSku   OrderableSku   @relation(fields: [orderableSkuId], references: [id], onDelete: Restrict)
+  createdAt      DateTime       @default(now()) @db.DateTime(3)
+  updatedAt      DateTime       @updatedAt @db.DateTime(3)
+
+  @@index([projectId, status])
+}
+
+model RfqRequest {
+  id             String         @id @default(uuid()) @db.Char(36)
+  projectId      String         @db.Char(36)
+  orderableSkuId String         @db.Char(36)
+  quantity       Decimal        @db.Decimal(18, 3)
+  targetDate     DateTime?      @db.Date
+  status         WorkItemStatus @default(OPEN)
+  project        Project        @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  orderableSku   OrderableSku   @relation(fields: [orderableSkuId], references: [id], onDelete: Restrict)
+  createdAt      DateTime       @default(now()) @db.DateTime(3)
+  updatedAt      DateTime       @updatedAt @db.DateTime(3)
+
+  @@index([projectId, status])
+}
+
+model LifecycleRecord {
+  id          String    @id @default(uuid()) @db.Char(36)
+  productId   String    @db.Char(36)
+  lifecycle   String    @db.VarChar(40)
+  source      String    @db.VarChar(255)
+  effectiveAt DateTime  @db.DateTime(3)
+  expiresAt   DateTime? @db.DateTime(3)
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now()) @db.DateTime(3)
+
+  @@index([productId, effectiveAt, expiresAt])
+}
+
+model PcnNotice {
+  id             String             @id @default(uuid()) @db.Char(36)
+  pcnCode        String             @unique @db.VarChar(100)
+  title          String             @db.VarChar(220)
+  status         RecordStatus       @default(DRAFT)
+  effectiveAt    DateTime?          @db.DateTime(3)
+  source         String             @db.VarChar(255)
+  productImpacts PcnProductImpact[]
+  createdAt      DateTime           @default(now()) @db.DateTime(3)
+  updatedAt      DateTime           @updatedAt @db.DateTime(3)
+}
+
+model PcnProductImpact {
+  pcnNoticeId String    @db.Char(36)
+  productId   String    @db.Char(36)
+  impact      Json
+  pcnNotice   PcnNotice @relation(fields: [pcnNoticeId], references: [id], onDelete: Cascade)
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([pcnNoticeId, productId])
+}
+
+model QualityEvent {
+  id          String         @id @default(uuid()) @db.Char(36)
+  eventCode   String         @unique @db.VarChar(100)
+  projectId   String?        @db.Char(36)
+  severity    String         @db.VarChar(20)
+  status      WorkItemStatus @default(OPEN)
+  description String         @db.Text
+  source      String         @db.VarChar(255)
+  project     Project?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  createdAt   DateTime       @default(now()) @db.DateTime(3)
+  updatedAt   DateTime       @updatedAt @db.DateTime(3)
+
+  @@index([projectId, status, severity])
+}
+
+model VerificationTask {
+  id                String           @id @default(uuid()) @db.Char(36)
+  projectId         String?          @db.Char(36)
+  solutionVersionId String?          @db.Char(36)
+  taskCode          String           @unique @db.VarChar(100)
+  status            WorkItemStatus   @default(OPEN)
+  plan              Json
+  result            Json?
+  source            String           @db.VarChar(255)
+  project           Project?         @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  solutionVersion   SolutionVersion? @relation(fields: [solutionVersionId], references: [id], onDelete: SetNull)
+  createdAt         DateTime         @default(now()) @db.DateTime(3)
+  updatedAt         DateTime         @updatedAt @db.DateTime(3)
+
+  @@index([projectId, status])
+}
+
+model KnowledgeEvidence {
+  id                String          @id @default(uuid()) @db.Char(36)
+  documentVersionId String          @db.Char(36)
+  chunkIndex        Int
+  content           String          @db.LongText
+  resourceLevel     ResourceLevel
+  effectiveAt       DateTime?       @db.DateTime(3)
+  expiresAt         DateTime?       @db.DateTime(3)
+  documentVersion   DocumentVersion @relation(fields: [documentVersionId], references: [id], onDelete: Cascade)
+  createdAt         DateTime        @default(now()) @db.DateTime(3)
+
+  @@unique([documentVersionId, chunkIndex])
+  @@index([resourceLevel, effectiveAt, expiresAt])
+}
+
+model AnalyticsEvent {
+  id         String   @id @default(uuid()) @db.Char(36)
+  subjectId  String?  @db.Char(36)
+  eventType  String   @db.VarChar(100)
+  objectType String?  @db.VarChar(80)
+  objectId   String?  @db.VarChar(80)
+  properties Json
+  traceId    String   @db.VarChar(64)
+  occurredAt DateTime @default(now()) @db.DateTime(3)
+  subject    Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+
+  @@index([eventType, occurredAt])
+  @@index([objectType, objectId, occurredAt])
 }

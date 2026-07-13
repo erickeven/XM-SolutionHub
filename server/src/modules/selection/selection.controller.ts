@@ -1,33 +1,19 @@
-import type { Request, Response, NextFunction } from 'express';
-import { successResponse } from '../../lib/response';
-import { selectionInputSchema } from './selection.schema';
-import * as repository from './selection.repository';
-import { matchProducts } from './selection.service';
+import type { Request, Response } from "express";
+import { z } from "zod";
+import { sendSuccess } from "../../shared/http/api-response.js";
+import type { SelectionService } from "./selection.service.js";
 
-export async function matchHandler(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> {
-  try {
-    const input = selectionInputSchema.parse(req.body);
-    const products = await repository.findActiveProducts();
-    const results = matchProducts(input, products);
-    res.status(200).json(successResponse(results));
-  } catch (err) {
-    next(err);
-  }
-}
+const selectionSchema = z.object({
+  application: z.string().trim().min(1).max(160),
+  keywords: z.array(z.string().trim().min(1).max(80)).max(12).default([]),
+  limit: z.number().int().min(1).max(20).default(8)
+});
 
-export async function popularHandler(
-  _req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> {
-  try {
-    const products = await repository.findPopularProducts(10);
-    res.status(200).json(successResponse(products));
-  } catch (err) {
-    next(err);
-  }
+export class SelectionController {
+  public constructor(private readonly service: SelectionService) {}
+
+  public readonly match = async (request: Request, response: Response): Promise<void> => {
+    const input = selectionSchema.parse(request.body);
+    sendSuccess(response, await this.service.match(input.application, input.keywords, input.limit));
+  };
 }

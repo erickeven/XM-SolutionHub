@@ -1,1 +1,0 @@
-export type { SearchTraceStep, SearchTraceRecord, TraceDoc, TraceIndexJob, TraceResponse } from '../api/trace';

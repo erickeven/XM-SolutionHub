@@ -1,12 +1,15 @@
 {
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "module": "CommonJS",
-    "moduleResolution": "node",
+    "target": "ES2024",
+    "lib": ["ES2024"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "rootDir": ".",
     "outDir": "dist",
-    "types": ["node"],
-    "lib": ["ES2022"]
+    "types": ["node", "vitest/globals"],
+    "sourceMap": true,
+    "declaration": true
   },
-  "include": ["src"],
-  "exclude": ["src/**/*.test.ts", "src/**/*.spec.ts", "src/**/*.bench.ts"]
+  "include": ["src/**/*.ts", "scripts/**/*.ts", "prisma.config.ts", "vitest.config.ts"]
 }

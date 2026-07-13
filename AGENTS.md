@@ -1,102 +1,33 @@
-# XM-SolutionHub — 芯茂微选型与资料系统
+# XM Design-in Platform
 
-> **状态**: 开发阶段持续重构中；业务主链路为“选型推荐产品 → 产品详情 → 关联方案 → 方案资料预览/下载”。初始化仅保留管理员/RBAC，不再灌演示产品、方案、资料数据。
+本仓库是依据 `docs/rebuild-2026/` 从零创建的新系统。该目录全部最终文档是业务、角色、UI、技术与验收的唯一基线；冲突时先修订最终文档，再改代码。
 
-## 项目定位
+## 固定技术栈
 
-面向工程师的芯片选型与方案资料平台，含 AI 问答和线索管理。前后端分离，模块化单体后端，Docker Compose 部署。
+- React 19 + TypeScript + Vite
+- Node.js 24 LTS + TypeScript + Express 5
+- Prisma 7 + MySQL 9.7、Redis 8
+- SeaweedFS 4.29 安全派生版，经通用 S3 Adapter 使用
+- 模块化单体 + 独立 Worker + MySQL Outbox
+- Docker Compose、Vitest、Supertest、RTL、Playwright
 
-## 技术栈（已锁定）
+## 硬约束
 
-| 层 | 选型 |
-|---|---|
-| 前端 | React 18 + TypeScript + Vite + Ant Design 5 + Tailwind CSS |
-| 后端 | Node.js 20 + TypeScript + Express + Prisma |
-| 数据库 | PostgreSQL 16 + pgvector + Redis 7 |
-| 存储 | MinIO（开发可用本地） |
-| 包管理 | pnpm workspaces |
+- Route → Controller/Schema → Application Service → Domain Policy → Repository/Adapter。
+- MySQL 是唯一事务事实源；不得引入 PostgreSQL、pgvector 或旧 schema 假设。
+- 初始化只创建管理员、RBAC 和必要配置，不灌演示业务数据。
+- 文件原件、派生物和压缩包版本化；文件访问使用短时授权，不返回永久对象地址。
+- 禁止 `any`、`@ts-ignore`、`eslint-disable`、前端假数据和无来源 AI 回答。
+- 不复用旧项目代码、迁移、测试、页面、假数据或部署文件。
 
-不要新增依赖，现有技术栈能解决的事禁止引入新框架/库。
-
-## 目录约定
-
-```
-client/          — React 前端
-server/          — Express 后端
-  prisma/        — schema + seed
-  src/modules/   — 按业务拆模块 (auth|products|selection|materials|solutions|knowledge|ai-chat|leads|audit)
-  每个模块: *.routes.ts / *.controller.ts / *.service.ts / *.repository.ts / *.schema.ts / *.types.ts / *.test.ts
-docs/            — PRD, design, tech（已定稿）
-```
-
-## 本地开发启动命令
+## 验证
 
 ```bash
-pnpm install
-docker compose up -d postgres redis minio
-pnpm --filter server admin:init
-pnpm --filter server dev
-pnpm --filter server worker:knowledge
-pnpm --filter client dev
+pnpm verify
+pnpm e2e
+python scripts/remote_validate.py
+python scripts/remote_scan_images.py
+python scripts/remote_operational_verify.py
 ```
 
-## 上线前验证顺序
-
-```bash
-pnpm lint && pnpm typecheck && pnpm test && pnpm e2e
-```
-
-## 架构硬约束
-
-- **后端分层**: Route → Controller(校验) → Service(业务) → Repository(Prisma) → Adapter(外部)
-- **统一响应**: `{ code: number, message: string, data: T }` — code 0=成功
-- **Token**: Access 2h / Refresh 7d(轮换)，Refresh 存 HttpOnly Cookie
-- **测试**: 选型算法(Vitest) + API(Supertest) + 组件(RTL) + E2E(Playwright)
-- **RBAC**: 匿名→注册→内部→审核员→管理员，层级递增
-- **AI 知识库**: 采用 SAG 思路，基于 chunk/event/entity、pgvector、全文检索和 SQL 多跳扩展；普通向量召回只允许作为降级策略
-
-## 禁止事项
-
-- `any` / `@ts-ignore` / `eslint-disable`
-- 前端假数据页面不接真实接口
-- AI 无来源回答
-- 将 Zleap-AI/SAG 原工作台作为独立服务硬嵌入本项目
-- 接口直接返回永久存储地址
-- 把敏感信息写入日志
-
-## 设计基线
-
-- 配色: 深海军蓝 + 芯片铜金 + 工业灰
-- 字体: Inter / PingFang SC / Microsoft YaHei
-- 间距: 4px 栅格，容器最大 1280px
-- 首屏必须有选型入口，不做纯营销落地页
-- 加载 / 空 / 错误 / 无权限 四态必须完整实现
-
-## 部署服务器（本地局域网）
-
-| 项目 | 值 |
-|---|---|
-| IP | `172.16.172.85` |
-| SSH 端口 | `22` |
-| 系统 | Ubuntu 22.04.5 LTS |
-| 环境 | 宝塔面板 / Docker / Node.js / Nginx |
-
-敏感凭据（密码等）存于 `.env.local` 和生产根目录 `.env`（均已加入 `.gitignore`，勿提交）。`.env.local` 内容包括 `DEPLOY_HOST`、`DEPLOY_USER`、`DEPLOY_PASSWORD`、`DEPLOY_PORT`；生产 `.env` 供 `docker-compose.prod.yml` 读取。
-
-首次部署流程（待实施）：
-```bash
-# 从项目根目录
-rsync -avz --exclude '.git' --exclude '.env.local' --exclude 'node_modules' \
-  ./ root@172.16.172.85:/opt/xinmaowei/
-
-# SSH 登入后
-ssh root@172.16.172.85
-cd /opt/xinmaowei
-docker compose up -d
-pnpm install && pnpm --filter server admin:init && pnpm build
-# Nginx 反代配置见宝塔面板
-```
-
-## 依赖服务
-
-本地开发依赖 `docker compose` 启动 PostgreSQL + Redis + MinIO。开发阶段不再执行演示 seed；初始化只创建/更新管理员、角色和权限。需要重建 schema 时再按当前 Prisma schema 选择迁移或同步策略。
+敏感凭据仅存于被忽略的 `.env.local`/生产 `.env`，不得打印、复制或提交。

@@ -1,0 +1,45 @@
+services:
+  mysql:
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+  redis:
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+  storage:
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+  api:
+    environment:
+      NODE_ENV: production
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+  worker:
+    environment:
+      NODE_ENV: production
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+  web:
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+  migrate:
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+  admin-init:
+    deploy:
+      resources:
+        limits:
+          memory: 1G
