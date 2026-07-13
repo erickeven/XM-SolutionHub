@@ -10,14 +10,14 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: mysql://ci:ci@127.0.0.1:3306/ci
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 11.8.0
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
-          cache: pnpm
+      - run: corepack enable
+      - run: corepack prepare pnpm@11.8.0 --activate
       - run: pnpm install --frozen-lockfile
       - run: pnpm verify
